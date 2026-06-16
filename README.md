@@ -1,19 +1,3 @@
----
-title: "DEGgo"
-output:
-  github_document:
-    toc: true
-    toc_depth: 3
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
-```
-
 <p align="center">
   <img src="man/figures/DEGgo_logo.png" width="280">
 </p>

@@ -21,11 +21,11 @@ generate_report <- function(
   if (is.null(report_template)) {
 
     candidates <- c(
-      file.path(getwd(), "report_template.Rmd"),
-      file.path(".", "report_template.Rmd"),
-      file.path(output_dir, "report_template.Rmd"),
-      system.file("report_template.Rmd", package = "cellDEverse"),
-      system.file("inst", "report_template.Rmd", package = "cellDEverse")
+      file.path(getwd(), "report.Rmd"),
+      file.path(".", "report.Rmd"),
+      file.path(output_dir, "report.Rmd"),
+      system.file("report.Rmd", package = "DEGgo"),
+      system.file("inst", "report.Rmd", package = "DEGgo")
     )
 
     report_template <- candidates[file.exists(candidates)][1]
@@ -33,7 +33,7 @@ generate_report <- function(
 
   if (is.na(report_template) || !file.exists(report_template)) {
     log(
-      "report_template.Rmd not found. Skipping HTML report.",
+      "report.Rmd not found. Skipping HTML report.",
       type = "warn"
     )
     return(invisible(NULL))
@@ -52,7 +52,7 @@ generate_report <- function(
   volcano_path <- file.path(output_dir, "Volcano_Plot.png")
   pca_path     <- file.path(output_dir, "PCA_Plot.png")
   heatmap_path <- file.path(output_dir, "Heatmap.png")
-  go_path      <- file.path(output_dir, "GO_Barplot.png")
+  go_path      <- file.path(output_dir, "GO_Dotplot.png")
 
   has_volcano <- file.exists(volcano_path)
   has_pca     <- file.exists(pca_path)
@@ -62,7 +62,7 @@ generate_report <- function(
   if (!has_volcano) log("Volcano plot missing. Report will continue.", type = "warn")
   if (!has_pca)     log("PCA plot missing. Report will continue.", type = "warn")
   if (!has_heatmap) log("Heatmap missing. Report will continue.", type = "warn")
-  if (!has_go)      log("GO barplot missing. Report will continue.", type = "warn")
+  if (!has_go)      log("GO dotplot missing. Report will continue.", type = "warn")
 
   # -------------------------------------------------------
   # GO table
