@@ -675,14 +675,12 @@ preprocess_counts <- function(
 #'   Default is \code{c("gene_id", "gene_name")}.
 #' @param verbose Logical; print summary messages. Default is \code{TRUE}.
 #'
-#' @return A list with:
-#' \describe{
-#'   \item{counts}{Filtered counts table.}
-#'   \item{metadata}{Filtered metadata table.}
-#'   \item{removed_samples}{Vector of removed sample names.}
-#' }
+#' @return A list with counts, metadata, and removed sample names.
 #'
 #' @examples
+#' \dontrun{
+#' qc <- explore_bulk_rnaseq(counts, metadata)
+#'
 #' cleaned <- remove_flagged_samples(
 #'   counts = counts,
 #'   metadata = metadata,
@@ -691,6 +689,7 @@ preprocess_counts <- function(
 #'
 #' counts <- cleaned$counts
 #' metadata <- cleaned$metadata
+#' }
 #'
 #' @export
 remove_flagged_samples <- function(
@@ -707,10 +706,6 @@ remove_flagged_samples <- function(
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
   qc_table <- as.data.frame(qc_table, stringsAsFactors = FALSE)
 
-  # -------------------------------------------------- #
-  # Checks
-  # -------------------------------------------------- #
-
   if (!sample_col %in% colnames(qc_table)) {
     stop("Column not found in qc_table: ", sample_col, call. = FALSE)
   }
@@ -723,51 +718,37 @@ remove_flagged_samples <- function(
     stop("Column not found in metadata: ", sample_col, call. = FALSE)
   }
 
-  # -------------------------------------------------- #
-  # Samples to remove
-  # -------------------------------------------------- #
-
   remove_samples <- qc_table[[sample_col]][
-    isTRUE(qc_table[[remove_col]]) |
-      qc_table[[remove_col]] %in% TRUE]
+    qc_table[[remove_col]] %in% TRUE
+  ]
 
-  remove_samples <- unique(remove_samples)
+  remove_samples <- unique(as.character(remove_samples))
 
-  # -------------------------------------------------- #
-  # Metadata
-  # -------------------------------------------------- #
-
-  metadata_clean <- metadata[!metadata[[sample_col]] %in% remove_samples,,drop = FALSE]
-
-  # -------------------------------------------------- #
-  # Counts
-  # -------------------------------------------------- #
+  metadata_clean <- metadata[
+    !metadata[[sample_col]] %in% remove_samples,
+    ,
+    drop = FALSE
+  ]
 
   keep_cols <- !colnames(counts) %in% remove_samples
-  counts_clean <- counts[,keep_cols, drop = FALSE]
+  counts_clean <- counts[, keep_cols, drop = FALSE]
 
-  # Preserve annotation columns
-  keep_gene_cols <- intersect(gene_cols, colnames(counts))
-  counts_clean <- counts_clean[, unique(c(keep_gene_cols,setdiff(colnames(counts_clean), keep_gene_cols))), drop = FALSE ]
-
-  # -------------------------------------------------- #
-  # Reporting
-  # -------------------------------------------------- #
+  keep_gene_cols <- intersect(gene_cols, colnames(counts_clean))
+  counts_clean <- counts_clean[
+    ,
+    unique(c(keep_gene_cols, setdiff(colnames(counts_clean), keep_gene_cols))),
+    drop = FALSE
+  ]
 
   if (verbose) {
-
-    cat("Removed samples: ", length(remove_samples),"\n")
+    cat("Removed samples:", length(remove_samples), "\n")
 
     if (length(remove_samples) > 0) {
-      cat(paste(remove_samples, collapse = ", "),"\n")
+      cat(paste(remove_samples, collapse = ", "), "\n")
     }
 
-    cat("Remaining samples: ", nrow(metadata_clean),"\n")
+    cat("Remaining samples:", nrow(metadata_clean), "\n")
   }
-
-  # -------------------------------------------------- #
-  # Output
-  # -------------------------------------------------- #
 
   list(
     counts = counts_clean,
@@ -775,6 +756,3 @@ remove_flagged_samples <- function(
     removed_samples = remove_samples
   )
 }
-
-
-

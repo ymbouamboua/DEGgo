@@ -17,6 +17,12 @@ utils::globalVariables(
     "pvalue",
     "ensembl_gene_id",
     "external_gene_name",
-    ".data"
+    ".data",
+    "library_size",
+    "detected_genes",
+    "n_flags",
+    "qc_status",
+    "score",
+    "marker_set"
   )
 )

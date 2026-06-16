@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{plot_theme}
 \alias{plot_theme}
-\title{Flexible ggplot2 theme used across GnRHcell visualizations.}
+\title{Flexible ggplot2 theme used across DEGgo visualizations}
 \usage{
 plot_theme(
   style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
@@ -39,8 +39,7 @@ plot_theme(
 )
 }
 \arguments{
-\item{style}{Theme style. One of \code{"classic"}, \code{"minimal"},
-\code{"bw"}, \code{"test"}, \code{"void"}, \code{"dirty"}, or \code{"gray"}.}
+\item{style}{Theme style.}
 
 \item{txtsize}{Base text size.}
 
@@ -48,7 +47,7 @@ plot_theme(
 
 \item{x.ang}{X-axis text angle.}
 
-\item{hjust, vjust}{Horizontal and vertical justification for x-axis labels.}
+\item{hjust, vjust}{Horizontal and vertical justification.}
 
 \item{xlab, ylab}{Show x/y axis tick labels.}
 
@@ -64,15 +63,15 @@ plot_theme(
 
 \item{x.ttl, y.ttl}{Show x/y axis titles.}
 
-\item{ticks, line, border}{Logical overrides for ticks, axis lines, and panel border.}
+\item{ticks, line, border}{Logical overrides.}
 
-\item{grid.major, grid.minor}{Logical overrides for major/minor grid lines.}
+\item{grid.major, grid.minor}{Logical overrides for grid lines.}
 
 \item{panel.fill}{Panel background fill.}
 
 \item{facet.bg}{Show facet background.}
 
-\item{mode}{Theme mode: \code{"light"} or \code{"dark"}.}
+\item{mode}{Theme mode.}
 
 \item{leg.pos}{Legend position.}
 
@@ -94,5 +93,5 @@ plot_theme(
 A ggplot2 theme object.
 }
 \description{
-Flexible ggplot2 theme used across GnRHcell visualizations.
+Flexible ggplot2 theme used across DEGgo visualizations
 }

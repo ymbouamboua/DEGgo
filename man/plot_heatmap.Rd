@@ -36,6 +36,12 @@ plot_heatmap(
 
 \item{metadata}{Sample metadata data frame.}
 
+\item{contrast}{Contrast name to plot.}
+
+\item{sample_subset}{Optional sample vector to retain.}
+
+\item{metadata_filter}{Optional named list used to filter metadata.}
+
 \item{top_n_heatmap}{Number of genes displayed in the heatmap.}
 
 \item{padj_cutoff}{Adjusted p-value threshold.}
@@ -48,6 +54,26 @@ plot_heatmap(
 
 \item{fallback}{Logical. If TRUE, use top ranked genes when no significant
 genes pass \code{padj_cutoff}.}
+
+\item{annotation_cols}{Metadata columns shown as heatmap annotations.}
+
+\item{annotation_colors}{Named list of annotation colors.}
+
+\item{order_by}{Metadata columns used to order samples.}
+
+\item{scale_rows}{Logical; scale rows before plotting.}
+
+\item{cluster_rows}{Logical; cluster genes.}
+
+\item{cluster_cols}{Logical; cluster samples.}
+
+\item{fontsize_row}{Row label font size.}
+
+\item{fontsize_col}{Column label font size.}
+
+\item{width}{Plot width in inches.}
+
+\item{height}{Plot height in inches.}
 }
 \value{
 Heatmap expression matrix, invisibly.

@@ -29,7 +29,17 @@ plot_pca(
 
 \item{intgroup}{Metadata columns used for PCA coloring/grouping.}
 
+\item{color_by}{Metadata column used for point color.}
+
+\item{shape_by}{Metadata column used for point shape.}
+
 \item{title}{Plot title.}
+
+\item{width}{Plot width in inches.}
+
+\item{height}{Plot height in inches.}
+
+\item{dpi}{Plot resolution.}
 }
 \value{
 A list containing the VST object, PCA data, and plot.

@@ -15,7 +15,7 @@ plot_volcano(
   padj_cutoff = 0.05,
   top_n_labels = 10,
   genes_highlight = NULL,
-  colors = c(Up = "#E64B35", Down = "#4DBBD5", Ns = "gray70"),
+  colors = c(Up = "#740001", Down = "#6497b1", Ns = "gray70"),
   point_size = 1.5,
   alpha = 0.65,
   title = "Volcano Plot",
@@ -75,6 +75,8 @@ automatically tries \code{"SYMBOL"}, \code{"gene"}, then \code{"ENSEMBL"}.}
 \item{height}{Plot height.}
 
 \item{dpi}{PNG resolution.}
+
+\item{style}{Plot style passed to \code{plot_theme()}.}
 
 \item{txtsize}{Base text size.}
 }

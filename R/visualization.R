@@ -1,14 +1,13 @@
 # ========================================================= #
 # PLOT THEME
 # ========================================================= #
-#' Flexible ggplot2 theme used across GnRHcell visualizations.
+#' Flexible ggplot2 theme used across DEGgo visualizations
 #'
-#' @param style Theme style. One of \code{"classic"}, \code{"minimal"},
-#' \code{"bw"}, \code{"test"}, \code{"void"}, \code{"dirty"}, or \code{"gray"}.
+#' @param style Theme style.
 #' @param txtsize Base text size.
 #' @param xy.val Show axis tick labels.
 #' @param x.ang X-axis text angle.
-#' @param hjust,vjust Horizontal and vertical justification for x-axis labels.
+#' @param hjust,vjust Horizontal and vertical justification.
 #' @param xlab,ylab Show x/y axis tick labels.
 #' @param xy.lab Show all axis tick labels.
 #' @param facet.face Facet label font face.
@@ -16,11 +15,11 @@
 #' @param txt.face Text font face.
 #' @param ttl.pos Plot title position.
 #' @param x.ttl,y.ttl Show x/y axis titles.
-#' @param ticks,line,border Logical overrides for ticks, axis lines, and panel border.
-#' @param grid.major,grid.minor Logical overrides for major/minor grid lines.
+#' @param ticks,line,border Logical overrides.
+#' @param grid.major,grid.minor Logical overrides for grid lines.
 #' @param panel.fill Panel background fill.
 #' @param facet.bg Show facet background.
-#' @param mode Theme mode: \code{"light"} or \code{"dark"}.
+#' @param mode Theme mode.
 #' @param leg.pos Legend position.
 #' @param leg.dir Legend direction.
 #' @param leg.size Legend text size.
@@ -33,7 +32,7 @@
 #' @return A ggplot2 theme object.
 #' @export
 plot_theme <- function(
-    style = c("classic","minimal","bw","test","void","dirty","gray"),
+    style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
     txtsize = 12,
     xy.val = TRUE,
     x.ang = 0,
@@ -44,8 +43,8 @@ plot_theme <- function(
     xy.lab = TRUE,
     facet.face = "bold",
     ttl.face = "bold",
-    txt.face = c("plain","italic","bold"),
-    ttl.pos = c("center","left","right"),
+    txt.face = c("plain", "italic", "bold"),
+    ttl.pos = c("center", "left", "right"),
     x.ttl = TRUE,
     y.ttl = TRUE,
     ticks = NULL,
@@ -55,7 +54,7 @@ plot_theme <- function(
     grid.minor = NULL,
     panel.fill = "white",
     facet.bg = TRUE,
-    mode = c("light","dark"),
+    mode = c("light", "dark"),
     leg.pos = "right",
     leg.dir = "vertical",
     leg.size = 10,
@@ -71,196 +70,218 @@ plot_theme <- function(
   txt.face <- match.arg(txt.face)
   mode <- match.arg(mode)
 
-  # Canonical line width (THIS FIXES YOUR PROBLEM)
   lw <- 0.3
 
   if (is.null(line)) {
-    line <- style == "classic"
+    line <- identical(style, "classic")
   }
 
-  # Colors
   if (mode == "light") {
-    col.txt   <- "#1A1A1A"
-    col.grid  <- "#D9D9D9"
+    col.txt <- "#1A1A1A"
+    col.grid <- "#D9D9D9"
     col.panel <- panel.fill
     col.strip <- "#EFEFEF"
   } else {
-    col.txt   <- "#DDDDDD"
-    col.grid  <- "#444444"
+    col.txt <- "#DDDDDD"
+    col.grid <- "#444444"
     col.panel <- "#1E1E1E"
     col.strip <- "#383838"
   }
 
-  # Automatic x-label alignment
   if (is.null(hjust) || is.null(vjust)) {
-    if (x.ang == 0)   { hjust <- .5; vjust <- .5 }
-    else if (x.ang == 45) { hjust <- 1; vjust <- 1 }
-    else if (x.ang == 90) { hjust <- 1; vjust <- .5 }
-    else if (x.ang == 270){ hjust <- 0; vjust <- .5 }
-    else { hjust <- 1; vjust <- 1 }
+    if (x.ang == 0) {
+      hjust <- 0.5
+      vjust <- 0.5
+    } else if (x.ang == 45) {
+      hjust <- 1
+      vjust <- 1
+    } else if (x.ang == 90) {
+      hjust <- 1
+      vjust <- 0.5
+    } else if (x.ang == 270) {
+      hjust <- 0
+      vjust <- 0.5
+    } else {
+      hjust <- 1
+      vjust <- 1
+    }
   }
 
+  ttl.hjust <- switch(
+    ttl.pos,
+    left = 0,
+    center = 0.5,
+    right = 1
+  )
 
-  ttl.pos <- switch(ttl.pos, left = 0, center = .5, right = 1)
-
-  # Base theme components
-  base <- theme(
-    text = element_text(color = col.txt, size = txtsize, family = "Helvetica"),
-    axis.text.x = element_text(color = col.txt, size = txtsize),
-    axis.text.y = element_text(color = col.txt, size = txtsize),
-    axis.title  = element_text(size = txtsize),
-    plot.title  = element_text(
-      hjust = ttl.pos, face = ttl.face,
-      size = txtsize + 2, color = col.txt
+  base <- ggplot2::theme(
+    text = ggplot2::element_text(
+      color = col.txt,
+      size = txtsize,
+      family = "Helvetica",
+      face = txt.face
     ),
-    strip.text = element_text(face = facet.face, color = col.txt),
-    legend.title = element_text(size = leg.ttl.size + 2, face = "bold"),
-    legend.text  = element_text(size = leg.size),
+    axis.text.x = ggplot2::element_text(color = col.txt, size = txtsize),
+    axis.text.y = ggplot2::element_text(color = col.txt, size = txtsize),
+    axis.title = ggplot2::element_text(size = txtsize),
+    plot.title = ggplot2::element_text(
+      hjust = ttl.hjust,
+      face = ttl.face,
+      size = txtsize + 2,
+      color = col.txt
+    ),
+    strip.text = ggplot2::element_text(face = facet.face, color = col.txt),
+    strip.background = ggplot2::element_rect(fill = col.strip, color = NA),
+    panel.background = ggplot2::element_rect(fill = col.panel, color = NA),
+    legend.title = ggplot2::element_text(size = leg.ttl.size, face = "bold"),
+    legend.text = ggplot2::element_text(size = leg.size),
     legend.position = leg.pos,
-    legend.key.height = unit(.4, "cm"),
-    legend.key.width  = unit(.4, "cm"),
-    legend.background = element_blank(),
-    legend.box.background = element_blank(),
-    legend.key = element_blank(),
-    legend.box = "vertical",
-    legend.spacing.y = unit(0.05, "cm"),
-    legend.margin = ggplot2::margin(1,1,1,1),
+    legend.direction = leg.dir,
+    legend.justification = leg.just,
+    legend.key.height = grid::unit(0.4, "cm"),
+    legend.key.width = grid::unit(0.4, "cm"),
+    legend.background = ggplot2::element_blank(),
+    legend.box.background = ggplot2::element_blank(),
+    legend.key = ggplot2::element_blank(),
+    legend.spacing.y = grid::unit(0.05, "cm"),
+    legend.margin = ggplot2::margin(1, 1, 1, 1),
     ...
   )
 
-  # Preset themes
   preset <- switch(
     style,
-    minimal = theme_minimal(base_size = txtsize),
-    classic = theme_classic(base_size = txtsize),
-    bw      = theme_bw(base_size = txtsize),
-    test    = theme_test(base_size = txtsize),
-    void    = ggplot2::theme_void(base_size = txtsize),
-    dirty   = theme_minimal(base_size = txtsize) +
-      theme(
-        panel.grid = element_blank(),
-        panel.border = element_blank(),
-        axis.ticks = element_blank()
+    minimal = ggplot2::theme_minimal(base_size = txtsize),
+    classic = ggplot2::theme_classic(base_size = txtsize),
+    bw = ggplot2::theme_bw(base_size = txtsize),
+    test = ggplot2::theme_test(base_size = txtsize),
+    void = ggplot2::theme_void(base_size = txtsize),
+    dirty = ggplot2::theme_minimal(base_size = txtsize) +
+      ggplot2::theme(
+        panel.grid = ggplot2::element_blank(),
+        panel.border = ggplot2::element_blank(),
+        axis.ticks = ggplot2::element_blank()
       ),
-    gray    = theme_gray(base_size = txtsize) +
-      theme(
-        panel.background = element_rect(fill = "#EDEDED", color = NA),
-        panel.grid.major = element_line(color = "#CCCCCC", linewidth = lw),
-        panel.grid.minor = element_line(color = "#DDDDDD", linewidth = lw/2)
+    gray = ggplot2::theme_gray(base_size = txtsize) +
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "#EDEDED", color = NA),
+        panel.grid.major = ggplot2::element_line(color = "#CCCCCC", linewidth = lw),
+        panel.grid.minor = ggplot2::element_line(color = "#DDDDDD", linewidth = lw / 2)
       )
   )
 
   th <- preset + base
 
-  # Normalize panel borders for border-based themes
   if (style %in% c("bw", "test", "gray")) {
-    th <- th + theme(
-      panel.border = element_rect(
+    th <- th + ggplot2::theme(
+      panel.border = ggplot2::element_rect(
         linewidth = lw,
         color = col.txt,
         fill = NA
       ),
-      axis.line = element_blank()
+      axis.line = ggplot2::element_blank()
     )
   }
 
-  # Axis lines (classic-style)
-  if (line && style == "classic") {
-    th <- th + theme(
-      axis.line.x = element_line(color = col.txt, linewidth = lw),
-      axis.line.y = element_line(color = col.txt, linewidth = lw)
+  if (line && identical(style, "classic")) {
+    th <- th + ggplot2::theme(
+      axis.line.x = ggplot2::element_line(color = col.txt, linewidth = lw),
+      axis.line.y = ggplot2::element_line(color = col.txt, linewidth = lw)
     )
   } else {
-    th <- th + theme(axis.line = element_blank())
+    th <- th + ggplot2::theme(axis.line = ggplot2::element_blank())
   }
 
-  # X-axis angle
   if (xy.val && xlab) {
-    th <- th + theme(
-      axis.text.x = element_text(angle = x.ang, hjust = hjust, vjust = vjust)
+    th <- th + ggplot2::theme(
+      axis.text.x = ggplot2::element_text(
+        angle = x.ang,
+        hjust = hjust,
+        vjust = vjust
+      )
     )
   }
 
-  # Label / tick / grid overrides
-  if (!xy.lab) th <- th + theme(axis.text = element_blank(), axis.ticks = element_blank())
-  if (!xlab)   th <- th + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
-  if (!ylab)   th <- th + theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
-  if (!x.ttl)  th <- th + theme(axis.title.x = element_blank())
-  if (!y.ttl)  th <- th + theme(axis.title.y = element_blank())
+  if (!xy.lab) {
+    th <- th + ggplot2::theme(
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank()
+    )
+  }
+
+  if (!xlab) {
+    th <- th + ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      axis.ticks.x = ggplot2::element_blank()
+    )
+  }
+
+  if (!ylab) {
+    th <- th + ggplot2::theme(
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank()
+    )
+  }
+
+  if (!x.ttl) th <- th + ggplot2::theme(axis.title.x = ggplot2::element_blank())
+  if (!y.ttl) th <- th + ggplot2::theme(axis.title.y = ggplot2::element_blank())
 
   if (!is.null(ticks)) {
-    th <- th + if (ticks)
-      theme(axis.ticks = element_line(color = col.txt, linewidth = lw))
-    else
-      theme(axis.ticks = element_blank())
+    th <- th + if (ticks) {
+      ggplot2::theme(axis.ticks = ggplot2::element_line(color = col.txt, linewidth = lw))
+    } else {
+      ggplot2::theme(axis.ticks = ggplot2::element_blank())
+    }
   }
 
   if (!is.null(border)) {
-    th <- th + if (border)
-      theme(panel.border = element_rect(color = col.grid, fill = NA, linewidth = lw))
-    else
-      theme(panel.border = element_blank())
+    th <- th + if (border) {
+      ggplot2::theme(panel.border = ggplot2::element_rect(color = col.grid, fill = NA, linewidth = lw))
+    } else {
+      ggplot2::theme(panel.border = ggplot2::element_blank())
+    }
   }
 
   if (!is.null(grid.major)) {
-    th <- th + if (grid.major)
-      theme(panel.grid.major = element_line(color = col.grid, linewidth = lw))
-    else
-      theme(panel.grid.major = element_blank())
+    th <- th + if (grid.major) {
+      ggplot2::theme(panel.grid.major = ggplot2::element_line(color = col.grid, linewidth = lw))
+    } else {
+      ggplot2::theme(panel.grid.major = ggplot2::element_blank())
+    }
   }
 
   if (!is.null(grid.minor)) {
-    th <- th + if (grid.minor)
-      theme(panel.grid.minor = element_line(color = col.grid, linewidth = lw/2))
-    else
-      theme(panel.grid.minor = element_blank())
+    th <- th + if (grid.minor) {
+      ggplot2::theme(panel.grid.minor = ggplot2::element_line(color = col.grid, linewidth = lw / 2))
+    } else {
+      ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+    }
   }
 
   if (!facet.bg) {
-    th <- th + theme(strip.background = element_blank())
+    th <- th + ggplot2::theme(strip.background = ggplot2::element_blank())
   }
 
   if (!is.null(leg.ttl.text)) {
-    th <- th + labs(color = leg.ttl.text)
+    th <- th + ggplot2::labs(color = leg.ttl.text, fill = leg.ttl.text)
   }
 
-  # Void cleanup
-  # Void cleanup
-  if (style == "void") {
-    th <- th + theme(
-      axis.text.x  = element_blank(),
-      axis.text.y  = element_blank(),
-      axis.ticks   = element_blank(),
-      axis.title.x = element_blank(),
-      axis.title.y = element_blank(),
-      axis.line    = element_blank(),
-      panel.grid   = element_blank(),
-      panel.border = element_blank(),
-      strip.text   = element_blank(),
-      strip.background = element_blank()
+  if (identical(style, "void")) {
+    th <- th + ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.line = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      panel.border = ggplot2::element_blank(),
+      strip.text = ggplot2::element_blank(),
+      strip.background = ggplot2::element_blank()
     )
-    line <- FALSE
-    ticks <- FALSE
-    border <- FALSE
-    grid.major <- FALSE
-    grid.minor <- FALSE
-    facet.bg <- FALSE
-  }
-
-  # Dirty theme
-  if (style == "dirty") {
-    line       <- TRUE
-    ticks      <- FALSE
-    border     <- FALSE
-    grid.major <- FALSE
-    grid.minor <- FALSE
-    facet.bg   <- FALSE
   }
 
   th
 }
-
-
 
 # ========================================================= #
 # VOLCANO PLOT
@@ -295,6 +316,7 @@ plot_theme <- function(
 #' @param width Plot width.
 #' @param height Plot height.
 #' @param txtsize Base text size.
+#' @param style Plot style passed to \code{plot_theme()}.
 #' @param dpi PNG resolution.
 #'
 #' @return A \code{ggplot} object.
@@ -312,8 +334,8 @@ plot_volcano <- function(
     top_n_labels = 10,
     genes_highlight = NULL,
     colors = c(
-      "Up" = "#E64B35",
-      "Down" = "#4DBBD5",
+      "Up" = "#740001",
+      "Down" = "#6497b1",
       "Ns" = "gray70"
     ),
     point_size = 1.5,
@@ -613,6 +635,11 @@ plot_volcano <- function(
 #' @param filename Output filename without extension.
 #' @param intgroup Metadata columns used for PCA coloring/grouping.
 #' @param title Plot title.
+#' @param color_by Metadata column used for point color.
+#' @param shape_by Metadata column used for point shape.
+#' @param width Plot width in inches.
+#' @param height Plot height in inches.
+#' @param dpi Plot resolution.
 #'
 #' @return A list containing the VST object, PCA data, and plot.
 #' @export
@@ -657,7 +684,7 @@ plot_pca <- function(
     groups <- "sample"
   }
 
-  colData(dds)[, groups] <- metadata[colnames(dds), groups, drop = FALSE]
+  SummarizedExperiment::colData(dds)[, groups] <- metadata[colnames(dds), groups, drop = FALSE]
 
   vsd <- DESeq2::varianceStabilizingTransformation(
     dds,
@@ -813,6 +840,19 @@ plot_pca <- function(
 #' @param filename Output file name without extension.
 #' @param fallback Logical. If TRUE, use top ranked genes when no significant
 #'   genes pass \code{padj_cutoff}.
+#' @param contrast Contrast name to plot.
+#' @param sample_subset Optional sample vector to retain.
+#' @param metadata_filter Optional named list used to filter metadata.
+#' @param annotation_cols Metadata columns shown as heatmap annotations.
+#' @param annotation_colors Named list of annotation colors.
+#' @param order_by Metadata columns used to order samples.
+#' @param scale_rows Logical; scale rows before plotting.
+#' @param cluster_rows Logical; cluster genes.
+#' @param cluster_cols Logical; cluster samples.
+#' @param fontsize_row Row label font size.
+#' @param fontsize_col Column label font size.
+#' @param width Plot width in inches.
+#' @param height Plot height in inches.
 #'
 #' @return Heatmap expression matrix, invisibly.
 #'
@@ -985,7 +1025,7 @@ plot_heatmap <- function(
     main = main,
     border_color = "#9C9391",
     color = grDevices::colorRampPalette(
-      c("#3B4CC0", "#F7F7F7", "#B40426")
+      c("#6497b1", "#F7F7F7", "#740001")
     )(100),
     breaks = seq(-2, 2, length.out = 101),
     #color = grDevices::colorRampPalette(c("purple", "black", "yellow"))(100),
@@ -1214,7 +1254,6 @@ plot_heatmap <- function(
 #' @param assay_transform Expression transformation.
 #' @param annotation_cols Metadata columns shown above heatmap.
 #' @param annotation_colors Named list of annotation colors.
-#' @param annotation_palette Palette used when colors are generated automatically.
 #' @param order_by Metadata columns used to order samples.
 #' @param output_dir Output directory.
 #' @param filename Output filename.
@@ -1226,9 +1265,13 @@ plot_heatmap <- function(
 #' @param height Plot height.
 #' @param fontsize_row Row names size.
 #' @param fontsize_col Column names size.
+#' @param color Heatmap color palette.
+#' @param breaks Numeric vector of color breaks.
+#' @param border_color Border color for heatmap cells.
 #'
 #' @return Expression matrix used for plotting.
 #' @export
+#'
 plot_gene_heatmap <- function(
     counts,
     metadata,
@@ -1243,6 +1286,8 @@ plot_gene_heatmap <- function(
     output_dir = "DEGgo_out",
     filename = "Gene_Expression_Heatmap",
     main = "Selected gene expression heatmap",
+    color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
+    breaks = seq(-2, 2, length.out = 101),
     border_color = "#9C9391",
     scale_rows = TRUE,
     cluster_rows = TRUE,
@@ -1339,10 +1384,9 @@ plot_gene_heatmap <- function(
     treeheight_col = 0,
     angle_col = 90,
     main = main,
-    color = grDevices::colorRampPalette(
-      c("#3B4CC0", "#F7F7F7", "#B40426")
-    )(100),
-    breaks = seq(-2, 2, length.out = 101),
+    color = color,
+    breaks = breaks,
+    border_color = border_color,
     filename = file.path(output_dir, paste0(filename, ".png")),
     width = width,
     height = height
@@ -1379,6 +1423,19 @@ plot_gene_heatmap <- function(
 #' @param height Plot height in inches.
 #' @param dpi Plot resolution.
 #'
+#' @examples
+#' \dontrun{
+#' qc <- explore_bulk_rnaseq(counts, metadata)
+#'
+#' cleaned <- remove_flagged_samples(
+#'   counts = counts,
+#'   metadata = metadata,
+#'   qc_table = qc$qc
+#' )
+#'
+#' counts <- cleaned$counts
+#' metadata <- cleaned$metadata
+#' }
 #' @return Invisibly returns a list containing QC table, plots, correlation
 #' matrix, PCA plots, top variable genes, marker heatmap object, and output path.
 #'
@@ -1495,7 +1552,7 @@ explore_bulk_rnaseq <- function(
     annotation_colors = ann_colors,
     filename = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
     main = "Sample Correlation",
-    color = grDevices::colorRampPalette(c("#3B4CC0", "#F7F7F7", "#B40426"))(100),
+    color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
     fontsize = 8,
     width = 12,
     height = 10
@@ -1612,7 +1669,7 @@ explore_bulk_rnaseq <- function(
         cluster_cols = TRUE,
         #color = grDevices::colorRampPalette(c("purple", "black", "yellow"))(100),
         color = grDevices::colorRampPalette(
-          c("#3B4CC0", "#F7F7F7", "#B40426")
+          c("#6497b1", "#F7F7F7", "#740001")
         )(100),
         breaks = seq(-2, 2, length.out = 101),
         filename = file.path(output_dir, "TopVariableGenes_Heatmap.png"),
@@ -1637,7 +1694,7 @@ explore_bulk_rnaseq <- function(
         annotation_colors = ann_colors,
         order_by = intersect(c("tissue", "sex", "treatment", "condition"), colnames(metadata)),
         color = grDevices::colorRampPalette(
-          c("#3B4CC0", "#F7F7F7", "#B40426")
+          c("#6497b1", "#F7F7F7", "#740001")
         )(100),
         breaks = seq(-2, 2, length.out = 101),
         output_dir = output_dir,
@@ -1701,6 +1758,7 @@ explore_bulk_rnaseq <- function(
 }
 
 
+
 # ========================================================= #
 # MARKER SCORE CHECK
 # ========================================================= #
@@ -1753,6 +1811,7 @@ explore_bulk_rnaseq <- function(
 #' Gene matching is case-insensitive.
 #'
 #' @examples
+#' \dontrun{
 #' marker_sets <- list(
 #'   BAT = c("Ucp1", "Cidea", "Ppargc1a"),
 #'   WAT = c("Adipoq", "Lep", "Fabp4"),
@@ -1771,7 +1830,7 @@ explore_bulk_rnaseq <- function(
 #' head(res$scores)
 #' res$swaps
 #' print(res$plot)
-#'
+#'}
 #' @importFrom reshape2 melt
 #' @importFrom ggplot2 ggplot aes geom_col coord_flip labs
 #'
@@ -1892,3 +1951,157 @@ marker_score_check <- function(
 }
 
 
+
+
+# ========================================================= #
+# PLOT GO TERMS
+# ========================================================= #
+#' Plot GO terms by regulation status
+#'
+#' @param go_df GO enrichment data frame from \code{run_go_enrichment()}.
+#' @param go_terms_of_interest Optional GO terms to display.
+#' @param comparison Optional comparison name used as plot title.
+#' @param top_n Number of GO terms to show per regulation.
+#' @param wrap_width Width for wrapping GO term labels.
+#' @param color_values Named colors for Up and Down.
+#' @param size_range Point size range.
+#' @param style Theme style passed to \code{plot_theme()}.
+#' @param x_angle X-axis text angle.
+#' @param font_size Base font size.
+#'
+#' @return A ggplot object.
+#' @export
+plot_go_terms <- function(
+    go_df,
+    go_terms_of_interest = NULL,
+    comparison = NULL,
+    top_n = 10,
+    wrap_width = 50,
+    color_values = c(
+      "Up" = "#740001",
+      "Down" = "#6497b1"
+    ),
+    size_range = c(2, 6),
+    style = "bw",
+    x_angle = 0,
+    font_size = 12
+) {
+
+  for (pkg in c("ggplot2", "dplyr", "stringr", "forcats")) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      stop("Package '", pkg, "' is required.", call. = FALSE)
+    }
+  }
+
+  if (is.null(go_df) || !is.data.frame(go_df) || nrow(go_df) == 0) {
+    stop("go_df is empty.", call. = FALSE)
+  }
+
+  required <- c("Description", "FoldEnrichment", "p.adjust", "Count", "Regulation")
+  missing <- setdiff(required, colnames(go_df))
+
+  if (length(missing) > 0) {
+    stop(
+      "Missing column(s) in go_df: ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  df <- go_df |>
+    dplyr::mutate(
+      Description = stringr::str_to_upper(.data[["Description"]]),
+      Regulation = factor(.data[["Regulation"]], levels = c("Up", "Down")),
+      FoldEnrichment = as.numeric(.data[["FoldEnrichment"]]),
+      p.adjust = as.numeric(.data[["p.adjust"]]),
+      Count = as.integer(.data[["Count"]])
+    ) |>
+    dplyr::filter(
+      !is.na(.data[["Regulation"]]),
+      is.finite(.data[["FoldEnrichment"]]),
+      is.finite(.data[["p.adjust"]]),
+      .data[["p.adjust"]] > 0
+    )
+
+  if (nrow(df) == 0) {
+    stop("No valid GO terms after cleaning.", call. = FALSE)
+  }
+
+  if (!is.null(go_terms_of_interest)) {
+    go_terms_of_interest <- stringr::str_to_upper(go_terms_of_interest)
+
+    df <- df |>
+      dplyr::filter(.data[["Description"]] %in% go_terms_of_interest)
+  }
+
+  df <- df |>
+    dplyr::group_by(.data[["Regulation"]], .data[["Description"]]) |>
+    dplyr::arrange(
+      .data[["p.adjust"]],
+      dplyr::desc(.data[["FoldEnrichment"]]),
+      .by_group = TRUE
+    ) |>
+    dplyr::slice_head(n = 1) |>
+    dplyr::ungroup()
+
+  if (is.null(go_terms_of_interest)) {
+    df <- df |>
+      dplyr::group_by(.data[["Regulation"]]) |>
+      dplyr::arrange(
+        .data[["p.adjust"]],
+        dplyr::desc(.data[["FoldEnrichment"]]),
+        .by_group = TRUE
+      ) |>
+      dplyr::slice_head(n = top_n) |>
+      dplyr::ungroup()
+  }
+
+  df <- df |>
+    dplyr::mutate(
+      log10FDR = -log10(.data[["p.adjust"]]),
+      Description_wrapped = stringr::str_wrap(.data[["Description"]], width = wrap_width),
+      Description_wrapped = forcats::fct_reorder(
+        .data[["Description_wrapped"]],
+        .data[["log10FDR"]]
+      )
+    )
+
+  if (nrow(df) == 0) {
+    stop("No GO terms left after filtering.", call. = FALSE)
+  }
+
+  ggplot2::ggplot(
+    df,
+    ggplot2::aes(
+      x = .data[["log10FDR"]],
+      y = .data[["Description_wrapped"]]
+    )
+  ) +
+    ggplot2::geom_segment(
+      ggplot2::aes(
+        x = 0,
+        xend = .data[["log10FDR"]],
+        yend = .data[["Description_wrapped"]],
+        color = .data[["Regulation"]]
+      ),
+      linewidth = 0.8,
+      alpha = 1
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(
+        size = .data[["FoldEnrichment"]],
+        color = .data[["Regulation"]]
+      ),
+      alpha = 1
+    ) +
+    ggplot2::scale_color_manual(values = color_values, drop = FALSE) +
+    ggplot2::scale_size(range = size_range) +
+    ggplot2::labs(
+      x = expression(-log[10](FDR)),
+      y = NULL,
+      size = "Fold enrichment",
+      color = "Regulation",
+      title = comparison %||% "GO enrichment"
+    ) +
+    plot_theme(style = style, x.ang = x_angle, txtsize = font_size)
+}

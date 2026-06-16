@@ -72,6 +72,7 @@ The function performs a simple signature-based classification:
 Gene matching is case-insensitive.
 }
 \examples{
+\dontrun{
 marker_sets <- list(
   BAT = c("Ucp1", "Cidea", "Ppargc1a"),
   WAT = c("Adipoq", "Lep", "Fabp4"),
@@ -90,5 +91,5 @@ res <- marker_score_check(
 head(res$scores)
 res$swaps
 print(res$plot)
-
+}
 }

@@ -34,18 +34,16 @@ Default is \code{c("gene_id", "gene_name")}.}
 \item{verbose}{Logical; print summary messages. Default is \code{TRUE}.}
 }
 \value{
-A list with:
-\describe{
-\item{counts}{Filtered counts table.}
-\item{metadata}{Filtered metadata table.}
-\item{removed_samples}{Vector of removed sample names.}
-}
+A list with counts, metadata, and removed sample names.
 }
 \description{
 Removes samples flagged for exclusion in a QC table and returns
 synchronized counts and metadata objects.
 }
 \examples{
+\dontrun{
+qc <- explore_bulk_rnaseq(counts, metadata)
+
 cleaned <- remove_flagged_samples(
   counts = counts,
   metadata = metadata,
@@ -54,5 +52,6 @@ cleaned <- remove_flagged_samples(
 
 counts <- cleaned$counts
 metadata <- cleaned$metadata
+}
 
 }

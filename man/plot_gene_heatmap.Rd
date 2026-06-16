@@ -18,6 +18,8 @@ plot_gene_heatmap(
   output_dir = "DEGgo_out",
   filename = "Gene_Expression_Heatmap",
   main = "Selected gene expression heatmap",
+  color = (grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001")))(100),
+  breaks = seq(-2, 2, length.out = 101),
   border_color = "#9C9391",
   scale_rows = TRUE,
   cluster_rows = TRUE,
@@ -55,6 +57,12 @@ plot_gene_heatmap(
 
 \item{main}{Heatmap title.}
 
+\item{color}{Heatmap color palette.}
+
+\item{breaks}{Numeric vector of color breaks.}
+
+\item{border_color}{Border color for heatmap cells.}
+
 \item{scale_rows}{Scale genes.}
 
 \item{cluster_rows}{Cluster genes.}
@@ -68,8 +76,6 @@ plot_gene_heatmap(
 \item{width}{Plot width.}
 
 \item{height}{Plot height.}
-
-\item{annotation_palette}{Palette used when colors are generated automatically.}
 }
 \value{
 Expression matrix used for plotting.

@@ -60,3 +60,17 @@ distribution, density curves, sample correlation, hierarchical clustering,
 PCA plots, top variable gene heatmap, optional marker heatmap, and automatic
 sample QC flags.
 }
+\examples{
+\dontrun{
+qc <- explore_bulk_rnaseq(counts, metadata)
+
+cleaned <- remove_flagged_samples(
+  counts = counts,
+  metadata = metadata,
+  qc_table = qc$qc
+)
+
+counts <- cleaned$counts
+metadata <- cleaned$metadata
+}
+}

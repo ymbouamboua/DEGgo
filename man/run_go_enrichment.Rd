@@ -12,71 +12,51 @@ run_go_enrichment(
   show_category = 20,
   pvalue_cutoff = 0.05,
   qvalue_cutoff = 0.2,
-  p_adjust_method = "BH"
+  p_adjust_method = "BH",
+  logfc_col = "log2FoldChange",
+  entrez_col = "ENTREZID",
+  min_genes = 10
 )
 }
 \arguments{
-\item{sig_deg}{Significant DEG data frame. Must contain an \code{ENTREZID}
-column.}
+\item{sig_deg}{Significant DEG data frame. Must contain Entrez IDs and
+log2 fold-change values.}
 
 \item{ontology}{Character. GO ontology to test. One of \code{"BP"},
-\code{"MF"}, or \code{"CC"}. Default is \code{"BP"}.}
+\code{"MF"}, or \code{"CC"}.}
 
 \item{orgdb}{OrgDb annotation database used by
 \code{clusterProfiler::enrichGO()}.}
 
 \item{output_dir}{Character. Directory where enrichment tables and plots
-are exported. Default is \code{"DEGgo_out"}.}
+are exported.}
 
-\item{show_category}{Integer. Number of GO terms to display in plots.
-Default is \code{20}.}
+\item{show_category}{Integer. Number of GO terms to display per regulation.}
 
-\item{pvalue_cutoff}{Numeric. P-value cutoff for enrichment.
-Default is \code{0.05}.}
+\item{pvalue_cutoff}{Numeric. P-value cutoff for enrichment.}
 
-\item{qvalue_cutoff}{Numeric. Q-value cutoff for enrichment.
-Default is \code{0.2}.}
+\item{qvalue_cutoff}{Numeric. Q-value cutoff for enrichment.}
 
-\item{p_adjust_method}{Character. Multiple-testing correction method.
-Default is \code{"BH"}.}
+\item{p_adjust_method}{Character. Multiple-testing correction method.}
+
+\item{logfc_col}{Character. Column containing log2 fold-change values.}
+
+\item{entrez_col}{Character. Column containing Entrez IDs.}
+
+\item{min_genes}{Integer. Minimum number of genes required for enrichment.}
 }
 \value{
 A named list containing:
 \describe{
-\item{\code{go_results}}{GO enrichment result table as a data frame.}
-\item{\code{go_object}}{Original \code{enrichResult} object returned by
-\code{clusterProfiler::enrichGO()}.}
-\item{\code{bar_plot}}{GO enrichment bar plot.}
-\item{\code{dot_plot}}{GO enrichment dot plot.}
+\item{\code{go_results}}{Merged GO enrichment table with Regulation column.}
+\item{\code{go_by_regulation}}{Separate Up and Down enrichGO results.}
+\item{\code{go_plot}}{Combined Up/Down GO plot.}
 \item{\code{ontology}}{Ontology tested.}
-\item{\code{n_input_genes}}{Number of unique Entrez IDs used.}
+\item{\code{n_up_genes}}{Number of upregulated genes tested.}
+\item{\code{n_down_genes}}{Number of downregulated genes tested.}
 }
 }
 \description{
-Performs Gene Ontology enrichment analysis on significant differentially
-expressed genes using Entrez identifiers.
-}
-\details{
-The function expects that Entrez identifiers have already been added to
-the DEG table, for example using \code{map_entrez_ids()}.
-
-If no significant genes, no Entrez IDs, or no enriched terms are found,
-the function returns \code{NULL} or an empty result object without failing.
-}
-\examples{
-\dontrun{
-orgdb <- org.Mm.eg.db::org.Mm.eg.db
-
-go <- run_go_enrichment(
-  sig_deg = sig_deg,
-  ontology = "BP",
-  orgdb = orgdb,
-  output_dir = "DEGgo_out"
-)
-
-go$go_results
-go$bar_plot
-go$dot_plot
-}
-
+Performs Gene Ontology enrichment analysis separately on upregulated and
+downregulated significant differentially expressed genes using Entrez IDs.
 }

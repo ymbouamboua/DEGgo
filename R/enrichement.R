@@ -1,57 +1,32 @@
 #' Run Gene Ontology enrichment analysis
 #'
-#' Performs Gene Ontology enrichment analysis on significant differentially
-#' expressed genes using Entrez identifiers.
+#' Performs Gene Ontology enrichment analysis separately on upregulated and
+#' downregulated significant differentially expressed genes using Entrez IDs.
 #'
-#' @param sig_deg Significant DEG data frame. Must contain an \code{ENTREZID}
-#'   column.
+#' @param sig_deg Significant DEG data frame. Must contain Entrez IDs and
+#'   log2 fold-change values.
 #' @param ontology Character. GO ontology to test. One of \code{"BP"},
-#'   \code{"MF"}, or \code{"CC"}. Default is \code{"BP"}.
+#'   \code{"MF"}, or \code{"CC"}.
 #' @param orgdb OrgDb annotation database used by
 #'   \code{clusterProfiler::enrichGO()}.
 #' @param output_dir Character. Directory where enrichment tables and plots
-#'   are exported. Default is \code{"DEGgo_out"}.
-#' @param show_category Integer. Number of GO terms to display in plots.
-#'   Default is \code{20}.
+#'   are exported.
+#' @param show_category Integer. Number of GO terms to display per regulation.
 #' @param pvalue_cutoff Numeric. P-value cutoff for enrichment.
-#'   Default is \code{0.05}.
 #' @param qvalue_cutoff Numeric. Q-value cutoff for enrichment.
-#'   Default is \code{0.2}.
 #' @param p_adjust_method Character. Multiple-testing correction method.
-#'   Default is \code{"BH"}.
+#' @param logfc_col Character. Column containing log2 fold-change values.
+#' @param entrez_col Character. Column containing Entrez IDs.
+#' @param min_genes Integer. Minimum number of genes required for enrichment.
 #'
 #' @return A named list containing:
 #' \describe{
-#'   \item{\code{go_results}}{GO enrichment result table as a data frame.}
-#'   \item{\code{go_object}}{Original \code{enrichResult} object returned by
-#'   \code{clusterProfiler::enrichGO()}.}
-#'   \item{\code{bar_plot}}{GO enrichment bar plot.}
-#'   \item{\code{dot_plot}}{GO enrichment dot plot.}
+#'   \item{\code{go_results}}{Merged GO enrichment table with Regulation column.}
+#'   \item{\code{go_by_regulation}}{Separate Up and Down enrichGO results.}
+#'   \item{\code{go_plot}}{Combined Up/Down GO plot.}
 #'   \item{\code{ontology}}{Ontology tested.}
-#'   \item{\code{n_input_genes}}{Number of unique Entrez IDs used.}
-#' }
-#'
-#' @details
-#' The function expects that Entrez identifiers have already been added to
-#' the DEG table, for example using \code{map_entrez_ids()}.
-#'
-#' If no significant genes, no Entrez IDs, or no enriched terms are found,
-#' the function returns \code{NULL} or an empty result object without failing.
-#'
-#' @examples
-#' \dontrun{
-#' orgdb <- org.Mm.eg.db::org.Mm.eg.db
-#'
-#' go <- run_go_enrichment(
-#'   sig_deg = sig_deg,
-#'   ontology = "BP",
-#'   orgdb = orgdb,
-#'   output_dir = "DEGgo_out"
-#' )
-#'
-#' go$go_results
-#' go$bar_plot
-#' go$dot_plot
+#'   \item{\code{n_up_genes}}{Number of upregulated genes tested.}
+#'   \item{\code{n_down_genes}}{Number of downregulated genes tested.}
 #' }
 #'
 #' @export
@@ -63,99 +38,186 @@ run_go_enrichment <- function(
     show_category = 20,
     pvalue_cutoff = 0.05,
     qvalue_cutoff = 0.2,
-    p_adjust_method = "BH"
+    p_adjust_method = "BH",
+    logfc_col = "log2FoldChange",
+    entrez_col = "ENTREZID",
+    min_genes = 10
 ) {
 
   ontology <- match.arg(ontology)
 
   log <- .msg(verbose = TRUE)
-  log("Running GO enrichment...")
+  log("Running GO enrichment for Up and Down DEGs...")
 
-  if (!requireNamespace("clusterProfiler", quietly = TRUE)) {
-    stop("Package 'clusterProfiler' is required.", call. = FALSE)
+  for (pkg in c("clusterProfiler", "ggplot2")) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      stop("Package '", pkg, "' is required.", call. = FALSE)
+    }
   }
 
-  if (!requireNamespace("enrichplot", quietly = TRUE)) {
-    stop("Package 'enrichplot' is required.", call. = FALSE)
-  }
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required.", call. = FALSE)
-  }
-
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-  }
-
-  if (is.null(sig_deg) || nrow(sig_deg) == 0) {
+  if (is.null(sig_deg) || !is.data.frame(sig_deg) || nrow(sig_deg) == 0) {
     log("No significant DEGs found. Skipping GO enrichment.", type = "warn")
     return(NULL)
   }
 
-  if (!"ENTREZID" %in% colnames(sig_deg)) {
-    log("ENTREZID column not found. Skipping GO enrichment.", type = "warn")
+  required <- c(entrez_col, logfc_col)
+  missing <- setdiff(required, colnames(sig_deg))
+
+  if (length(missing) > 0) {
+    log(
+      paste0("Missing column(s): ", paste(missing, collapse = ", "),
+             ". Skipping GO enrichment."),
+      type = "warn"
+    )
     return(NULL)
   }
 
-  entrez <- unique(stats::na.omit(as.character(sig_deg$ENTREZID)))
+  sig_deg[[logfc_col]] <- as.numeric(sig_deg[[logfc_col]])
 
-  if (!length(entrez)) {
-    log("No ENTREZ IDs available for enrichment. Skipping GO enrichment.",
-        type = "warn")
-    return(NULL)
-  }
-
-  ego <- clusterProfiler::enrichGO(
-    gene = entrez,
-    OrgDb = orgdb,
-    keyType = "ENTREZID",
-    ont = ontology,
-    pAdjustMethod = p_adjust_method,
-    pvalueCutoff = pvalue_cutoff,
-    qvalueCutoff = qvalue_cutoff,
-    readable = TRUE
+  deg_list <- list(
+    Up = sig_deg[!is.na(sig_deg[[logfc_col]]) & sig_deg[[logfc_col]] > 0, , drop = FALSE],
+    Down = sig_deg[!is.na(sig_deg[[logfc_col]]) & sig_deg[[logfc_col]] < 0, , drop = FALSE]
   )
 
-  ego_df <- as.data.frame(ego)
+  run_one_go <- function(df, regulation) {
 
-  utils::write.csv(
-    ego_df,
-    file = file.path(output_dir, paste0("GO_", ontology, "_enrichment.csv")),
-    row.names = FALSE
-  )
+    entrez <- unique(stats::na.omit(as.character(df[[entrez_col]])))
 
-  if (!nrow(ego_df)) {
-    log("No enriched GO terms found. Skipping GO plots.", type = "warn")
+    if (length(entrez) < min_genes) {
+      log(paste0("Skipping ", regulation, ": fewer than ", min_genes, " genes."), type = "warn")
 
-    return(list(
+      return(list(
+        go_results = data.frame(),
+        go_object = NULL,
+        regulation = regulation,
+        n_input_genes = length(entrez)
+      ))
+    }
+
+    ego <- clusterProfiler::enrichGO(
+      gene = entrez,
+      OrgDb = orgdb,
+      keyType = "ENTREZID",
+      ont = ontology,
+      pAdjustMethod = p_adjust_method,
+      pvalueCutoff = pvalue_cutoff,
+      qvalueCutoff = qvalue_cutoff,
+      readable = TRUE
+    )
+
+    ego_df <- as.data.frame(ego)
+
+    if (!nrow(ego_df)) {
+      log(paste0("No enriched GO terms for ", regulation, "."), type = "warn")
+
+      return(list(
+        go_results = data.frame(),
+        go_object = ego,
+        regulation = regulation,
+        n_input_genes = length(entrez)
+      ))
+    }
+
+    ego_df$Description <- toupper(ego_df$Description)
+    ego_df$Regulation <- regulation
+    ego_df$Ontology <- ontology
+    ego_df$n_input_genes <- length(entrez)
+
+    out_prefix <- paste0("GO_", ontology, "_", regulation)
+
+    utils::write.csv(
+      ego_df,
+      file = file.path(output_dir, paste0(out_prefix, "_enrichment.csv")),
+      row.names = FALSE
+    )
+
+    utils::write.table(
+      ego_df,
+      file = file.path(output_dir, paste0(out_prefix, "_enrichment.tsv")),
+      sep = "\t",
+      quote = FALSE,
+      row.names = FALSE
+    )
+
+    saveRDS(
+      ego,
+      file = file.path(output_dir, paste0(out_prefix, "_enrichGO.rds"))
+    )
+
+    list(
       go_results = ego_df,
       go_object = ego,
-      bar_plot = NULL,
-      dot_plot = NULL,
-      ontology = ontology,
+      regulation = regulation,
       n_input_genes = length(entrez)
-    ))
+    )
   }
 
-  dot_plot <- enrichplot::dotplot(
-    ego,
-    showCategory = show_category,
-    title = paste0("GO enrichment: ", ontology)
+  go_by_regulation <- lapply(names(deg_list), function(reg) {
+    run_one_go(deg_list[[reg]], reg)
+  })
+
+  names(go_by_regulation) <- names(deg_list)
+
+  go_table <- do.call(
+    rbind,
+    lapply(go_by_regulation, function(x) {
+      if (is.null(x$go_results) || nrow(x$go_results) == 0) return(NULL)
+      x$go_results
+    })
   )
 
-  ggplot2::ggsave(
-    filename = file.path(output_dir, paste0("GO_", ontology, "_dotplot.png")),
-    plot = dot_plot,
-    width = 8,
-    height = 6,
-    dpi = 300
-  )
+  go_plot <- NULL
+
+  if (is.null(go_table) || nrow(go_table) == 0) {
+    log("No significant GO terms found for Up or Down genes.", type = "warn")
+    go_table <- data.frame()
+  } else {
+    rownames(go_table) <- NULL
+
+    utils::write.csv(
+      go_table,
+      file = file.path(output_dir, paste0("GO_", ontology, "_UpDown_enrichment.csv")),
+      row.names = FALSE
+    )
+
+    utils::write.table(
+      go_table,
+      file = file.path(output_dir, paste0("GO_", ontology, "_UpDown_enrichment.tsv")),
+      sep = "\t",
+      quote = FALSE,
+      row.names = FALSE
+    )
+
+    go_plot <- plot_go_terms(
+      go_df = go_table,
+      comparison = paste0("GO ", ontology, " enrichment"),
+      top_n = show_category
+    )
+
+    ggplot2::ggsave(
+      filename = file.path(output_dir, paste0("GO_", ontology, "_UpDown_plot.png")),
+      plot = go_plot,
+      width = 8,
+      height = 6,
+      dpi = 300
+    )
+
+    ggplot2::ggsave(
+      filename = file.path(output_dir, paste0("GO_", ontology, "_UpDown_plot.pdf")),
+      plot = go_plot,
+      width = 8,
+      height = 6
+    )
+  }
 
   list(
-    go_results = ego_df,
-    go_object = ego,
-    dot_plot = dot_plot,
+    go_results = go_table,
+    go_by_regulation = go_by_regulation,
+    go_plot = go_plot,
     ontology = ontology,
-    n_input_genes = length(entrez)
+    n_up_genes = nrow(deg_list$Up),
+    n_down_genes = nrow(deg_list$Down)
   )
 }
