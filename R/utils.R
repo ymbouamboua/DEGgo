@@ -1,33 +1,22 @@
-#' Format elapsed runtime into human-readable text
-#'
-#' Converts a duration in seconds into a compact human-readable string
-#' suitable for console logging.
-#'
-#' Formatting rules:
-#' \itemize{
-#'   \item seconds < 60 → \code{"7.6s"}
-#'   \item minutes < 60 → \code{"1m 0.6s"}
-#'   \item hours ≥ 1 → \code{"1h 3m 0.4s"}
-#' }
-#'
-#' @param seconds Numeric duration in seconds.
-#'
-#' @return A character string containing formatted elapsed time.
-#'
+# =========================================================
+# FORMAT RUNTIME
+# =========================================================
+
+#' Format runtime
 #' @keywords internal
 #' @noRd
 .format_duration <- function(seconds) {
-  
+
   if (is.null(seconds) || is.na(seconds)) {
     return(NA_character_)
   }
-  
+
   seconds <- as.numeric(seconds)
-  
-  hrs <- floor(seconds / 3600)
+
+  hrs  <- floor(seconds / 3600)
   mins <- floor((seconds %% 3600) / 60)
   secs <- seconds %% 60
-  
+
   if (hrs > 0) {
     sprintf("%dh %dm %.1fs", hrs, mins, secs)
   } else if (mins > 0) {
@@ -38,105 +27,156 @@
 }
 
 
+# =========================================================
+# LOGGER
+# =========================================================
 
-#' Styled GnRHcell logger
+#' Create package logger
 #'
-#' CRAN-safe console logger using ASCII labels and optional ANSI colors.
+#' Lightweight logger used throughout GnRHcell.
 #'
-#' @param verbose Logical; print messages.
-#' @param color Logical; use ANSI colors.
+#' @param verbose Logical.
+#' @param prefix Package prefix.
 #'
-#' @return A logging function.
+#' @return Logging function.
+#'
 #' @keywords internal
 #' @noRd
 .msg <- function(
     verbose = TRUE,
-    color = interactive()
+    prefix = "INFO"
 ) {
-  
+
   t0 <- Sys.time()
-  
-  col_reset  <- if (color) "\033[0m" else ""
-  col_bold   <- if (color) "\033[1m" else ""
-  
-  # devtools/cli-like palette
-  col_blue   <- if (color) "\033[34m" else ""
-  col_green  <- if (color) "\033[32m" else ""
-  col_yellow <- if (color) "\033[33m" else ""
-  col_red    <- if (color) "\033[31m" else ""
-  col_gray   <- if (color) "\033[90m" else ""
-  col_cyan   <- if (color) "\033[36m" else ""
-  col_purple <- if (color) "\033[35m" else ""
-  
+
   function(
     ...,
-    type = c("info", "step", "done", "warn", "error", "header"),
+    type = c(
+      "info",
+      "step",
+      "done",
+      "warn",
+      "error",
+      "header"
+    ),
     duration = NULL
   ) {
-    
+
     if (!isTRUE(verbose)) {
       return(invisible(NULL))
     }
-    
+
     type <- match.arg(type)
+
     txt <- paste(..., collapse = " ")
-    
+
     if (type == "done") {
+
       if (is.null(duration)) {
         duration <- as.numeric(
-          difftime(Sys.time(), t0, units = "secs")
+          difftime(
+            Sys.time(),
+            t0,
+            units = "secs"
+          )
         )
       }
-      
-      txt <- sprintf(
-        "%s Duration: %s",
+
+      txt <- paste0(
         txt,
+        " Duration: ",
         .format_duration(duration)
       )
     }
-    
-    prefix <- switch(
+
+    tag <- switch(
       type,
       info   = "[INFO]",
       step   = "[STEP]",
       done   = "[DONE]",
       warn   = "[WARN]",
       error  = "[ERROR]",
-      header = "[DEGgo]"
+      header = paste0("[", prefix, "]")
     )
-    
-    prefix_col <- switch(
-      type,
-      info   = col_gray,
-      step   = col_blue,
-      done   = col_green,
-      warn   = col_yellow,
-      error  = col_red,
-      header = paste0(col_purple, col_bold)
-    )
-    
-    txt_col <- switch(
-      type,
-      info   = col_gray,
-      step   = col_cyan,
-      done   = col_green,
-      warn   = col_yellow,
-      error  = col_red,
-      header = paste0(col_purple, col_bold)
-    )
-    
+
     cat(
-      prefix_col,
-      prefix,
-      col_reset,
+      tag,
       " ",
-      txt_col,
       txt,
-      col_reset,
       "\n",
       sep = ""
     )
-    
+
     invisible(NULL)
   }
 }
+
+
+# =========================================================
+# SAVE SESSION INFO
+# =========================================================
+
+#' Save session info
+#'
+#' @param output_dir outdir directory
+#'
+#' @keywords internal
+#' @noRd
+.safe_write_session_info <- function(output_dir) {
+  x <- tryCatch(
+    utils::capture.output(utils::sessionInfo()),
+    error = function(e) {
+      c(
+        "sessionInfo() failed.",
+        paste("Reason:", conditionMessage(e)),
+        "",
+        "Fallback:",
+        utils::capture.output(Sys.info()),
+        utils::capture.output(R.version)
+      )
+    }
+  )
+
+  writeLines(
+    x,
+    file.path(output_dir, "sessionInfo.txt")
+  )
+}
+
+
+# =========================================================
+# .flag_low_mad
+# =========================================================
+
+#' Flag low outliers using MAD
+#'
+#' @param x Numeric vector.
+#' @param nmad Number of MADs below the median.
+#'
+#' @return Logical vector.
+#' @keywords internal
+#' @noRd
+.flag_low_mad <- function(x, nmad = 3) {
+  med <- stats::median(x, na.rm = TRUE)
+  madv <- stats::mad(x, na.rm = TRUE)
+  x < med - nmad * madv
+}
+
+# =========================================================
+# .flag_high_mad
+# =========================================================
+
+#' Flag high outliers using MAD
+#'
+#' @param x Numeric vector.
+#' @param nmad Number of MADs above the median.
+#'
+#' @return Logical vector.
+#' @keywords internal
+#' @noRd
+.flag_high_mad <- function(x, nmad = 3) {
+  med <- stats::median(x, na.rm = TRUE)
+  madv <- stats::mad(x, na.rm = TRUE)
+  x > med + nmad * madv
+}
+

@@ -7,9 +7,10 @@ export_deg_results <- function(
     sig_deg,
     output_dir = "DEGgo_out"
 ) {
-  
-  log_msg("Exporting results...")
-  
+
+  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log("Exporting DEG results...", type = "info")
+
   cols <- c(
     "ENSEMBL",
     "SYMBOL",
@@ -23,15 +24,15 @@ export_deg_results <- function(
     "padj",
     "negLog10Padj"
   )
-  
+
   res_df <- res_df[, cols, drop = FALSE]
-  
+
   sig_deg <- sig_deg[
     order(sig_deg$padj),
     cols,
     drop = FALSE
   ]
-  
+
   utils::write.table(
     res_df,
     file.path(output_dir, "All_DEGs.tsv"),
@@ -39,7 +40,7 @@ export_deg_results <- function(
     row.names = FALSE,
     quote = FALSE
   )
-  
+
   utils::write.table(
     sig_deg,
     file.path(output_dir, "Significant_DEGs.tsv"),

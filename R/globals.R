@@ -1,7 +1,5 @@
 utils::globalVariables(
-
   c(
-
     "ENSEMBL",
     "ENTREZID",
     "FEATURE",
@@ -18,6 +16,7 @@ utils::globalVariables(
     "stat",
     "pvalue",
     "ensembl_gene_id",
-    "external_gene_name"
+    "external_gene_name",
+    ".data"
   )
 )

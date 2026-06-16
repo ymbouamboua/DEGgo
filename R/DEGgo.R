@@ -1,162 +1,69 @@
 #' Run DEGgo bulk RNA-seq downstream analysis
 #'
 #' Run an automated bulk RNA-seq downstream analysis workflow including
-#' differential expression analysis, result annotation, visualization,
-#' heatmap generation, PCA analysis, and Gene Ontology enrichment.
+#' input preparation, sample matching, differential expression analysis,
+#' result annotation, visualization, heatmap generation,
+#' PCA analysis, and Gene Ontology enrichment.
 #'
-#' The function supports two analysis modes:
-#' \itemize{
-#'   \item \code{"single"}: run one differential expression analysis using
-#'   \code{design_formula} and optional \code{contrast}.
-#'   \item \code{"pairwise"}: run multiple pairwise contrasts generated
-#'   automatically or supplied by the user.
-#' }
+#' DEGgo automatically detects common gene identifier columns
+#' (e.g. gene_id, ENSEMBL, gene) and optional gene annotation
+#' columns (e.g. gene_name, SYMBOL), allowing flexible input
+#' count tables from multiple RNA-seq pipelines.
 #'
-#' @param counts Raw count matrix with genes as rows and samples as columns.
-#'   Column names must match sample identifiers in \code{metadata}.
-#' @param metadata Sample metadata data frame. Row names should correspond to
-#'   sample names in \code{counts}. If a \code{sample} column is present, it can
-#'   be used upstream by \code{prepare_counts_metadata()} to define row names.
-#' @param output_dir Character. Directory where results will be exported.
-#'   If \code{NULL}, a timestamped output directory is created automatically.
-#' @param padj_cutoff Numeric. Adjusted p-value cutoff used to define
-#'   significant differentially expressed genes.
-#' @param logfc_cutoff Numeric. Absolute log2 fold-change cutoff used to define
-#'   significant differentially expressed genes.
-#' @param top_n_heatmap Integer. Number of top genes displayed in the heatmap.
-#' @param top_n_labels Integer. Number of top genes labeled in the volcano plot.
-#' @param ontology Character. Gene Ontology category used for enrichment.
-#'   One of \code{"BP"}, \code{"MF"}, or \code{"CC"}.
-#' @param organism Character. Organism used for gene annotation.
-#'   One of \code{"human"}, \code{"mouse"}, or \code{"rat"}.
-#' @param orgdb Optional OrgDb annotation object. If \code{NULL}, the OrgDb is
-#'   selected automatically from \code{organism}.
-#' @param method Character. Differential expression engine.
-#'   One of \code{"DESeq2"}, \code{"edgeR"}, or \code{"limma"}.
-#' @param analysis_mode Character. Analysis mode. Use \code{"single"} for one
-#'   differential expression analysis or \code{"pairwise"} for multiple
-#'   pairwise comparisons.
-#' @param contrast Optional contrast passed to the differential expression
-#'   method in \code{"single"} mode. For DESeq2, this is typically a character
-#'   vector such as \code{c("condition", "treated", "control")}.
-#' @param design_formula Formula. Design formula used for differential
-#'   expression analysis in \code{"single"} mode.
-#' @param pairwise_group_cols Character vector. Metadata columns used to build
-#'   combined groups for pairwise analysis. For example,
-#'   \code{c("condition", "sex")} creates groups such as
-#'   \code{"WT_F"} and \code{"KO_M"}.
-#' @param pairwise_contrast_col Character. Name of the combined metadata column
-#'   created for pairwise analysis.
-#' @param pairwise_contrasts Optional named list of pairwise contrasts. Each
-#'   contrast must be a character vector of length three:
-#'   \code{c(pairwise_contrast_col, level_1, level_2)}. If \code{NULL} and
-#'   \code{pairwise_auto = TRUE}, contrasts are generated automatically.
-#' @param filter_method Character. Gene filtering method.
-#'   One of \code{"count"}, \code{"cpm"}, or \code{"none"}.
-#' @param pairwise_auto Logical. If \code{TRUE}, automatically generate
-#'   pairwise contrasts when \code{pairwise_contrasts = NULL}.
-#' @param pairwise_mode Character. Pairwise contrast generation mode:
-#'   \itemize{
-#'     \item \code{"all"}: all pairwise comparisons among combined groups.
-#'     \item \code{"within_first"}: comparisons within levels of the first
-#'     column in \code{pairwise_group_cols}.
-#'     \item \code{"within_second"}: comparisons within levels of the second
-#'     column in \code{pairwise_group_cols}.
-#'   }
-#' @param min_count Integer. Minimum count required for count-based filtering.
-#' @param min_samples Integer. Minimum number of samples required to pass
-#'   the count threshold.
-#' @param min_total Integer. Minimum total count required across all samples.
-#' @param seed Integer. Random seed for reproducibility.
+#' @param counts Raw count table or matrix.
+#' @param metadata Sample metadata data frame.
+#' @param gene_col Character vector of possible gene identifier columns.
+#'   Used to identify the column containing unique gene IDs
+#'   (e.g. ENSEMBL IDs) in the counts table.
+#'   The first matching column is used automatically.
+#' @param feature_col Character vector of possible feature annotation
+#'   columns containing gene symbols or gene names.
+#'   If present, this information is retained and used for
+#'   annotation, plotting, and reporting.
+#' @param sample_col Character vector of possible sample identifier
+#'   columns in the metadata table.
+#'   The first matching column is used to match metadata
+#'   with count matrix columns.
+#' @param prepare_input Logical. If TRUE, automatically matches counts and
+#'   metadata using \code{prepare_counts_metadata()}.
+#' @param output_dir Output directory. If NULL, a dated directory is created.
+#' @param padj_cutoff Adjusted p-value cutoff.
+#' @param logfc_cutoff Absolute log2 fold-change cutoff.
+#' @param top_n_heatmap Number of top genes for heatmap.
+#' @param top_n_labels Number of top genes labeled in volcano plot.
+#' @param ontology GO ontology: BP, MF, or CC.
+#' @param organism Organism: human, mouse, or rat.
+#' @param orgdb Optional OrgDb object.
+#' @param method DE method: DESeq2, edgeR, or limma.
+#' @param analysis_mode Analysis mode: single or pairwise.
+#' @param contrast Optional contrast for single analysis.
+#' @param design_formula Design formula.
+#' @param pairwise_group_cols Metadata columns for pairwise groups.
+#' @param pairwise_contrast_col Name of pairwise contrast column.
+#' @param pairwise_contrasts Optional named list of contrasts.
+#' @param filter_method Filtering method: count, cpm, or none.
+#' @param pairwise_auto Automatically generate pairwise contrasts.
+#' @param pairwise_mode Pairwise mode: all, within_first, or within_second.
+#' @param min_count Minimum count for filtering.
+#' @param min_samples Minimum samples for filtering.
+#' @param min_total Minimum total count for filtering.
+#' @param seed Random seed.
 #'
-#' @return
-#' If \code{analysis_mode = "single"}, returns a list containing:
-#' \itemize{
-#'   \item \code{dds}: DESeq2 dataset object or equivalent model object.
-#'   \item \code{res_df}: annotated differential expression results.
-#'   \item \code{sig_deg}: significant differentially expressed genes.
-#'   \item \code{volcano_plot}: volcano plot object.
-#'   \item \code{pca_plot}: PCA plot object, when available.
-#'   \item \code{heatmap_matrix}: expression matrix used for heatmap,
-#'   when available.
-#'   \item \code{go_results}: Gene Ontology enrichment results.
-#' }
-#'
-#' If \code{analysis_mode = "pairwise"}, returns a list containing:
-#' \itemize{
-#'   \item \code{dds}: DESeq2 dataset object.
-#'   \item \code{results}: named list of pairwise differential expression
-#'   result tables.
-#'   \item \code{summary}: summary table for all pairwise comparisons.
-#'   \item \code{metadata}: metadata used in the pairwise analysis.
-#'   \item \code{contrast_col}: combined contrast column name.
-#'   \item \code{contrast_levels}: available contrast levels.
-#' }
-#'
-#' @details
-#' In \code{"pairwise"} mode, the function first creates a combined group
-#' variable from \code{pairwise_group_cols}. For example, if
-#' \code{pairwise_group_cols = c("condition", "sex")}, the combined groups may
-#' be \code{"WT_F"}, \code{"WT_M"}, \code{"KO_F"}, and \code{"KO_M"}.
-#'
-#' When \code{pairwise_contrasts = NULL} and \code{pairwise_auto = TRUE},
-#' pairwise contrasts are generated automatically according to
-#' \code{pairwise_mode}. Users can also provide a custom named list of
-#' contrasts for full control.
-#'
-#' @examples
-#' \dontrun{
-#' # Single comparison
-#' results <- run_deggo(
-#'   counts = counts,
-#'   metadata = metadata,
-#'   organism = "mouse",
-#'   method = "DESeq2",
-#'   design_formula = ~ condition,
-#'   contrast = c("condition", "treated", "control")
-#' )
-#'
-#' # Automatic pairwise comparisons among condition-sex groups
-#' results_pairwise <- run_deggo(
-#'   counts = counts,
-#'   metadata = metadata,
-#'   organism = "mouse",
-#'   method = "DESeq2",
-#'   analysis_mode = "pairwise",
-#'   pairwise_group_cols = c("condition", "sex"),
-#'   pairwise_mode = "all"
-#' )
-#'
-#' # User-defined pairwise contrasts
-#' my_contrasts <- list(
-#'   treated_male_vs_control_male =
-#'     c("comparison_group", "treated_M", "control_M"),
-#'   treated_female_vs_control_female =
-#'     c("comparison_group", "treated_F", "control_F")
-#' )
-#'
-#' results_custom <- run_deggo(
-#'   counts = counts,
-#'   metadata = metadata,
-#'   organism = "mouse",
-#'   method = "DESeq2",
-#'   analysis_mode = "pairwise",
-#'   pairwise_group_cols = c("condition", "sex"),
-#'   pairwise_contrasts = my_contrasts
-#' )
-#' }
-#'
+#' @return A list containing DEG results, plots, GO results, and output path.
 #' @export
-#' 
 run_deggo <- function(
     counts,
     metadata,
+    gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
+    feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
+    sample_col = c("sample", "Sample", "SAMPLE"),
+    prepare_input = TRUE,
     output_dir = NULL,
     padj_cutoff = 0.05,
     logfc_cutoff = 0.25,
     top_n_heatmap = 50,
     top_n_labels = 10,
-    ontology = "BP",
+    ontology = c("BP", "MF", "CC"),
     organism = c("human", "mouse", "rat"),
     orgdb = NULL,
     method = c("DESeq2", "edgeR", "limma"),
@@ -174,44 +81,107 @@ run_deggo <- function(
     min_total = 10,
     seed = 123
 ) {
-  
+
   set.seed(seed)
-  
+
   method <- match.arg(method)
   filter_method <- match.arg(filter_method)
   organism <- match.arg(organism)
   analysis_mode <- match.arg(analysis_mode)
   pairwise_mode <- match.arg(pairwise_mode)
-  
-  log <- .msg(verbose = TRUE)
+  ontology <- match.arg(ontology)
+
+  log <- .msg(verbose = TRUE, prefix = "DEGgo")
   t_start <- Sys.time()
-  
+
   log("==== STARTING DEGgo ANALYSIS ====", type = "header")
-  
-  log("Resolving analysis parameters", type = "step")
-  
+  log("[1/10] Resolving analysis parameters", type = "step")
+
+  if (is.null(output_dir)) {
+    output_dir <- file.path(
+      "DEGgo_results",
+      paste0(format(Sys.Date(), "%Y-%m-%d"), "_", method, "_", analysis_mode)
+    )
+  }
+
+  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+  output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
+
+  deggo_version <- tryCatch(
+    as.character(utils::packageVersion("DEGgo")),
+    error = function(e) "development"
+  )
+
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
-  
-  if ("sample" %in% colnames(metadata)) {
-    rownames(metadata) <- metadata$sample
+
+  # ------------------------------------------------------- #
+  # Step 2: input preparation
+  # ------------------------------------------------------- #
+
+  if (isTRUE(prepare_input)) {
+
+    log("[2/10] Matching counts and metadata", type = "step")
+
+    prep <- prepare_counts_metadata(
+      counts = counts,
+      metadata = metadata,
+      gene_col = gene_col,
+      feature_col = feature_col,
+      sample_col = sample_col,
+      verbose = FALSE
+    )
+
+    counts <- prep$counts
+    metadata <- prep$metadata
+
+  } else {
+
+    counts <- as.matrix(counts)
+
+    suppressWarnings(storage.mode(counts) <- "numeric")
+
+    if (!is.numeric(counts)) {
+      stop("counts must be numeric when prepare_input = FALSE.", call. = FALSE)
+    }
+
+    counts <- round(counts)
+    storage.mode(counts) <- "integer"
+
+    if ("sample" %in% colnames(metadata)) {
+      rownames(metadata) <- metadata$sample
+    }
   }
-  
+
+  if (!is.matrix(counts)) {
+    stop("counts must be a matrix after input preparation.", call. = FALSE)
+  }
+
+  if (!is.numeric(counts) && !is.integer(counts)) {
+    stop("counts must be numeric/integer after input preparation.", call. = FALSE)
+  }
+
+  # ------------------------------------------------------- #
+  # Pairwise validation
+  # ------------------------------------------------------- #
+
   if (analysis_mode == "pairwise" && method != "DESeq2") {
-    stop("Pairwise mode is currently available only with method = 'DESeq2'.",
-         call. = FALSE)
+    stop(
+      "Pairwise mode is currently available only with method = 'DESeq2'.",
+      call. = FALSE
+    )
   }
-  
+
   if (analysis_mode == "pairwise") {
-    
+
     if (is.null(pairwise_group_cols)) {
       stop(
         "'pairwise_group_cols' must be provided when analysis_mode = 'pairwise'.",
         call. = FALSE
       )
     }
-    
+
     missing_pairwise_cols <- setdiff(pairwise_group_cols, colnames(metadata))
-    
+
     if (length(missing_pairwise_cols) > 0) {
       stop(
         "Missing pairwise grouping columns in metadata: ",
@@ -220,18 +190,7 @@ run_deggo <- function(
       )
     }
   }
-  
-  if (is.null(output_dir)) {
-    output_dir <- paste0(
-      "DEGgo_",
-      method,
-      "_",
-      analysis_mode,
-      "_",
-      format(Sys.time(), "%Y%m%d_%H%M%S")
-    )
-  }
-  
+
   log("DE method:", method, type = "info")
   log("Analysis mode:", analysis_mode, type = "info")
   log("Design:", paste(deparse(design_formula), collapse = ""), type = "info")
@@ -240,53 +199,70 @@ run_deggo <- function(
   log("Log2 fold-change cutoff:", logfc_cutoff, type = "info")
   log("GO ontology:", ontology, type = "info")
   log("Output directory:", output_dir, type = "info")
-  
-  log("Loading annotation database", type = "step")
-  orgdb <- .get_orgdb(organism = organism, orgdb = orgdb)
-  
-  cellDEverse_version <- "0.1.0"
-  
-  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-  output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
-  
-  log("Validating thresholds and inputs", type = "step")
-  
+
+  log("[3/10] Loading annotation database", type = "step")
+
+  orgdb <- .get_orgdb(
+    organism = organism,
+    orgdb = orgdb
+  )
+
+  log("[4/10] Validating thresholds and inputs", type = "step")
+
   if (padj_cutoff <= 0 || padj_cutoff >= 1) {
     stop("padj_cutoff must be between 0 and 1.", call. = FALSE)
   }
-  
+
   if (logfc_cutoff < 0) {
     stop("logfc_cutoff must be positive.", call. = FALSE)
   }
-  
+
   if (top_n_heatmap <= 0) {
     stop("top_n_heatmap must be positive.", call. = FALSE)
   }
-  
+
   if (top_n_labels <= 0) {
     stop("top_n_labels must be positive.", call. = FALSE)
   }
-  
+
+  if (!"condition" %in% colnames(metadata)) {
+    if (analysis_mode == "pairwise" && !is.null(pairwise_group_cols)) {
+      metadata$condition <- apply(
+        metadata[, pairwise_group_cols, drop = FALSE],
+        1,
+        paste,
+        collapse = "_"
+      )
+    } else {
+      stop(
+        "Metadata must contain 'condition' or provide pairwise_group_cols.",
+        call. = FALSE
+      )
+    }
+  }
+
   validate_inputs(
     counts = counts,
     metadata = metadata,
     condition_col = "condition"
   )
-  
+
   sample_ids <- colnames(counts)
-  
+
   metadata <- metadata[
     match(sample_ids, rownames(metadata)),
     ,
     drop = FALSE
   ]
-  
+
   rownames(metadata) <- sample_ids
-  
-  log("Cleaning gene identifiers", type = "step")
+
+  log("[5/10] Cleaning gene identifiers", type = "step")
+
   counts <- clean_ensembl_ids(counts)
-  
-  log("Filtering low-expression genes", type = "step")
+
+  log("[6/10] Filtering low-expression genes", type = "step")
+
   counts <- preprocess_counts(
     counts = counts,
     metadata = metadata,
@@ -295,14 +271,18 @@ run_deggo <- function(
     min_samples = min_samples,
     min_total = min_total
   )
-  
+
   colnames(counts) <- sample_ids
   rownames(metadata) <- sample_ids
-  
+
+  # ------------------------------------------------------- #
+  # Pairwise mode
+  # ------------------------------------------------------- #
+
   if (analysis_mode == "pairwise") {
-    
-    log("Running pairwise DESeq2 contrasts", type = "step")
-    
+
+    log("[7/10] Running pairwise DESeq2 contrasts", type = "step")
+
     de_results <- run_deseq2_pairwise(
       counts = counts,
       metadata = metadata,
@@ -311,9 +291,56 @@ run_deggo <- function(
       contrast_list = pairwise_contrasts,
       pairwise_mode = pairwise_mode
     )
-    
-    log("Annotating pairwise DEG tables", type = "step")
-    
+
+    pca_dir <- file.path(output_dir, "pairwise_PCA")
+    dir.create(pca_dir, showWarnings = FALSE, recursive = TRUE)
+
+    de_results$pca <- list(
+      sample = plot_pca(
+        de_results$dds,
+        de_results$metadata,
+        pca_dir,
+        "PCA_by_sample",
+        color_by = "sample",
+        title = "PCA by sample"
+      ),
+      tissue = plot_pca(
+        de_results$dds,
+        de_results$metadata,
+        pca_dir,
+        "PCA_by_tissue",
+        color_by = "tissue",
+        title = "PCA by tissue"
+      ),
+      treatment = plot_pca(
+        de_results$dds,
+        de_results$metadata,
+        pca_dir,
+        "PCA_by_treatment",
+        color_by = "treatment",
+        title = "PCA by treatment"
+      ),
+      sex = plot_pca(
+        de_results$dds,
+        de_results$metadata,
+        pca_dir,
+        "PCA_by_sex",
+        color_by = "sex",
+        title = "PCA by sex"
+      ),
+      tissue_treatment = plot_pca(
+        de_results$dds,
+        de_results$metadata,
+        pca_dir,
+        "PCA_tissue_treatment",
+        color_by = "tissue",
+        shape_by = "treatment",
+        title = "PCA tissue + treatment"
+      )
+    )
+
+    log("[8/10] Annotating pairwise DEG tables", type = "step")
+
     de_results$results <- lapply(
       de_results$results,
       annotate_de_results,
@@ -321,29 +348,34 @@ run_deggo <- function(
       padj_cutoff = padj_cutoff,
       logfc_cutoff = logfc_cutoff
     )
-    
+
     result_dir <- file.path(output_dir, "pairwise_results")
     sig_dir <- file.path(output_dir, "pairwise_significant")
     plot_dir <- file.path(output_dir, "pairwise_plots")
     go_dir <- file.path(output_dir, "pairwise_GO")
-    
+    heatmap_dir <- file.path(output_dir, "pairwise_heatmaps")
+
     dir.create(result_dir, showWarnings = FALSE, recursive = TRUE)
     dir.create(sig_dir, showWarnings = FALSE, recursive = TRUE)
     dir.create(plot_dir, showWarnings = FALSE, recursive = TRUE)
     dir.create(go_dir, showWarnings = FALSE, recursive = TRUE)
-    
+    dir.create(heatmap_dir, showWarnings = FALSE, recursive = TRUE)
+
     de_results$sig_deg <- list()
     de_results$volcano_plots <- list()
+    de_results$heatmaps <- list()
     de_results$go_results <- list()
-    
-    log("Exporting pairwise results, plots and GO enrichment", type = "step")
-    
+
+    log("[9/10] Exporting pairwise plots and GO enrichment", type = "step")
+
+    vsd_pairwise <- DESeq2::vst(de_results$dds, blind = FALSE)
+
     for (nm in names(de_results$results)) {
-      
+
       log("Processing comparison:", nm, type = "info")
-      
+
       res_df_i <- de_results$results[[nm]]
-      
+
       sig_i <- res_df_i[
         !is.na(res_df_i$padj) &
           res_df_i$padj < padj_cutoff &
@@ -351,9 +383,9 @@ run_deggo <- function(
         ,
         drop = FALSE
       ]
-      
+
       de_results$sig_deg[[nm]] <- sig_i
-      
+
       utils::write.table(
         res_df_i,
         file.path(result_dir, paste0(nm, ".tsv")),
@@ -361,7 +393,7 @@ run_deggo <- function(
         quote = FALSE,
         row.names = FALSE
       )
-      
+
       utils::write.table(
         sig_i,
         file.path(sig_dir, paste0(nm, "_significant.tsv")),
@@ -369,29 +401,46 @@ run_deggo <- function(
         quote = FALSE,
         row.names = FALSE
       )
-      
+
       de_results$volcano_plots[[nm]] <- plot_volcano(
         res_df = res_df_i,
         top_n_labels = top_n_labels,
-        output_dir = plot_dir
+        output_dir = plot_dir,
+        filename = paste0(nm, "_Volcano_Plot"),
+        title = nm,
+        logfc_cutoff = logfc_cutoff,
+        padj_cutoff = padj_cutoff
       )
-      
-      if (file.exists(file.path(plot_dir, "Volcano_Plot.png"))) {
-        file.rename(
-          file.path(plot_dir, "Volcano_Plot.png"),
-          file.path(plot_dir, paste0(nm, "_Volcano_Plot.png"))
+
+      de_results$heatmaps[[nm]] <- plot_heatmap(
+        vsd = vsd_pairwise,
+        res_df = res_df_i,
+        metadata = de_results$metadata,
+        sample_subset = de_results$samples[[nm]],
+        top_n_heatmap = top_n_heatmap,
+        padj_cutoff = padj_cutoff,
+        output_dir = heatmap_dir,
+        main = nm,
+        filename = paste0(nm, "_Heatmap"),
+        annotation_cols = intersect(
+          c("treatment", "sex", "tissue"),
+          colnames(de_results$metadata)
+        ),
+        order_by = intersect(
+          c("tissue", "sex", "treatment"),
+          colnames(de_results$metadata)
         )
-      }
-      
+      )
+
       go_i <- run_go_enrichment(
         sig_deg = sig_i,
         ontology = ontology,
         output_dir = go_dir,
         orgdb = orgdb
       )
-      
+
       de_results$go_results[[nm]] <- go_i
-      
+
       if (!is.null(go_i) && !is.null(go_i$go_results)) {
         utils::write.table(
           go_i$go_results,
@@ -401,39 +450,42 @@ run_deggo <- function(
           quote = FALSE
         )
       }
-      
-      if (file.exists(file.path(go_dir, "GO_Dotplot.png"))) {
-        file.rename(
-          file.path(go_dir, "GO_Dotplot.png"),
-          file.path(go_dir, paste0(nm, "_GO_Dotplot.png"))
-        )
-      }
-      
-      if (file.exists(file.path(go_dir, "GO_Barplot.png"))) {
-        file.rename(
-          file.path(go_dir, "GO_Barplot.png"),
-          file.path(go_dir, paste0(nm, "_GO_Barplot.png"))
-        )
-      }
     }
-    
-    log("Summarizing pairwise results", type = "step")
-    
+
+    log("[10/10] Summarizing pairwise results", type = "step")
+
     de_results$summary <- do.call(
       rbind,
       lapply(names(de_results$results), function(nm) {
+
         x <- de_results$results[[nm]]
+
         data.frame(
           comparison = nm,
           total_genes = nrow(x),
-          significant = sum(x$significance != "Not Significant", na.rm = TRUE),
-          up = sum(x$significance == "Upregulated", na.rm = TRUE),
-          down = sum(x$significance == "Downregulated", na.rm = TRUE),
+          significant = sum(
+            !is.na(x$padj) &
+              x$padj < padj_cutoff &
+              abs(x$log2FoldChange) > logfc_cutoff,
+            na.rm = TRUE
+          ),
+          up = sum(
+            !is.na(x$padj) &
+              x$padj < padj_cutoff &
+              x$log2FoldChange > logfc_cutoff,
+            na.rm = TRUE
+          ),
+          down = sum(
+            !is.na(x$padj) &
+              x$padj < padj_cutoff &
+              x$log2FoldChange < -logfc_cutoff,
+            na.rm = TRUE
+          ),
           stringsAsFactors = FALSE
         )
       })
     )
-    
+
     utils::write.table(
       de_results$summary,
       file.path(output_dir, "pairwise_summary.tsv"),
@@ -441,23 +493,27 @@ run_deggo <- function(
       quote = FALSE,
       row.names = FALSE
     )
-    
-    writeLines(
-      utils::capture.output(utils::sessionInfo()),
-      file.path(output_dir, "sessionInfo.txt")
-    )
-    
+
+    .safe_write_session_info(output_dir)
+
+    de_results$output_dir <- output_dir
+    de_results$version <- deggo_version
+
     log(
-      "Pairwise analysis completed successfully.",
+      "==== DEGgo PAIRWISE ANALYSIS COMPLETE ====",
       type = "done",
       duration = as.numeric(difftime(Sys.time(), t_start, units = "secs"))
     )
-    
+
     return(de_results)
   }
-  
-  log("Running differential expression analysis", type = "step")
-  
+
+  # ------------------------------------------------------- #
+  # Single mode
+  # ------------------------------------------------------- #
+
+  log("[7/10] Running differential expression analysis", type = "step")
+
   de_results <- run_de(
     counts = counts,
     metadata = metadata,
@@ -465,108 +521,112 @@ run_deggo <- function(
     design_formula = design_formula,
     contrast = contrast
   )
-  
+
   dds <- de_results$dds %||% de_results$object
   res_df <- de_results$res_df
-  
-  log("Annotating DEG results", type = "step")
-  
+
+  log("[8/10] Annotating DEG results", type = "step")
+
   res_df$SYMBOL <- map_ensembl_to_feature(
     ensembl_vec = res_df$ENSEMBL,
     orgdb = orgdb
   )
-  
+
   res_df <- map_entrez_ids(
     res_df = res_df,
     orgdb = orgdb
   )
-  
+
   processed <- process_deg_results(
     res_df = res_df,
     padj_cutoff = padj_cutoff,
     logfc_cutoff = logfc_cutoff
   )
-  
+
   res_df <- processed$res_df
   sig_deg <- processed$sig_deg
-  
-  up_n <- if (nrow(sig_deg)) {
-    sum(sig_deg$log2FoldChange > 0, na.rm = TRUE)
-  } else {
-    0
-  }
-  
-  down_n <- if (nrow(sig_deg)) {
-    sum(sig_deg$log2FoldChange < 0, na.rm = TRUE)
-  } else {
-    0
-  }
-  
-  log("Generating volcano plot", type = "step")
-  
+
+  up_n <- sum(
+    !is.na(res_df$padj) &
+      res_df$padj < padj_cutoff &
+      res_df$log2FoldChange > logfc_cutoff,
+    na.rm = TRUE
+  )
+
+  down_n <- sum(
+    !is.na(res_df$padj) &
+      res_df$padj < padj_cutoff &
+      res_df$log2FoldChange < -logfc_cutoff,
+    na.rm = TRUE
+  )
+
+  log("[9/10] Generating plots and GO enrichment", type = "step")
+
   volcano_plot <- plot_volcano(
     res_df = res_df,
     top_n_labels = top_n_labels,
-    output_dir = output_dir
+    output_dir = output_dir,
+    logfc_cutoff = logfc_cutoff,
+    padj_cutoff = padj_cutoff
   )
-  
+
   pca_plot <- NULL
   heatmap_matrix <- NULL
   vsd <- NULL
-  
+
   if (method == "DESeq2") {
-    
-    log("Generating PCA plot", type = "step")
-    
+
     pca_results <- plot_pca(
       dds = dds,
       metadata = metadata,
       output_dir = output_dir
     )
-    
+
     vsd <- pca_results$vsd
     pca_plot <- pca_results$pca_plot
-    
-    log("Generating heatmap", type = "step")
-    
+
     heatmap_matrix <- plot_heatmap(
       vsd = vsd,
       res_df = res_df,
       metadata = metadata,
       top_n_heatmap = top_n_heatmap,
       padj_cutoff = padj_cutoff,
-      output_dir = output_dir
+      output_dir = output_dir,
+      main = "Top DEG heatmap",
+      filename = "Top_DEG_Heatmap",
+      annotation_cols = intersect(
+        c("condition", "treatment", "sex", "tissue"),
+        colnames(metadata)
+      ),
+      order_by = intersect(
+        c("condition", "tissue", "sex", "treatment"),
+        colnames(metadata)
+      )
     )
-    
+
   } else {
-    
-    log(
-      "PCA and heatmap currently available only for DESeq2.",
-      type = "warn"
-    )
+    log("PCA and heatmap currently available only for DESeq2.", type = "warn")
   }
-  
-  log("Running GO enrichment", type = "step")
-  
+
   go_results <- run_go_enrichment(
     sig_deg = sig_deg,
     ontology = ontology,
     output_dir = output_dir,
     orgdb = orgdb
   )
-  
-  log("Exporting final results", type = "step")
-  
+
+  log("[10/10] Exporting final results", type = "step")
+
   export_deg_results(
     res_df,
     sig_deg,
     output_dir
   )
-  
+
   summary_text <- paste0(
     "DEGgo Analysis Summary\n",
     "======================\n\n",
-    "DEGgo Version: ", cellDEverse_version, "\n",
+    "DEGgo Version: ", deggo_version, "\n",
     "DE method: ", method, "\n",
     "Analysis mode: ", analysis_mode, "\n",
     "Organism: ", organism, "\n",
@@ -578,26 +638,28 @@ run_deggo <- function(
     "Upregulated genes: ", up_n, "\n",
     "Downregulated genes: ", down_n, "\n"
   )
-  
+
   writeLines(summary_text, file.path(output_dir, "Analysis_Summary.txt"))
-  writeLines(
-    utils::capture.output(utils::sessionInfo()),
-    file.path(output_dir, "sessionInfo.txt")
-  )
-  
+
+  .safe_write_session_info(output_dir)
+
   generate_report(
     sig_deg = sig_deg,
     go_results = go_results,
     output_dir = output_dir,
     report_template = file.path("inst", "report_template.Rmd")
   )
-  
+
+  log("Significant DEGs:", nrow(sig_deg), type = "info")
+  log("Upregulated genes:", up_n, type = "info")
+  log("Downregulated genes:", down_n, type = "info")
+
   log(
     "==== DEGgo ANALYSIS COMPLETE ====",
     type = "done",
     duration = as.numeric(difftime(Sys.time(), t_start, units = "secs"))
   )
-  
+
   list(
     dds = dds,
     res_df = res_df,
@@ -605,6 +667,8 @@ run_deggo <- function(
     volcano_plot = volcano_plot,
     pca_plot = pca_plot,
     heatmap_matrix = heatmap_matrix,
-    go_results = go_results
+    go_results = go_results,
+    output_dir = output_dir,
+    version = deggo_version
   )
 }

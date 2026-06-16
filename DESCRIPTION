@@ -1,11 +1,37 @@
 Package: DEGgo
-Title: What the Package Does (One Line, Title Case)
+Title: Differential Expression and Functional Analysis
 Version: 0.0.0.9000
 Authors@R: 
     person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: Integrated framework for differential expression, enrichment
+    and visualization.
+License: MIT + file LICENSE
 Encoding: UTF-8
+Depends:
+    R (>= 4.2.0)
+Imports:
+    DESeq2,
+    edgeR,
+    limma,
+    AnnotationDbi,
+    dplyr,
+    ggplot2,
+    reshape2,
+    ggrepel,
+    pheatmap,
+    clusterProfiler,
+    enrichplot,
+    rmarkdown,
+    biomaRt,
+    tibble,
+    SummarizedExperiment
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
+Suggests: 
+    knitr,
+    org.Hs.eg.db,
+    org.Mm.eg.db,
+    org.Rn.eg.db,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+VignetteBuilder: knitr

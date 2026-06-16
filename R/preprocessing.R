@@ -1,106 +1,384 @@
+#=========================================================#
+# CHECK RAW COUNTS
+#=========================================================#
 
+#' Validate raw count table
+#'
+#' Performs sanity checks on bulk RNA-seq count tables.
+#'
+#' @param counts Raw count table.
+#' @param gene_col Possible gene ID columns.
+#' @param feature_col Possible gene symbol columns.
+#' @param min_library_size Minimum acceptable library size.
+#' @param min_detected_genes Minimum acceptable detected genes.
+#'
+#' @return List of QC results.
+#' @export
+
+check_raw_counts <- function(
+    counts,
+    gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl"),
+    feature_col = c("gene_name", "SYMBOL", "symbol"),
+    min_library_size = 1e6,
+    min_detected_genes = 5000
+) {
+  counts <- as.data.frame(counts, check.names = FALSE)
+
+  gcol <- gene_col[gene_col %in% colnames(counts)][1]
+  fcol <- feature_col[feature_col %in% colnames(counts)][1]
+
+  if (is.na(gcol)) stop("No gene ID column found.", call. = FALSE)
+
+  sample_cols <- colnames(counts)[!colnames(counts) %in% c(gcol, fcol)]
+
+  mat <- as.matrix(counts[, sample_cols, drop = FALSE])
+  storage.mode(mat) <- "numeric"
+
+  # -------------------------------------------------- #
+  # Sample name checks
+  # -------------------------------------------------- #
+
+  dup_idx <- duplicated(colnames(counts)) | duplicated(colnames(counts), fromLast = TRUE)
+
+  dup_cols <- data.frame(
+    position = which(dup_idx),
+    column = colnames(counts)[dup_idx],
+    stringsAsFactors = FALSE
+  )
+
+  dup_samples <- unique(sample_cols[duplicated(sample_cols)])
+
+  # -------------------------------------------------- #
+  # Duplicated expression profiles
+  # -------------------------------------------------- #
+
+  dup_genes <- unique(counts[[gcol]][duplicated(counts[[gcol]])])
+
+  # -------------------------------------------------- #
+  # Count checks
+  # -------------------------------------------------- #
+
+  missing_values <- sum(is.na(mat))
+  negative_values <- sum(mat < 0, na.rm = TRUE)
+  non_integer <- sum(abs(mat - round(mat)) > 1e-6, na.rm = TRUE)
+
+  # -------------------------------------------------- #
+  # Library QC
+  # -------------------------------------------------- #
+
+  qc <- data.frame(
+    sample = colnames(mat),
+    library_size = colSums(mat, na.rm = TRUE),
+    detected_genes = colSums(mat > 0, na.rm = TRUE),
+    low_library = colSums(mat, na.rm = TRUE) < min_library_size,
+    low_detected = colSums(mat > 0, na.rm = TRUE) < min_detected_genes,
+    stringsAsFactors = FALSE
+  )
+
+  # -------------------------------------------------- #
+  # Report
+  # -------------------------------------------------- #
+
+  cat("Genes: ", nrow(mat), "\n")
+  cat("Samples: ", ncol(mat), "\n")
+  cat("Duplicated genes: ", length(dup_genes), "\n")
+  cat("Duplicated sample names: ", length(dup_samples), "\n")
+  cat("Missing values: ", missing_values, "\n")
+  cat("Negative counts: ", negative_values, "\n")
+  cat("Non-integer counts: ", non_integer, "\n")
+
+  invisible(list(
+    qc = qc,
+    gene_col = gcol,
+    feature_col = fcol,
+    duplicated_columns = dup_cols,
+    duplicated_samples = dup_samples,
+    duplicated_gene_ids = dup_genes,
+    missing_values = missing_values,
+    negative_counts = negative_values,
+    non_integer_counts = non_integer
+  ))
+}
+
+
+
+# ========================================================= #
+# PREPARE COUNTS MATRIX
+# ========================================================= #
+#' Prepare count matrix for DEGgo analysis
+#'
+#' Converts a count table containing gene annotation columns and sample
+#' count columns into a clean numeric matrix suitable for downstream
+#' differential expression analysis.
+#'
+#' The function:
+#' \enumerate{
+#'   \item Extracts sample columns defined in the metadata.
+#'   \item Verifies that all metadata samples are present in the count table.
+#'   \item Converts count columns to numeric values.
+#'   \item Uses a gene identifier column as row names when available.
+#'   \item Returns a numeric count matrix compatible with DESeq2,
+#'   edgeR, and limma workflows.
+#' }
+#'
+#' @param counts A count table containing gene annotation columns and
+#'   sample count columns.
+#' @param metadata A metadata data frame containing sample information.
+#' @param sample_col Column name in \code{metadata} containing sample IDs.
+#'   Default is \code{"sample"}.
+#' @param gene_cols Character vector of possible gene identifier columns.
+#'   The first matching column found in \code{counts} is used as row names.
+#'   Default includes common gene ID and gene symbol columns.
+#'
+#' @return A numeric matrix with:
+#' \describe{
+#'   \item{rows}{Genes.}
+#'   \item{columns}{Samples.}
+#' }
+#'
+#' @details
+#' This helper is used internally by \code{\link{run_deggo}} to ensure
+#' that only numeric sample count columns are retained before differential
+#' expression analysis.
+#'
+#' If one of the specified \code{gene_cols} is found, it is used as the
+#' row names of the returned matrix. Duplicate gene identifiers are made
+#' unique using \code{\link[base]{make.unique}}.
+#'
+#' The function stops if:
+#' \itemize{
+#'   \item Metadata samples are missing from the count table.
+#'   \item Non-numeric values remain after coercion.
+#' }
+#'
+#' @examples
+#' counts_mat <- prepare_deggo_counts(
+#'   counts = counts,
+#'   metadata = metadata
+#' )
+#'
+#' dim(counts_mat)
+#' head(colnames(counts_mat))
+#' head(rownames(counts_mat))
+#'
+#' @seealso
+#' \code{\link{prepare_counts_metadata}},
+#' \code{\link{run_deggo}}
+#'
+#' @keywords internal
+#' @noRd
+prepare_deggo_counts <- function(
+    counts,
+    metadata,
+    sample_col = "sample",
+    gene_cols = c(
+      "gene_id",
+      "gene_name",
+      "GeneID",
+      "SYMBOL",
+      "symbol"
+    )
+) {
+
+  counts <- as.data.frame(counts, check.names = FALSE)
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  sample_ids <- metadata[[sample_col]]
+
+  missing <- setdiff(sample_ids, colnames(counts))
+
+  if (length(missing) > 0) {
+    stop(
+      "Samples missing from counts: ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  count_mat <- counts[, sample_ids, drop = FALSE]
+
+  count_mat[] <- lapply(count_mat, function(x) {
+    suppressWarnings(as.numeric(as.character(x)))
+  })
+
+  if (anyNA(count_mat)) {
+    stop(
+      "Non-numeric values detected in count columns after coercion.",
+      call. = FALSE
+    )
+  }
+
+  present_gene_cols <- intersect(
+    gene_cols,
+    colnames(counts)
+  )
+
+  if (length(present_gene_cols) > 0) {
+    row_ids <- counts[[present_gene_cols[1]]]
+  } else {
+    row_ids <- rownames(counts)
+  }
+
+  rownames(count_mat) <- make.unique(
+    as.character(row_ids)
+  )
+
+  count_mat <- as.matrix(count_mat)
+  storage.mode(count_mat) <- "numeric"
+
+  count_mat
+}
+
+
+
+
+# ========================================================= #
+# PREPARE COUNTS METADATA
+# ========================================================= #
 #' Prepare count matrix and metadata with matched samples
 #'
-#' @param counts A data.frame or matrix of raw counts.
-#' @param metadata A data.frame containing sample information.
-#' @param gene_col Name of the gene ID column in counts.
-#' @param sample_col Name of the sample column in metadata.
-#' @param keep_common_only Logical. If TRUE, keep only samples present in both.
-#' @param verbose Logical. Print summary messages.
+#' @param counts Raw count table or matrix.
+#' @param metadata Sample metadata data frame.
+#' @param gene_col Possible gene identifier column names in counts.
+#' @param feature_col Possible gene symbol/annotation column names in counts.
+#' @param sample_col Possible sample identifier column names in metadata.
+#' @param keep_common_only Logical. If TRUE, keeps only samples present
+#'   in both counts and metadata.
+#' @param verbose Logical. Print preparation summary.
 #'
-#' @return A list with matched count matrix and metadata.
-#' @export
+#' @return A list containing prepared counts, metadata, feature map,
+#'   selected column names, common samples, and missing sample names.
+#'
+#' @seealso
+#' See also the internal input validation used by DEGgo.
+#'
+#' @keywords internal
+#' @noRd
 prepare_counts_metadata <- function(
     counts,
     metadata,
-    gene_col = c("GeneID", "gene", "Gene", "ENSEMBL"),
+    gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
+    feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
     sample_col = c("sample", "Sample", "SAMPLE"),
     keep_common_only = TRUE,
     verbose = TRUE
 ) {
-  
+
   if (!is.data.frame(counts) && !is.matrix(counts)) {
     stop("counts must be a data.frame or matrix.", call. = FALSE)
   }
-  
-  if (!is.data.frame(metadata)) {
-    metadata <- as.data.frame(metadata)
-  }
-  
+
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
   counts <- as.data.frame(counts, check.names = FALSE)
-  
+
   gene_col <- gene_col[gene_col %in% colnames(counts)][1]
+  feature_col <- feature_col[feature_col %in% colnames(counts)][1]
   sample_col <- sample_col[sample_col %in% colnames(metadata)][1]
-  
+
   if (is.na(gene_col)) {
-    stop("No gene column found in counts.", call. = FALSE)
+    stop("No gene identifier column found in counts.", call. = FALSE)
   }
-  
+
   if (is.na(sample_col)) {
     stop("No sample column found in metadata.", call. = FALSE)
   }
-  
-  gene_ids <- counts[[gene_col]]
-  
-  counts_mat <- counts[, setdiff(colnames(counts), gene_col), drop = FALSE]
-  rownames(counts_mat) <- gene_ids
-  
-  counts_mat <- as.matrix(counts_mat)
-  storage.mode(counts_mat) <- "integer"
-  
+
+  gene_ids <- as.character(counts[[gene_col]])
+  gene_ids <- make.unique(gene_ids)
+
+  annotation_cols <- unique(c(gene_col, feature_col))
+  annotation_cols <- annotation_cols[!is.na(annotation_cols)]
+
+  count_df <- counts[
+    ,
+    setdiff(colnames(counts), annotation_cols),
+    drop = FALSE
+  ]
+
   metadata[[sample_col]] <- as.character(metadata[[sample_col]])
-  
-  common_samples <- intersect(colnames(counts_mat), metadata[[sample_col]])
-  
+
+  common_samples <- intersect(
+    colnames(count_df),
+    metadata[[sample_col]]
+  )
+
   if (!length(common_samples)) {
     stop("No common samples between counts and metadata.", call. = FALSE)
   }
-  
-  missing_in_meta <- setdiff(colnames(counts_mat), metadata[[sample_col]])
-  missing_in_counts <- setdiff(metadata[[sample_col]], colnames(counts_mat))
-  
-  if (!keep_common_only) {
-    if (length(missing_in_meta) || length(missing_in_counts)) {
-      stop(
-        "Sample mismatch.\n",
-        "Missing in metadata: ", paste(missing_in_meta, collapse = ", "), "\n",
-        "Missing in counts: ", paste(missing_in_counts, collapse = ", "),
-        call. = FALSE
-      )
-    }
+
+  missing_in_meta <- setdiff(colnames(count_df), metadata[[sample_col]])
+  missing_in_counts <- setdiff(metadata[[sample_col]], colnames(count_df))
+
+  if (!keep_common_only && (length(missing_in_meta) > 0 || length(missing_in_counts) > 0)) {
+    stop(
+      "Sample mismatch.\n",
+      "Missing in metadata: ", paste(missing_in_meta, collapse = ", "), "\n",
+      "Missing in counts: ", paste(missing_in_counts, collapse = ", "),
+      call. = FALSE
+    )
   }
-  
-  counts_mat <- counts_mat[, common_samples, drop = FALSE]
-  metadata <- metadata[match(common_samples, metadata[[sample_col]]), , drop = FALSE]
-  
+
+  count_df <- count_df[, common_samples, drop = FALSE]
+
+  count_df[] <- lapply(count_df, function(x) {
+    suppressWarnings(as.numeric(as.character(x)))
+  })
+
+  if (anyNA(count_df)) {
+    bad_cols <- names(which(vapply(count_df, function(x) anyNA(x), logical(1))))
+
+    stop(
+      "Non-numeric values detected in count columns after coercion: ",
+      paste(bad_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  counts_mat <- as.matrix(count_df)
+  rownames(counts_mat) <- gene_ids
+  counts_mat <- round(counts_mat)
+  storage.mode(counts_mat) <- "integer"
+
+  metadata <- metadata[
+    match(common_samples, metadata[[sample_col]]),
+    ,
+    drop = FALSE
+  ]
+
   rownames(metadata) <- metadata[[sample_col]]
-  
-  if (!all(colnames(counts_mat) == rownames(metadata))) {
-    stop("Final sample order mismatch.", call. = FALSE)
+
+  if (!"sample" %in% colnames(metadata)) {
+    metadata$sample <- metadata[[sample_col]]
   }
-  
+
+  feature_map <- NULL
+
+  if (!is.na(feature_col)) {
+    feature_map <- data.frame(
+      ENSEMBL = gene_ids,
+      SYMBOL = as.character(counts[[feature_col]]),
+      stringsAsFactors = FALSE
+    )
+  }
+
   if (verbose) {
-    message("Counts genes   : ", nrow(counts_mat))
-    message("Counts samples : ", ncol(counts_mat))
-    message("Metadata rows  : ", nrow(metadata))
-    
-    if (length(missing_in_meta)) {
-      message("Removed from counts because missing in metadata: ",
-              paste(missing_in_meta, collapse = ", "))
+    cat("Gene ID column : ", gene_col, "\n")
+    if (!is.na(feature_col)) {
+      cat("Feature column : ", feature_col, "\n")
     }
-    
-    if (length(missing_in_counts)) {
-      message("Removed from metadata because missing in counts: ",
-              paste(missing_in_counts, collapse = ", "))
-    }
-    
-    message("Sample matching: OK")
+    cat("Sample column  : ", sample_col, "\n")
+    cat("Counts genes   : ", nrow(counts_mat), "\n")
+    cat("Counts samples : ", ncol(counts_mat), "\n")
+    cat("Metadata rows  : ", nrow(metadata), "\n")
+    cat("Sample matching: OK", "\n")
   }
-  
+
   list(
     counts = counts_mat,
     metadata = metadata,
     gene_col = gene_col,
+    feature_col = feature_col,
+    feature_map = feature_map,
     sample_col = sample_col,
     common_samples = common_samples,
     missing_in_meta = missing_in_meta,
@@ -108,6 +386,10 @@ prepare_counts_metadata <- function(
   )
 }
 
+
+# ========================================================= #
+# VALIDATE INPUT
+# ========================================================= #
 
 #' Validate count matrix and metadata
 #'
@@ -123,41 +405,41 @@ validate_inputs <- function(
     metadata,
     condition_col = "condition"
 ) {
-  
+
   if (!is.matrix(counts) && !is.data.frame(counts)) {
     stop("'counts' must be a matrix or data.frame.", call. = FALSE)
   }
-  
+
   counts <- as.matrix(counts)
-  
+
   if (!is.numeric(counts) && !is.integer(counts)) {
     stop("'counts' must contain numeric or integer values.", call. = FALSE)
   }
-  
+
   if (anyNA(counts)) {
     stop("'counts' contains missing values.", call. = FALSE)
   }
-  
+
   if (any(counts < 0)) {
     stop("'counts' contains negative values.", call. = FALSE)
   }
-  
+
   if (is.null(rownames(counts))) {
     stop("'counts' must have gene IDs as rownames.", call. = FALSE)
   }
-  
+
   if (is.null(colnames(counts))) {
     stop("'counts' must have sample names as colnames.", call. = FALSE)
   }
-  
+
   if (!is.data.frame(metadata)) {
     metadata <- as.data.frame(metadata)
   }
-  
+
   if (is.null(rownames(metadata))) {
     stop("'metadata' must have sample names as rownames.", call. = FALSE)
   }
-  
+
   if (!condition_col %in% colnames(metadata)) {
     stop(
       "Metadata must contain column: ",
@@ -165,7 +447,7 @@ validate_inputs <- function(
       call. = FALSE
     )
   }
-  
+
   if (!all(colnames(counts) %in% rownames(metadata))) {
     missing <- setdiff(colnames(counts), rownames(metadata))
     stop(
@@ -174,7 +456,7 @@ validate_inputs <- function(
       call. = FALSE
     )
   }
-  
+
   if (!all(colnames(counts) == rownames(metadata))) {
     stop(
       "Sample order mismatch between counts columns and metadata rownames. ",
@@ -182,7 +464,7 @@ validate_inputs <- function(
       call. = FALSE
     )
   }
-  
+
   if (length(unique(metadata[[condition_col]])) < 2) {
     stop(
       "Metadata column '",
@@ -191,41 +473,128 @@ validate_inputs <- function(
       call. = FALSE
     )
   }
-  
+
   invisible(TRUE)
 }
 
 
-# =========================================================
+# ========================================================= #
 # CLEAN ENSEMBL IDS
-# =========================================================
+# ========================================================= #
 
+
+#' Clean and collapse Ensembl gene identifiers
+#'
+#' Removes Ensembl version suffixes and collapses duplicated
+#' gene identifiers by summing counts across rows.
+#'
+#' For example:
+#'
+#' \preformatted{
+#' ENSG000001234.5 -> ENSG000001234
+#' }
+#'
+#' After cleaning, duplicated identifiers are merged using
+#' \code{\link[base]{rowsum}}.
+#'
+#' @param counts Count matrix with genes as rows and samples as columns.
+#'
+#' @return Integer count matrix with cleaned Ensembl identifiers
+#'   as row names.
+#'
+#' @details
+#' Ensembl version numbers are removed using:
+#'
+#' \code{sub("\\\\..*$", "", gene_id)}
+#'
+#' Duplicate Ensembl identifiers generated after version removal
+#' are collapsed by summing counts across rows.
+#'
+#' @seealso
+#' \code{\link{prepare_counts_metadata}},
+#' \code{\link{preprocess_counts}}
+#'
+#' @keywords internal
+#' @noRd
 clean_ensembl_ids <- function(counts) {
-  
-  log_msg("Cleaning ENSEMBL IDs...")
-  
+
+  log <- .msg(verbose = TRUE)
+
+  log("Cleaning ENSEMBL IDs...")
+
   counts <- as.matrix(counts)
   sample_names <- colnames(counts)
-  
+
   clean_ids <- sub("\\..*$", "", rownames(counts))
   rownames(counts) <- clean_ids
-  
+
   counts <- rowsum(
     x = counts,
     group = rownames(counts),
     reorder = FALSE
   )
-  
+
   colnames(counts) <- sample_names
   storage.mode(counts) <- "integer"
-  
+
   counts
 }
 
-# =========================================================
-# PREPROCESS COUNTS
-# =========================================================
 
+# ========================================================= #
+# PROCESS COUNTS RNA-SEQ MATRIX
+# ========================================================= #
+
+#' Preprocess RNA-seq count matrix
+#'
+#' Filters lowly expressed genes prior to differential
+#' expression analysis.
+#'
+#' Three filtering strategies are supported:
+#'
+#' \itemize{
+#'   \item \code{"count"}: retain genes expressed above a minimum
+#'   count threshold in a minimum number of samples.
+#'   \item \code{"cpm"}: use
+#'   \code{edgeR::filterByExpr()}.
+#'   \item \code{"none"}: no filtering.
+#' }
+#'
+#' @param counts Raw count matrix.
+#' @param metadata Sample metadata. Required when
+#'   \code{filter_method = "cpm"}.
+#' @param filter_method Filtering method.
+#'   One of \code{"count"}, \code{"cpm"}, or \code{"none"}.
+#' @param min_count Minimum count threshold for count-based filtering.
+#' @param min_samples Minimum number of samples passing
+#'   \code{min_count}.
+#' @param min_total Minimum total counts across all samples.
+#'
+#' @return Filtered integer count matrix.
+#'
+#' @details
+#' Count-based filtering retains genes satisfying:
+#'
+#' \deqn{
+#' \sum(count_i \ge min\_count) \ge min\_samples
+#' }
+#'
+#' and
+#'
+#' \deqn{
+#' \sum count_i \ge min\_total
+#' }
+#'
+#' CPM-based filtering uses
+#' \code{edgeR::filterByExpr()}, which accounts for
+#' library sizes and experimental groups.
+#'
+#' @seealso
+#' \code{\link{prepare_counts_metadata}},
+#' \code{\link{validate_inputs}}
+#'
+#' @keywords internal
+#' @noRd
 preprocess_counts <- function(
     counts,
     metadata = NULL,
@@ -234,36 +603,38 @@ preprocess_counts <- function(
     min_samples = 2,
     min_total = 10
 ) {
-  
-  log_msg("Preprocessing counts...")
-  
+
+  log <- .msg(verbose = TRUE)
+
+  log("Preprocessing counts...")
+
   filter_method <- match.arg(filter_method)
-  
+
   counts <- round(as.matrix(counts))
   mode(counts) <- "integer"
-  
+
   if (filter_method == "none") {
-    log_msg("No gene filtering applied.", type = "warn")
+    log("No gene filtering applied.", type = "warn")
     return(counts)
   }
-  
+
   if (filter_method == "cpm") {
-    
+
     if (!requireNamespace("edgeR", quietly = TRUE)) {
       stop("Package 'edgeR' is required for CPM filtering.", call. = FALSE)
     }
-    
+
     if (is.null(metadata) || !"condition" %in% colnames(metadata)) {
       stop("metadata with 'condition' column is required for CPM filtering.", call. = FALSE)
     }
-    
+
     keep <- edgeR::filterByExpr(
       counts,
       group = metadata$condition
     )
-    
+
   } else {
-    
+
     keep <- (
       rowSums(counts >= min_count) >= min_samples
     ) &
@@ -271,14 +642,139 @@ preprocess_counts <- function(
         rowSums(counts) >= min_total
       )
   }
-  
-  log_msg(
+
+  log(
     paste0(
       "Genes before filtering: ", nrow(counts),
       " | Genes retained: ", sum(keep),
       " | Filter method: ", filter_method
     )
   )
-  
+
   counts[keep, , drop = FALSE]
 }
+
+
+# ========================================================= #
+# REMOVE FLAGGED SAMPLES
+# ========================================================= #
+#' Remove flagged samples from counts and metadata
+#'
+#' Removes samples flagged for exclusion in a QC table and returns
+#' synchronized counts and metadata objects.
+#'
+#' @param counts Count matrix or data frame. Rows are genes and columns
+#'   are samples. Gene annotation columns are preserved.
+#' @param metadata Sample metadata.
+#' @param qc_table QC table containing sample identifiers and removal flags.
+#' @param sample_col Column containing sample names. Default is
+#'   \code{"sample_original"}.
+#' @param remove_col Logical column indicating samples to remove.
+#'   Default is \code{"recommend_remove"}.
+#' @param gene_cols Character vector of annotation columns to preserve.
+#'   Default is \code{c("gene_id", "gene_name")}.
+#' @param verbose Logical; print summary messages. Default is \code{TRUE}.
+#'
+#' @return A list with:
+#' \describe{
+#'   \item{counts}{Filtered counts table.}
+#'   \item{metadata}{Filtered metadata table.}
+#'   \item{removed_samples}{Vector of removed sample names.}
+#' }
+#'
+#' @examples
+#' cleaned <- remove_flagged_samples(
+#'   counts = counts,
+#'   metadata = metadata,
+#'   qc_table = qc$qc
+#' )
+#'
+#' counts <- cleaned$counts
+#' metadata <- cleaned$metadata
+#'
+#' @export
+remove_flagged_samples <- function(
+    counts,
+    metadata,
+    qc_table,
+    sample_col = "sample_original",
+    remove_col = "recommend_remove",
+    gene_cols = c("gene_id", "gene_name"),
+    verbose = TRUE
+) {
+
+  counts <- as.data.frame(counts, check.names = FALSE)
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+  qc_table <- as.data.frame(qc_table, stringsAsFactors = FALSE)
+
+  # -------------------------------------------------- #
+  # Checks
+  # -------------------------------------------------- #
+
+  if (!sample_col %in% colnames(qc_table)) {
+    stop("Column not found in qc_table: ", sample_col, call. = FALSE)
+  }
+
+  if (!remove_col %in% colnames(qc_table)) {
+    stop("Column not found in qc_table: ", remove_col, call. = FALSE)
+  }
+
+  if (!sample_col %in% colnames(metadata)) {
+    stop("Column not found in metadata: ", sample_col, call. = FALSE)
+  }
+
+  # -------------------------------------------------- #
+  # Samples to remove
+  # -------------------------------------------------- #
+
+  remove_samples <- qc_table[[sample_col]][
+    isTRUE(qc_table[[remove_col]]) |
+      qc_table[[remove_col]] %in% TRUE]
+
+  remove_samples <- unique(remove_samples)
+
+  # -------------------------------------------------- #
+  # Metadata
+  # -------------------------------------------------- #
+
+  metadata_clean <- metadata[!metadata[[sample_col]] %in% remove_samples,,drop = FALSE]
+
+  # -------------------------------------------------- #
+  # Counts
+  # -------------------------------------------------- #
+
+  keep_cols <- !colnames(counts) %in% remove_samples
+  counts_clean <- counts[,keep_cols, drop = FALSE]
+
+  # Preserve annotation columns
+  keep_gene_cols <- intersect(gene_cols, colnames(counts))
+  counts_clean <- counts_clean[, unique(c(keep_gene_cols,setdiff(colnames(counts_clean), keep_gene_cols))), drop = FALSE ]
+
+  # -------------------------------------------------- #
+  # Reporting
+  # -------------------------------------------------- #
+
+  if (verbose) {
+
+    cat("Removed samples: ", length(remove_samples),"\n")
+
+    if (length(remove_samples) > 0) {
+      cat(paste(remove_samples, collapse = ", "),"\n")
+    }
+
+    cat("Remaining samples: ", nrow(metadata_clean),"\n")
+  }
+
+  # -------------------------------------------------- #
+  # Output
+  # -------------------------------------------------- #
+
+  list(
+    counts = counts_clean,
+    metadata = metadata_clean,
+    removed_samples = remove_samples
+  )
+}
+
+
+

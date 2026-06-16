@@ -1,2 +1,5 @@
 ^DEGgo\.Rproj$
 ^\.Rproj\.user$
+^\.github$
+^LICENSE\.md$
+^README\.Rmd$
