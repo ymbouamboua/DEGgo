@@ -4,4 +4,7 @@
 .httr-oauth
 .DS_Store
 .quarto
+*.tar.gz
+DEGgo.Rcheck
 inst/doc
+
