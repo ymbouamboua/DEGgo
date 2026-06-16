@@ -2115,3 +2115,112 @@ plot_go_terms <- function(
     ) +
     plot_theme(style = style, x.ang = x_angle, txtsize = font_size)
 }
+
+
+
+#' Plot GO enrichment terms for all pairwise comparisons
+#'
+#' Generates GO enrichment plots for every comparison returned by
+#' \code{run_deggo()} and optionally exports figures to disk.
+#'
+#' @param results DEGgo results object returned by \code{run_deggo()}.
+#' @param top_n Number of GO terms to display per regulation class
+#'   (Up and Down). Default is \code{10}.
+#' @param font_size Base font size used in plots. Default is \code{8}.
+#' @param output_dir Optional output directory for exported figures.
+#'   If \code{NULL}, plots are returned but not saved.
+#' @param width Plot width in inches. Default is \code{8}.
+#' @param height Plot height in inches. Default is \code{6}.
+#' @param dpi Plot resolution. Default is \code{300}.
+#'
+#' @return
+#' A named list of ggplot objects, one per comparison.
+#'
+#' @details
+#' This function iterates over all pairwise comparisons stored in
+#' \code{results$go_results} and calls \code{plot_go_terms()} on each
+#' GO enrichment table.
+#'
+#' If \code{output_dir} is supplied, PNG and PDF versions of all plots
+#' are automatically exported.
+#'
+#' @examples
+#' \dontrun{
+#'
+#' go_plots <- plot_all_go_terms(
+#'   results = results,
+#'   top_n = 10,
+#'   font_size = 8,
+#'   output_dir = "GO_plots"
+#' )
+#'
+#' names(go_plots)
+#'
+#' go_plots$WAT_Female_PAMH_vs_PBS
+#'
+#' }
+#'
+#' @export
+plot_all_go_terms <- function(
+    results,
+    top_n = 10,
+    font_size = 8,
+    output_dir = NULL,
+    width = 8,
+    height = 6,
+    dpi = 300
+) {
+
+  plots <- lapply(names(results$go_results), function(comp) {
+
+    go_df <- results$go_results[[comp]]$go_results
+
+    if (is.null(go_df) || nrow(go_df) == 0) {
+      return(NULL)
+    }
+
+    p <- plot_go_terms(
+      go_df = go_df,
+      comparison = comp,
+      top_n = top_n,
+      font_size = font_size
+    )
+
+    if (!is.null(output_dir)) {
+
+      dir.create(
+        output_dir,
+        recursive = TRUE,
+        showWarnings = FALSE
+      )
+
+      ggplot2::ggsave(
+        filename = file.path(
+          output_dir,
+          paste0(comp, "_GO_terms.png")
+        ),
+        plot = p,
+        width = width,
+        height = height,
+        dpi = dpi
+      )
+
+      ggplot2::ggsave(
+        filename = file.path(
+          output_dir,
+          paste0(comp, "_GO_terms.pdf")
+        ),
+        plot = p,
+        width = width,
+        height = height
+      )
+    }
+
+    p
+  })
+
+  names(plots) <- names(results$go_results)
+
+  plots
+}
+

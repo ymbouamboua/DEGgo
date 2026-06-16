@@ -460,21 +460,6 @@ DEGgo_results/
 └── DEGgo_results.rds
 ```
 
-# Recommended figures for GitHub
-
-For the best GitHub presentation, place these files in `man/figures/`:
-
-``` text
-man/figures/DEGgo_logo.png
-man/figures/DEGgo_workflow.png
-man/figures/example_pca.png
-man/figures/example_volcano.png
-man/figures/example_heatmap.png
-man/figures/example_go_plot.png
-```
-
-Then include them in the README using standard markdown image tags.
-
 # Citation
 
 If you use DEGgo in your work, please cite:
