@@ -1,20 +1,61 @@
+DEGgo
+================
+
+- [DEGgo](#deggo)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Workflow](#workflow)
+  - [Workflow](#workflow-1)
+  - [Input data](#input-data)
+    - [Count table](#count-table)
+    - [Metadata](#metadata)
+  - [Main functions](#main-functions)
+- [Complete DEGgo workflow](#complete-deggo-workflow)
+  - [1. Raw QC](#1-raw-qc)
+  - [2. Remove flagged samples](#2-remove-flagged-samples)
+  - [3. Save cleaned tables](#3-save-cleaned-tables)
+  - [4. Re-run QC after cleaning](#4-re-run-qc-after-cleaning)
+  - [5. Tissue marker validation](#5-tissue-marker-validation)
+- [Differential expression analysis](#differential-expression-analysis)
+  - [6A. Single comparison mode](#6a-single-comparison-mode)
+  - [6B. Pairwise contrast mode](#6b-pairwise-contrast-mode)
+- [GO enrichment](#go-enrichment)
+  - [Plot GO terms](#plot-go-terms)
+- [Extract genes and GO terms of
+  interest](#extract-genes-and-go-terms-of-interest)
+  - [1. Define genes of interest](#1-define-genes-of-interest)
+  - [2. Extract DEG genes](#2-extract-deg-genes)
+  - [3. Extract GO terms containing genes of
+    interest](#3-extract-go-terms-containing-genes-of-interest)
+  - [4. Extract GO terms using biological
+    keywords](#4-extract-go-terms-using-biological-keywords)
+- [Output structure](#output-structure)
+- [Recommended figures for GitHub](#recommended-figures-for-github)
+- [Citation](#citation)
+- [License](#license)
+- [Roadmap](#roadmap)
+
 <p align="center">
-  <img src="man/figures/DEGgo_logo.png" width="280">
+
+<img src="man/figures/DEGgo_logo.png" width="300">
 </p>
 
 # DEGgo
 
 <p align="center">
-  <img src="https://img.shields.io/badge/R-%3E%3D4.3-blue">
-  <img src="https://img.shields.io/badge/license-MIT-green">
-  <img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social">
+
+<img src="https://img.shields.io/badge/R-%3E%3D4.3-blue">
+<img src="https://img.shields.io/badge/license-MIT-green">
+<img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social">
 </p>
 
 ## Overview
 
-**DEGgo** is an R package for end-to-end bulk RNA-seq differential expression analysis and Gene Ontology enrichment.
+**DEGgo** is an R package for end-to-end bulk RNA-seq differential
+expression analysis and Gene Ontology enrichment.
 
-DEGgo provides a complete workflow from raw count matrices to biological interpretation:
+DEGgo provides a complete workflow from raw count matrices to biological
+interpretation:
 
 - raw count quality control;
 - sample validation and filtering;
@@ -27,19 +68,21 @@ DEGgo provides a complete workflow from raw count matrices to biological interpr
 
 ## Installation
 
-```{r installation}
+``` r
 install.packages("remotes")
 
 remotes::install_github("ymbouamboua/DEGgo")
 ```
 
-```{r load-package}
+``` r
 library(DEGgo)
 ```
 
 ## Workflow
 
-```text
+## Workflow
+
+``` text
 Raw counts
     │
     ▼
@@ -72,7 +115,7 @@ Reporting
 
 ### Count table
 
-```text
+``` text
 gene_id     gene_name    Sample1    Sample2    Sample3
 ENSMUSG1    Adipoq       120        145        98
 ENSMUSG2    Lep          65         80         50
@@ -80,7 +123,7 @@ ENSMUSG2    Lep          65         80         50
 
 ### Metadata
 
-```text
+``` text
 sample      tissue    sex       treatment
 Sample1     WAT       Female    PBS
 Sample2     WAT       Female    PAMH
@@ -90,7 +133,7 @@ Sample3     BAT       Female    PBS
 ## Main functions
 
 | Function | Description |
-|---|---|
+|----|----|
 | `explore_bulk_rnaseq()` | Raw and cleaned RNA-seq quality control |
 | `remove_flagged_samples()` | Remove failed or low-quality samples |
 | `marker_score_check()` | Tissue marker scoring and sample swap detection |
@@ -106,7 +149,7 @@ Sample3     BAT       Female    PBS
 
 ## 1. Raw QC
 
-```{r raw-qc}
+``` r
 qc <- explore_bulk_rnaseq(
   counts = counts,
   metadata = metadata,
@@ -122,7 +165,7 @@ qc$qc
 
 ## 2. Remove flagged samples
 
-```{r remove-flagged-samples}
+``` r
 cleaned <- remove_flagged_samples(
   counts = counts,
   metadata = metadata,
@@ -139,7 +182,7 @@ metadata <- cleaned$metadata
 
 ## 3. Save cleaned tables
 
-```{r save-clean-tables}
+``` r
 savetbl(
   counts,
   file.path(root, "data", "processed", "clean_counts"),
@@ -155,7 +198,7 @@ savetbl(
 
 ## 4. Re-run QC after cleaning
 
-```{r clean-qc}
+``` r
 qc_clean <- explore_bulk_rnaseq(
   counts = counts,
   metadata = metadata,
@@ -171,7 +214,7 @@ qc_clean$qc
 
 ## 5. Tissue marker validation
 
-```{r tissue-marker-validation}
+``` r
 marker_sets <- list(
   BAT = c(
     "Ucp1", "Cidea", "Ppargc1a",
@@ -226,9 +269,10 @@ marker_check$plot
 
 ## 6A. Single comparison mode
 
-Use `analysis_mode = "single"` when you have one contrast such as `PAMH` vs `PBS`, `KO` vs `WT`, or `treated` vs `control`.
+Use `analysis_mode = "single"` when you have one contrast such as `PAMH`
+vs `PBS`, `KO` vs `WT`, or `treated` vs `control`.
 
-```{r run-deggo-single}
+``` r
 results_single <- run_deggo(
   counts = counts,
   metadata = metadata,
@@ -249,9 +293,10 @@ results_single$summary
 
 ## 6B. Pairwise contrast mode
 
-Use `analysis_mode = "pairwise"` when your experiment contains multiple structured comparisons, such as treatment by sex by tissue.
+Use `analysis_mode = "pairwise"` when your experiment contains multiple
+structured comparisons, such as treatment by sex by tissue.
 
-```{r pairwise-contrasts}
+``` r
 pairwise_contrasts <- list(
   WAT_Female_PAMH_vs_PBS =
     c("comparison_group", "PAMH_Female_WAT", "PBS_Female_WAT"),
@@ -273,7 +318,7 @@ pairwise_contrasts <- list(
 )
 ```
 
-```{r run-deggo-pairwise}
+``` r
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
@@ -293,7 +338,7 @@ results <- run_deggo(
 results$summary
 ```
 
-```{r save-results}
+``` r
 saveRDS(
   results,
   file.path(outdir, "DEGgo_results.rds")
@@ -307,7 +352,7 @@ DEGgo performs Gene Ontology enrichment separately for:
 - upregulated genes;
 - downregulated genes.
 
-```{r run-go-enrichment}
+``` r
 go <- run_go_enrichment(
   sig_deg = results$sig_deg$WAT_Female_PAMH_vs_PBS,
   ontology = "BP",
@@ -321,7 +366,7 @@ go$go_plot
 
 ## Plot GO terms
 
-```{r plot-go-terms}
+``` r
 plot_go_terms(
   go_df = go$go_results,
   comparison = "WAT Female PAMH vs PBS",
@@ -333,7 +378,7 @@ plot_go_terms(
 
 ## 1. Define genes of interest
 
-```{r genes-interest}
+``` r
 genes_interest <- c(
   "Amh", "Amhr2",
   "Ar", "Akr1c3",
@@ -347,7 +392,7 @@ genes_interest <- c(
 
 ## 2. Extract DEG genes
 
-```{r extract-deg-genes}
+``` r
 gene_summary <- deggo_extract_deg_genes(
   results,
   genes_interest
@@ -368,7 +413,7 @@ gene_summary_sig
 
 ## 3. Extract GO terms containing genes of interest
 
-```{r extract-go-genes}
+``` r
 go_genes_pairwise <- deggo_extract_go_genes_pairwise(
   results,
   genes_interest
@@ -379,7 +424,7 @@ go_genes_pairwise
 
 ## 4. Extract GO terms using biological keywords
 
-```{r extract-go-keywords}
+``` r
 go_keywords <- c(
   "tgf", "bmp", "smad",
   "inflammation", "immune",
@@ -401,7 +446,7 @@ go_keywords_results
 
 # Output structure
 
-```text
+``` text
 DEGgo_results/
 │
 ├── DEGgo_QC_raw/
@@ -419,7 +464,7 @@ DEGgo_results/
 
 For the best GitHub presentation, place these files in `man/figures/`:
 
-```text
+``` text
 man/figures/DEGgo_logo.png
 man/figures/DEGgo_workflow.png
 man/figures/example_pca.png
@@ -434,7 +479,8 @@ Then include them in the README using standard markdown image tags.
 
 If you use DEGgo in your work, please cite:
 
-> MBOUAMBOUA Y. DEGgo: an integrated framework for bulk RNA-seq differential expression analysis and functional enrichment.
+> Yvon MBOUAMBOUA and Paolo Giacobini. DEGgo: an integrated framework for bulk RNA-seq
+> differential expression analysis and functional enrichment.
 
 # License
 

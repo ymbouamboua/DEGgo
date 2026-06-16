@@ -2059,12 +2059,19 @@ plot_go_terms <- function(
   df <- df |>
     dplyr::mutate(
       log10FDR = -log10(.data[["p.adjust"]]),
-      Description_wrapped = stringr::str_wrap(.data[["Description"]], width = wrap_width),
+      Description_wrapped = stringr::str_wrap(
+        .data[["Description"]],
+        width = wrap_width
+      ),
+      Regulation = droplevels(.data[["Regulation"]]),
       Description_wrapped = forcats::fct_reorder(
         .data[["Description_wrapped"]],
         .data[["log10FDR"]]
       )
     )
+
+  present_regs <- unique(as.character(df$Regulation))
+  color_values <- color_values[names(color_values) %in% present_regs]
 
   if (nrow(df) == 0) {
     stop("No GO terms left after filtering.", call. = FALSE)
@@ -2094,7 +2101,10 @@ plot_go_terms <- function(
       ),
       alpha = 1
     ) +
-    ggplot2::scale_color_manual(values = color_values, drop = FALSE) +
+    ggplot2::scale_color_manual(
+      values = color_values,
+      drop = TRUE
+    ) +
     ggplot2::scale_size(range = size_range) +
     ggplot2::labs(
       x = expression(-log[10](FDR)),
