@@ -55,40 +55,10 @@ library(DEGgo)
 
 ## Workflow
 
-```text
-Raw counts + metadata
-        │
-        ▼
-Input preparation and sample matching
-        │
-        ▼
-Quality control and marker validation
-        │
-        ▼
-Low-expression filtering
-        │
-        ▼
-Differential expression analysis
-        │
-        ├── Single contrast mode
-        │
-        └── Pairwise contrast mode
-                 │
-                 ▼
-Annotation and DEG export
-                 │
-                 ▼
-Volcano plots, PCA and heatmaps
-                 │
-                 ▼
-Gene Ontology enrichment
-                 │
-                 ▼
-Gene/GO extraction and visualization
-                 │
-                 ▼
-HTML/PDF DEGgo report
-```
+<p align="center">
+  <img src="man/figures/DEGgo_workflow.png" width="900">
+</p>
+
 
 ## Input data
 
