@@ -242,6 +242,42 @@ map_entrez_ids <- function(
 }
 
 
+#' @keywords internal
+#' @noRd
+.annotate_dds <- function(dds, orgdb) {
+
+  genes <- rownames(dds)
+
+  SummarizedExperiment::rowData(dds)$SYMBOL <-
+    AnnotationDbi::mapIds(
+      orgdb,
+      keys = genes,
+      column = "SYMBOL",
+      keytype = "ENSEMBL",
+      multiVals = "first"
+    )
+
+  SummarizedExperiment::rowData(dds)$ENTREZID <-
+    AnnotationDbi::mapIds(
+      orgdb,
+      keys = genes,
+      column = "ENTREZID",
+      keytype = "ENSEMBL",
+      multiVals = "first"
+    )
+
+  SummarizedExperiment::rowData(dds)$GENENAME <-
+    AnnotationDbi::mapIds(
+      orgdb,
+      keys = genes,
+      column = "GENENAME",
+      keytype = "ENSEMBL",
+      multiVals = "first"
+    )
+
+  dds
+}
+
 
 #' Annotate differential expression results
 #'

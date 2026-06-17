@@ -284,6 +284,185 @@ plot_theme <- function(
 }
 
 # ========================================================= #
+# PLOT GENE EXPRESSION
+# ========================================================= #
+#' Plot normalized gene expression
+#'
+#' Generates publication-ready violin, boxplot, or barplot visualizations
+#' from normalized expression values produced by
+#' \code{extract_normalized_expression()}.
+#'
+#' Statistical comparisons can be added using
+#' \code{ggpubr::stat_compare_means()}.
+#'
+#' @param expr_df Long-format expression table.
+#' @param gene Gene symbol to plot.
+#' @param x Metadata variable displayed on the x-axis.
+#' @param color Metadata variable used for fill colors.
+#' @param facet Optional metadata variable used for faceting.
+#' @param geom Plot type: \code{"violin"}, \code{"boxplot"},
+#'   or \code{"barplot"}.
+#' @param comparisons List of comparisons passed to
+#'   \code{ggpubr::stat_compare_means()}.
+#' @param stats Logical. Add statistical comparisons.
+#' @param stat_method Statistical test method.
+#' @param stat_label Label style:
+#'   \code{"p.signif"} or \code{"p.format"}.
+#' @param output_dir Output directory.
+#' @param filename Output filename.
+#' @param width Plot width.
+#' @param height Plot height.
+#' @param dpi Plot resolution.
+#' @param txtsize Base font size.
+#' @param ncol Number of plot columns.
+#' @param x_ang Numeric. Angle of x-axis labels.
+#'
+#' @return A ggplot object.
+#'
+#' @examples
+#' \dontrun{
+#' plot_gene_expression(
+#'   expr_df,
+#'   gene = "Adipoq",
+#'   x = "treatment",
+#'   color = "treatment",
+#'   facet = "tissue",
+#'   geom = "violin"
+#' )
+#' }
+#'
+#' @export
+#'
+plot_gene_expression <- function(
+    expr_df,
+    gene,
+    x = "treatment",
+    color = x,
+    facet = NULL,
+    geom = c("violin", "boxplot", "barplot"),
+    comparisons = list(c("PBS", "PAMH")),
+    stats = TRUE,
+    stat_method = "wilcox.test",
+    stat_label = c("p.signif", "p.format"),
+    output_dir = NULL,
+    filename = NULL,
+    width = 6,
+    height = 5,
+    dpi = 300,
+    txtsize = 12,
+    x_ang = 45,
+    ncol = NULL
+) {
+
+  geom <- match.arg(geom)
+  stat_label <- match.arg(stat_label)
+
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required.", call. = FALSE)
+  }
+
+  if (isTRUE(stats) && !requireNamespace("ggpubr", quietly = TRUE)) {
+    stop("Package 'ggpubr' is required for stats.", call. = FALSE)
+  }
+
+  df <- as.data.frame(expr_df)
+
+  required <- c("gene", "expression", x)
+  if (!is.null(color)) required <- c(required, color)
+  if (!is.null(facet)) required <- c(required, facet)
+
+  missing <- setdiff(required, colnames(df))
+  if (length(missing) > 0) {
+    stop("Missing column(s): ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+
+  df <- df[df$gene == gene, , drop = FALSE]
+
+  if (nrow(df) == 0) {
+    stop("Gene not found in expr_df: ", gene, call. = FALSE)
+  }
+
+  df[[x]] <- factor(df[[x]])
+
+  p <- ggplot2::ggplot(
+    df,
+    ggplot2::aes(x = .data[[x]], y = .data[["expression"]], fill = .data[[color]])
+  )
+
+  if (geom == "violin") {
+    p <- p +
+      ggplot2::geom_violin(trim = FALSE, alpha = 0.8, linewidth = 0.1) +
+      ggplot2::geom_boxplot(width = 0.15, outlier.shape = NA, alpha = 0.85) +
+      ggplot2::geom_jitter(width = 0.08, size = 0.5, alpha = 0.8)
+  }
+
+  if (geom == "boxplot") {
+    p <- p +
+      ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.8, linewidth = 0.1) +
+      ggplot2::geom_jitter(width = 0.12, size = 0.5, alpha = 0.8)
+  }
+
+  if (geom == "barplot") {
+    p <- p +
+      ggplot2::stat_summary(fun = mean, geom = "bar", alpha = 0.8, width = 0.7) +
+      ggplot2::stat_summary(fun.data = ggplot2::mean_se, geom = "errorbar", width = 0.2, linewidth = 0.1) +
+      ggplot2::geom_jitter(width = 0.12, size = 0.5, alpha = 0.8)
+  }
+
+  if (!is.null(facet)) {
+    p <- p +
+      ggplot2::facet_wrap(stats::as.formula(paste("~", facet)), scales = "free_y", ncol = ncol)
+  }
+
+  if (isTRUE(stats)) {
+    p <- p +
+      ggpubr::stat_compare_means(
+        comparisons = comparisons,
+        method = stat_method,
+        label = stat_label
+      )
+  }
+
+  y_label <- switch(
+    unique(df$assay)[1],
+    raw = "Raw counts",
+    normalized = "Normalized counts",
+    log2_normalized = "log2(Normalized counts + 1)",
+    vst = "VST expression",
+    fpkm = "FPKM",
+    tpm = "TPM",
+    "Expression"
+  )
+
+  p <- p +
+    ggplot2::labs(title = gene, x = x, y = y_label) +
+    plot_theme(style = "classic", txtsize = txtsize, x.ang = x_ang)
+
+  if (!is.null(output_dir)) {
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+    if (is.null(filename)) {
+      filename <- paste0(gene, "_", geom)
+    }
+
+    ggplot2::ggsave(
+      file.path(output_dir, paste0(filename, ".png")),
+      p, width = width, height = height, dpi = dpi, bg = "white"
+    )
+
+    ggplot2::ggsave(
+      file.path(output_dir, paste0(filename, ".pdf")),
+      p, width = width, height = height, bg = "white"
+    )
+  }
+
+  p
+}
+
+
+
+
+# ========================================================= #
 # VOLCANO PLOT
 # ========================================================= #
 #' Generate volcano plot for differential expression results
@@ -331,7 +510,7 @@ plot_volcano <- function(
     use_padj = TRUE,
     logfc_cutoff = 0.25,
     padj_cutoff = 0.05,
-    top_n_labels = 10,
+    top_n_labels = 40,
     genes_highlight = NULL,
     colors = c(
       "Up" = "#740001",

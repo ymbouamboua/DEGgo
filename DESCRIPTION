@@ -16,6 +16,7 @@ Imports:
     AnnotationDbi,
     dplyr,
     ggplot2,
+    ggpubr,
     reshape2,
     grid,
     ggrepel,

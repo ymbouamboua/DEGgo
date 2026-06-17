@@ -37,15 +37,15 @@ DEGgo provides a complete workflow from raw count matrices to biological interpr
 - tissue marker verification;
 - differential expression analysis;
 - single and pairwise contrasts;
-- Gene Ontology enrichment for Up and Down genes;
+- gene ontology enrichment;
 - extraction of genes and GO terms of interest;
-- publication-ready visualization.
+- publication-ready visualization;
+- automated HTML/PDF reporting.
 
 ## Installation
 
 ```{r installation}
 install.packages("remotes")
-
 remotes::install_github("ymbouamboua/DEGgo")
 ```
 
@@ -55,55 +55,78 @@ library(DEGgo)
 
 ## Workflow
 
-
-## Workflow
-
 ```text
-Raw counts
-    │
-    ▼
-Quality Control
-    │
-    ▼
-Sample Filtering
-    │
-    ▼
-Marker Validation
-    │
-    ▼
-Differential Expression
-    │
-    ├── Single analysis
-    │
-    └── Pairwise analysis
-             │
-             ▼
-GO Enrichment
-             │
-             ▼
-Gene Extraction
-             │
-             ▼
-Reporting
+Raw counts + metadata
+        │
+        ▼
+Input preparation and sample matching
+        │
+        ▼
+Quality control and marker validation
+        │
+        ▼
+Low-expression filtering
+        │
+        ▼
+Differential expression analysis
+        │
+        ├── Single contrast mode
+        │
+        └── Pairwise contrast mode
+                 │
+                 ▼
+Annotation and DEG export
+                 │
+                 ▼
+Volcano plots, PCA and heatmaps
+                 │
+                 ▼
+Gene Ontology enrichment
+                 │
+                 ▼
+Gene/GO extraction and visualization
+                 │
+                 ▼
+HTML/PDF DEGgo report
 ```
 
 ## Input data
 
 ### Count table
 
+DEGgo accepts raw count tables or matrices. Gene annotation columns can be automatically detected using `gene_col` and `feature_col`.
+
 ```text
-gene_id     gene_name    Sample1    Sample2    Sample3
-ENSMUSG1    Adipoq       120        145        98
-ENSMUSG2    Lep          65         80         50
+gene_id      gene_name    Sample1    Sample2    Sample3
+ENSMUSG1     Adipoq       120        145        98
+ENSMUSG2     Lep          65         80         50
+ENSMUSG3     Ucp1         12         18         250
 ```
 
 ### Metadata
+
+Metadata must contain one row per sample. A `sample` column is expected or automatically detected using `sample_col`.
 
 ```text
 sample      tissue    sex       treatment
 Sample1     WAT       Female    PBS
 Sample2     WAT       Female    PAMH
 Sample3     BAT       Female    PBS
+```
+
+For pairwise analysis, DEGgo can build a `condition` variable from multiple metadata columns, for example:
+
+```r
+pairwise_group_cols = c("treatment", "sex", "tissue")
+```
+
+This creates groups such as:
+
+```text
+PBS_Female_WAT
+PAMH_Female_WAT
+PBS_Male_BAT
+PAMH_Male_BAT
 ```
 
 ## Main functions
@@ -115,15 +138,19 @@ Sample3     BAT       Female    PBS
 | `marker_score_check()` | Tissue marker scoring and sample swap detection |
 | `plot_gene_heatmap()` | Marker or selected-gene heatmap |
 | `run_deggo()` | Main DEGgo differential expression workflow |
-| `run_go_enrichment()` | GO enrichment for Up and Down DEGs |
-| `plot_go_terms()` | Publication-ready Up/Down GO plot |
+| `run_go_enrichment()` | Gene Ontology enrichment for DEG results |
+| `plot_go_terms()` | Publication-ready GO plot |
+| `plot_all_go_terms()` | Plot GO terms across multiple comparisons |
+| `extract_expression()` | Extract raw, normalized, log2-normalized or VST expression values |
+| `plot_gene_expression()` | Plot normalized gene expression for selected genes |
+| `generate_deggo_report()` | Generate HTML/PDF DEGgo report |
 | `deggo_extract_deg_genes()` | Extract genes of interest from DEG results |
 | `deggo_extract_go_genes_pairwise()` | Extract GO terms containing selected genes |
 | `deggo_extract_go_keywords()` | Extract GO terms matching biological keywords |
 
 # Complete DEGgo workflow
 
-## 1. Raw QC
+## 1. Raw count quality control
 
 ```{r raw-qc}
 qc <- explore_bulk_rnaseq(
@@ -247,6 +274,8 @@ marker_check$plot
 
 Use `analysis_mode = "single"` when you have one contrast such as `PAMH` vs `PBS`, `KO` vs `WT`, or `treated` vs `control`.
 
+The metadata must contain a `condition` column when using single mode.
+
 ```{r run-deggo-single}
 results_single <- run_deggo(
   counts = counts,
@@ -260,10 +289,13 @@ results_single <- run_deggo(
   min_count = 2,
   min_samples = 2,
   min_total = 10,
+  generate_report = TRUE,
+  report_formats = "html",
   output_dir = file.path(outdir, "DEGgo_single")
 )
 
 results_single$summary
+results_single$report_files
 ```
 
 ## 6B. Pairwise contrast mode
@@ -306,10 +338,13 @@ results <- run_deggo(
   min_count = 2,
   min_samples = 2,
   min_total = 10,
+  generate_report = TRUE,
+  report_formats = "html",
   output_dir = outdir
 )
 
 results$summary
+results$report_files
 ```
 
 ```{r save-results}
@@ -319,16 +354,123 @@ saveRDS(
 )
 ```
 
+# Automated HTML/PDF report
+
+DEGgo can automatically generate an HTML or PDF report at the end of `run_deggo()` using the arguments `generate_report`, `report_formats`, and `report_template`.
+
+## HTML report
+
+```{r html-report}
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "mouse",
+  method = "DESeq2",
+  analysis_mode = "pairwise",
+  pairwise_group_cols = c("treatment", "sex", "tissue"),
+  pairwise_contrast_col = "comparison_group",
+  pairwise_contrasts = pairwise_contrasts,
+  generate_report = TRUE,
+  report_formats = "html",
+  output_dir = outdir
+)
+
+results$report_files$html
+```
+
+## HTML and PDF report
+
+```{r html-pdf-report}
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "mouse",
+  method = "DESeq2",
+  analysis_mode = "pairwise",
+  pairwise_group_cols = c("treatment", "sex", "tissue"),
+  pairwise_contrast_col = "comparison_group",
+  pairwise_contrasts = pairwise_contrasts,
+  generate_report = TRUE,
+  report_formats = c("html", "pdf"),
+  output_dir = outdir
+)
+
+results$report_files
+```
+
+PDF generation requires a LaTeX installation, for example TinyTeX.
+
+```{r install-tinytex}
+install.packages("tinytex")
+tinytex::install_tinytex()
+```
+
+## Generate a report from existing results
+
+If you already have a DEGgo results object, you can generate the report directly:
+
+```{r report-existing-results}
+report_files <- generate_deggo_report(
+  results = results,
+  output_dir = results$output_dir,
+  formats = c("html", "pdf")
+)
+
+report_files
+```
+
+# Gene expression extraction and plotting
+
+## Extract expression values
+
+`extract_expression()` extracts raw, normalized, log2-normalized, or variance-stabilized expression values from a DESeq2 object.
+
+```{r extract-expression}
+expr_df <- extract_expression(
+  dds = results$dds,
+  metadata = results$metadata,
+  genes = c("Adipoq", "Lep", "Ucp1", "Amh", "Amhr2"),
+  assay = "vst",
+  gene_col = "SYMBOL"
+)
+
+head(expr_df)
+```
+
+## Plot one gene
+
+```{r plot-one-gene}
+plot_gene_expression(
+  expr_df,
+  gene = "Adipoq",
+  x = "treatment",
+  color = "treatment",
+  facet = "tissue",
+  geom = "violin"
+)
+```
+
+## Plot another gene
+
+```{r plot-another-gene}
+plot_gene_expression(
+  expr_df,
+  gene = "Ucp1",
+  x = "treatment",
+  color = "treatment",
+  facet = "tissue",
+  geom = "boxplot"
+)
+```
+
 # GO enrichment
 
-DEGgo performs Gene Ontology enrichment separately for:
-
-- upregulated genes;
-- downregulated genes.
+DEGgo performs Gene Ontology enrichment on significant differentially expressed genes.
 
 ```{r run-go-enrichment}
 go <- run_go_enrichment(
   sig_deg = results$sig_deg$WAT_Female_PAMH_vs_PBS,
+  comparison = "WAT_Female_PAMH_vs_PBS",
   ontology = "BP",
   orgdb = org.Mm.eg.db::org.Mm.eg.db,
   output_dir = file.path(outdir, "GO_WAT_Female_PAMH_vs_PBS")
@@ -345,6 +487,16 @@ plot_go_terms(
   go_df = go$go_results,
   comparison = "WAT Female PAMH vs PBS",
   top_n = 15
+)
+```
+
+## Plot all GO terms across pairwise comparisons
+
+```{r plot-all-go-terms}
+plot_all_go_terms(
+  results = results,
+  top_n = 10,
+  output_dir = file.path(outdir, "pairwise_GO_plots")
 )
 ```
 
@@ -420,19 +572,28 @@ go_keywords_results
 
 # Output structure
 
+For pairwise DESeq2 analysis, DEGgo creates a dated analysis directory:
+
 ```text
 DEGgo_results/
-│
-├── DEGgo_QC_raw/
-├── DEGgo_QC_clean/
-├── PCA/
-├── Volcano/
-├── Heatmaps/
-├── GO/
-├── DEG_tables/
-├── Summary/
-└── DEGgo_results.rds
+└── DEGgo_YYYY_MM_DD_DESeq2_pairwise/
+    │
+    ├── pairwise_DESeq2_results/
+    ├── pairwise_DESeq2_significant/
+    ├── pairwise_volcano/
+    ├── pairwise_heatmaps/
+    ├── pairwise_PCA/
+    ├── pairwise_GO/
+    ├── pairwise_GO_plots/
+    ├── DEGgo_Report.html
+    ├── DEGgo_Report.pdf
+    ├── pairwise_summary.tsv
+    ├── session_info.txt
+    └── DEGgo_results.rds
 ```
+
+For single analysis, the output directory has the same general structure but contains single-comparison result files.
+
 
 # Citation
 
@@ -443,16 +604,3 @@ If you use DEGgo in your work, please cite:
 # License
 
 MIT © Yvon MBOUAMBOUA
-
-# Roadmap
-
-Upcoming features:
-
-- KEGG enrichment;
-- Reactome enrichment;
-- GSEA;
-- multi-factor designs;
-- Quarto report generation;
-- interactive HTML reports;
-- CRAN submission;
-- Bioconductor submission.

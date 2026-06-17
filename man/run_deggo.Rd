@@ -32,6 +32,9 @@ run_deggo(
   min_count = 5,
   min_samples = 2,
   min_total = 10,
+  generate_report = TRUE,
+  report_formats = "html",
+  report_template = NULL,
   seed = 123
 )
 }
@@ -40,23 +43,13 @@ run_deggo(
 
 \item{metadata}{Sample metadata data frame.}
 
-\item{gene_col}{Character vector of possible gene identifier columns.
-Used to identify the column containing unique gene IDs
-(e.g. ENSEMBL IDs) in the counts table.
-The first matching column is used automatically.}
+\item{gene_col}{Character vector of possible gene identifier columns.}
 
-\item{feature_col}{Character vector of possible feature annotation
-columns containing gene symbols or gene names.
-If present, this information is retained and used for
-annotation, plotting, and reporting.}
+\item{feature_col}{Character vector of possible feature annotation columns.}
 
-\item{sample_col}{Character vector of possible sample identifier
-columns in the metadata table.
-The first matching column is used to match metadata
-with count matrix columns.}
+\item{sample_col}{Character vector of possible sample identifier columns.}
 
-\item{prepare_input}{Logical. If TRUE, automatically matches counts and
-metadata using \code{prepare_counts_metadata()}.}
+\item{prepare_input}{Logical. If TRUE, automatically matches counts and metadata.}
 
 \item{output_dir}{Output directory. If NULL, a dated directory is created.}
 
@@ -100,20 +93,21 @@ metadata using \code{prepare_counts_metadata()}.}
 
 \item{min_total}{Minimum total count for filtering.}
 
+\item{generate_report}{Logical. Generate DEGgo report.}
+
+\item{report_formats}{Character vector. Report formats: html and/or pdf.}
+
+\item{report_template}{Optional path to report R Markdown template.}
+
 \item{seed}{Random seed.}
 }
 \value{
-A list containing DEG results, plots, GO results, and output path.
+A list containing DEG results, plots, GO results, reports, and output paths.
 }
 \description{
 Run an automated bulk RNA-seq downstream analysis workflow including
 input preparation, sample matching, differential expression analysis,
 result annotation, visualization, heatmap generation,
-PCA analysis, and Gene Ontology enrichment.
-}
-\details{
-DEGgo automatically detects common gene identifier columns
-(e.g. gene_id, ENSEMBL, gene) and optional gene annotation
-columns (e.g. gene_name, SYMBOL), allowing flexible input
-count tables from multiple RNA-seq pipelines.
+PCA analysis, Gene Ontology enrichment, and optional HTML/PDF report
+generation.
 }

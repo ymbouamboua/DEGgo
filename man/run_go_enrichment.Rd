@@ -6,10 +6,10 @@
 \usage{
 run_go_enrichment(
   sig_deg,
+  comparison = NULL,
   ontology = c("BP", "MF", "CC"),
   orgdb,
   output_dir = "DEGgo_out",
-  show_category = 20,
   pvalue_cutoff = 0.05,
   qvalue_cutoff = 0.2,
   p_adjust_method = "BH",
@@ -19,44 +19,45 @@ run_go_enrichment(
 )
 }
 \arguments{
-\item{sig_deg}{Significant DEG data frame. Must contain Entrez IDs and
-log2 fold-change values.}
+\item{sig_deg}{Significant DEG data frame containing Entrez IDs
+and log2 fold-change values.}
 
-\item{ontology}{Character. GO ontology to test. One of \code{"BP"},
-\code{"MF"}, or \code{"CC"}.}
+\item{comparison}{Character. Comparison name used to label GO
+enrichment results and exported files.}
+
+\item{ontology}{Character. GO ontology to test. One of
+\code{"BP"}, \code{"MF"} or \code{"CC"}.}
 
 \item{orgdb}{OrgDb annotation database used by
 \code{clusterProfiler::enrichGO()}.}
 
-\item{output_dir}{Character. Directory where enrichment tables and plots
-are exported.}
+\item{output_dir}{Character. Output directory.}
 
-\item{show_category}{Integer. Number of GO terms to display per regulation.}
+\item{pvalue_cutoff}{Numeric. Raw p-value cutoff.}
 
-\item{pvalue_cutoff}{Numeric. P-value cutoff for enrichment.}
+\item{qvalue_cutoff}{Numeric. q-value cutoff.}
 
-\item{qvalue_cutoff}{Numeric. Q-value cutoff for enrichment.}
-
-\item{p_adjust_method}{Character. Multiple-testing correction method.}
+\item{p_adjust_method}{Character. Multiple testing correction method.}
 
 \item{logfc_col}{Character. Column containing log2 fold-change values.}
 
-\item{entrez_col}{Character. Column containing Entrez IDs.}
+\item{entrez_col}{Character. Column containing Entrez gene identifiers.}
 
-\item{min_genes}{Integer. Minimum number of genes required for enrichment.}
+\item{min_genes}{Integer. Minimum number of genes required to
+perform enrichment.}
 }
 \value{
 A named list containing:
 \describe{
-\item{\code{go_results}}{Merged GO enrichment table with Regulation column.}
-\item{\code{go_by_regulation}}{Separate Up and Down enrichGO results.}
-\item{\code{go_plot}}{Combined Up/Down GO plot.}
+\item{\code{go_results}}{GO enrichment results table.}
 \item{\code{ontology}}{Ontology tested.}
+\item{\code{comparison}}{Comparison identifier.}
 \item{\code{n_up_genes}}{Number of upregulated genes tested.}
 \item{\code{n_down_genes}}{Number of downregulated genes tested.}
 }
 }
 \description{
-Performs Gene Ontology enrichment analysis separately on upregulated and
-downregulated significant differentially expressed genes using Entrez IDs.
+Performs Gene Ontology enrichment analysis separately on
+upregulated and downregulated significant differentially
+expressed genes using Entrez identifiers.
 }

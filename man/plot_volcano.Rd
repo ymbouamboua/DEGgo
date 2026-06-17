@@ -13,7 +13,7 @@ plot_volcano(
   use_padj = TRUE,
   logfc_cutoff = 0.25,
   padj_cutoff = 0.05,
-  top_n_labels = 10,
+  top_n_labels = 40,
   genes_highlight = NULL,
   colors = c(Up = "#740001", Down = "#6497b1", Ns = "gray70"),
   point_size = 1.5,

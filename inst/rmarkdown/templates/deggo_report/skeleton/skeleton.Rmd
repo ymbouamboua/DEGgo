@@ -1,0 +1,296 @@
+---
+title: "DEGgo RNA-seq Report"
+author: "DEGgo"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    theme: flatly
+    self_contained: true
+params:
+  results: NULL
+  sig_deg: NULL
+  go_results: NULL
+  summary: NULL
+  output_dir: NULL
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+res <- params$results
+outdir <- params$output_dir
+
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+html_card <- function(title, value, subtitle = NULL) {
+  cat(
+    '<div class="card" style="padding:16px;margin:8px;border-radius:12px;border:1px solid #ddd;">',
+    '<h3 style="margin-top:0;">', title, '</h3>',
+    '<div style="font-size:28px;font-weight:bold;">', value, '</div>',
+    if (!is.null(subtitle)) paste0('<p style="color:#666;">', subtitle, '</p>') else '',
+    '</div>'
+  )
+}
+
+show_table <- function(x, n = 30) {
+  x <- as.data.frame(x)
+  if (nrow(x) == 0) {
+    cat("<p><em>No data available.</em></p>")
+    return(invisible(NULL))
+  }
+  if (is.finite(n)) x <- head(x, n)
+  print(knitr::kable(x, format = "html", table.attr = "class='table table-striped table-hover'"))
+}
+
+find_png <- function(path) {
+  if (!dir.exists(path)) return(character())
+  list.files(path, pattern = "\\.png$", recursive = TRUE, full.names = TRUE)
+}
+
+emit_gallery <- function(files, width = "95%") {
+  if (length(files) == 0) {
+    cat("<p><em>No plot found.</em></p>")
+    return(invisible(NULL))
+  }
+
+  for (f in files) {
+    title <- tools::file_path_sans_ext(basename(f))
+    f <- normalizePath(f, winslash = "/", mustWork = TRUE)
+
+    cat('<div class="card" style="padding:16px;margin:18px 0;border-radius:12px;border:1px solid #ddd;">')
+    cat('<h3>', title, '</h3>')
+    cat('<img src="', f, '" style="width:', width, ';border:1px solid #eee;border-radius:8px;">')
+    cat('</div>')
+  }
+}
+
+clean_go <- function(x) {
+  if (is.null(x)) return(data.frame())
+  if (!is.null(x$go_results)) x <- x$go_results
+  tryCatch(as.data.frame(x), error = function(e) data.frame())
+}
+
+sig <- params$sig_deg %||% res$sig_deg
+go  <- params$go_results %||% res$go_results
+sumtab <- params$summary %||% res$summary
+```
+
+<style>
+body {
+  font-size: 14px;
+}
+h1, h2, h3 {
+  font-weight: 700;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>
+
+# Overview
+
+```{r overview, results='asis'}
+cat('<div class="card-grid">')
+
+html_card("Analysis mode", res$run_params$analysis_mode %||% "NA")
+html_card("Method", res$run_params$method %||% "NA")
+html_card("Organism", res$run_params$organism %||% "NA")
+html_card("DEGgo version", res$version %||% "development")
+
+cat('</div>')
+
+cat("<br>")
+cat("<strong>Output directory:</strong><br>")
+cat("<code>", outdir, "</code>")
+```
+
+# Run parameters
+
+```{r run-params}
+if (!is.null(res$run_params)) {
+  show_table(as.data.frame(res$run_params), n = Inf)
+}
+```
+
+# Sample metadata
+
+```{r metadata}
+if (!is.null(res$metadata)) {
+  show_table(res$metadata, n = 100)
+}
+```
+
+# Differential expression summary
+
+```{r deg-summary}
+if (!is.null(sumtab)) {
+  show_table(sumtab, n = Inf)
+}
+```
+
+# PCA plots {.tabset}
+
+## PCA gallery
+
+```{r pca-plots, results='asis'}
+pca_dirs <- c(
+  file.path(outdir, "pairwise_PCA"),
+  file.path(outdir, "PCA"),
+  file.path(outdir, "pca")
+)
+
+pca_dir <- pca_dirs[dir.exists(pca_dirs)][1]
+pca_files <- find_png(pca_dir)
+
+emit_gallery(pca_files)
+```
+
+# Volcano plots {.tabset}
+
+## Volcano gallery
+
+```{r volcano-plots, results='asis'}
+volcano_dirs <- c(
+  file.path(outdir, "pairwise_volcano"),
+  file.path(outdir, "volcano"),
+  file.path(outdir, "Volcano")
+)
+
+volcano_dir <- volcano_dirs[dir.exists(volcano_dirs)][1]
+volcano_files <- find_png(volcano_dir)
+
+emit_gallery(volcano_files)
+```
+
+# Heatmaps {.tabset}
+
+## Heatmap gallery
+
+```{r heatmap-plots, results='asis'}
+heatmap_dirs <- c(
+  file.path(outdir, "pairwise_heatmaps"),
+  file.path(outdir, "heatmaps"),
+  file.path(outdir, "Heatmaps")
+)
+
+heatmap_dir <- heatmap_dirs[dir.exists(heatmap_dirs)][1]
+heatmap_files <- find_png(heatmap_dir)
+
+emit_gallery(heatmap_files)
+```
+
+# Significant DEGs {.tabset}
+
+```{r sig-deg-tabs, results='asis'}
+if (is.null(sig)) {
+
+  cat("<p><em>No significant DEG table available.</em></p>")
+
+} else if (is.list(sig)) {
+
+  for (nm in names(sig)) {
+    x <- as.data.frame(sig[[nm]])
+
+    cat("\n\n## ", nm, "\n\n", sep = "")
+    cat("<p><strong>Number of significant DEGs:</strong> ", nrow(x), "</p>", sep = "")
+
+    if (nrow(x) > 0) {
+      show_table(x, n = 30)
+    } else {
+      cat("<p><em>No significant DEG.</em></p>")
+    }
+  }
+
+} else {
+
+  x <- as.data.frame(sig)
+  cat("<p><strong>Number of significant DEGs:</strong> ", nrow(x), "</p>", sep = "")
+  show_table(x, n = 30)
+}
+```
+
+# GO enrichment {.tabset}
+
+```{r go-tabs, results='asis'}
+if (is.null(go)) {
+
+  cat("<p><em>No GO results available.</em></p>")
+
+} else if (is.list(go)) {
+
+  for (nm in names(go)) {
+    x <- clean_go(go[[nm]])
+
+    cat("\n\n## ", nm, "\n\n", sep = "")
+
+    if (nrow(x) > 0) {
+      show_table(x, n = 30)
+    } else {
+      cat("<p><em>No enriched GO terms.</em></p>")
+    }
+  }
+
+} else {
+
+  x <- clean_go(go)
+  show_table(x, n = 30)
+}
+```
+
+# GO plots {.tabset}
+
+## GO plot gallery
+
+```{r go-plots, results='asis'}
+go_dirs <- c(
+  file.path(outdir, "pairwise_GO"),
+  file.path(outdir, "GO"),
+  file.path(outdir, "go")
+)
+
+go_dir <- go_dirs[dir.exists(go_dirs)][1]
+go_files <- find_png(go_dir)
+
+emit_gallery(go_files)
+```
+
+# Output files
+
+```{r output-files}
+if (dir.exists(outdir)) {
+  files <- list.files(outdir, recursive = TRUE, full.names = FALSE)
+  files <- files[!grepl("\\.html$", files)]
+
+  show_table(data.frame(file = files), n = 300)
+}
+```
+
+# Session information
+
+```{r session-info, results='asis'}
+session_file <- file.path(outdir, "sessionInfo.txt")
+
+cat("<pre>")
+
+if (file.exists(session_file)) {
+  cat(paste(readLines(session_file), collapse = "\n"))
+} else {
+  print(sessionInfo())
+}
+
+cat("</pre>")
+```
