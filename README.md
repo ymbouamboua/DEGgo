@@ -46,7 +46,7 @@ DEGgo
 
 <p align="center">
 
-<img src="man/figures/DEGgo_logo.png" width="300">
+<img src="man/figures/DEGgo_logo.png" width="500">
 </p>
 
 # DEGgo
@@ -91,7 +91,7 @@ library(DEGgo)
 
 <p align="center">
 
-<img src="man/figures/DEGgo_workflow.png" width="900">
+<img src="man/figures/DEGgo_workflow.png" width="600">
 </p>
 
 ## Input data
