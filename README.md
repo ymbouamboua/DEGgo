@@ -41,8 +41,8 @@ DEGgo
   - [4. Extract GO terms using biological
     keywords](#4-extract-go-terms-using-biological-keywords)
 - [Output structure](#output-structure)
-  - [Platform compatibility and HPC
-    support](#platform-compatibility-and-hpc-support)
+- [Platform compatibility and HPC
+  support](#platform-compatibility-and-hpc-support)
 - [Citation](#citation)
 - [License](#license)
 
@@ -611,7 +611,7 @@ DEGgo_results/
 For single analysis, the output directory has the same general structure
 but contains single-comparison result files.
 
-## Platform compatibility and HPC support
+# Platform compatibility and HPC support
 
 DEGgo is designed to provide a flexible RNA-seq downstream analysis
 workflow that can be used across different computing environments.
