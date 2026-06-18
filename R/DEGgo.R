@@ -812,6 +812,17 @@ run_deggo <- function(
 
   de_results$report_files <- NULL
 
+
+  pkg_root <- normalizePath(
+    file.path(dirname(sys.frame(1)$ofile %||% getwd()), ".."),
+    mustWork = FALSE
+  )
+
+  file.path(
+    pkg_root,
+    "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
+  )
+
   if (isTRUE(generate_report)) {
     de_results$report_files <- generate_deggo_report(
       results = de_results,

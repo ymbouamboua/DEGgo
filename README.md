@@ -41,6 +41,8 @@ DEGgo
   - [4. Extract GO terms using biological
     keywords](#4-extract-go-terms-using-biological-keywords)
 - [Output structure](#output-structure)
+  - [Platform compatibility and HPC
+    support](#platform-compatibility-and-hpc-support)
 - [Citation](#citation)
 - [License](#license)
 
@@ -608,6 +610,31 @@ DEGgo_results/
 
 For single analysis, the output directory has the same general structure
 but contains single-comparison result files.
+
+## Platform compatibility and HPC support
+
+DEGgo is designed to provide a flexible RNA-seq downstream analysis
+workflow that can be used across different computing environments.
+Although DEGgo is suitable for HPC environments and large-scale
+transcriptomic analyses, it can also be run on standard workstations.
+
+The package is fully compatible with Linux, macOS, and Windows systems
+as it is implemented entirely in R and relies on cross-platform CRAN and
+Bioconductor dependencies. No Linux-specific tools are required.
+
+For HPC users, DEGgo can be integrated into batch computing workflows
+(e.g., SLURM) by running standard R scripts through `Rscript`. Output
+files, analysis parameters, and reproducibility information are
+automatically saved, facilitating pipeline tracking and automated
+execution.
+
+DEGgo is also compatible with containerized environments such as Docker
+or Apptainer/Singularity, allowing reproducible deployment across HPC
+clusters and computational infrastructures.
+
+This makes DEGgo accessible both to experienced bioinformaticians
+working on HPC systems and to R users performing RNA-seq analysis on
+local computers.
 
 # Citation
 

@@ -29,11 +29,11 @@ knitr::opts_chunk$set(
   results = "asis"
 )
 
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
 res <- params$results
 outdir <- params$output_dir
 md <- params$metadata %||% res$metadata
-
-`%||%` <- function(x, y) if (is.null(x)) y else x
 
 sig <- params$sig_deg %||% res$sig_deg
 go  <- params$go_results %||% res$go_results
@@ -388,6 +388,24 @@ code {
 
 ```{r}
 
+analysis_label <- ifelse(
+  res$run_params$analysis_mode == "pairwise",
+  "pairwise differential expression analyses across multiple experimental groups",
+  "a differential expression analysis"
+)
+
+cat(
+  sprintf(
+    "<p>
+    This report summarizes %s performed with <strong>DEGgo</strong>.
+    Results include quality control, gene expression analysis,
+    visualization of significant genes, Gene Ontology enrichment,
+    and reproducibility information.
+    </p>",
+    analysis_label
+  )
+)
+
 cat('<div class="metric-grid">')
 
 html_card("Analysis mode", res$run_params$analysis_mode %||% "NA")
@@ -446,11 +464,8 @@ if (file.exists(input_summary_file)) {
         as.character(input_summary$metric[i]),
         as.character(input_summary$value[i])
       )
-
     }
-
     cat('</div>')
-
   } else {
 
     print(
@@ -461,11 +476,8 @@ if (file.exists(input_summary_file)) {
           "class='table table-striped table-hover'"
       )
     )
-
   }
-
 }
-
 
 
 # --------------------------------------------------------
@@ -492,13 +504,11 @@ if (file.exists(metadata_file)) {
 }
 
 
-
-if (!is.null(md) && nrow(md) > 0) {
-
-
 # --------------------------------------------------------
 # Clean metadata columns
 # --------------------------------------------------------
+
+if (!is.null(md) && nrow(md) > 0) {
 
 colnames(md) <- make.unique(
   trimws(colnames(md))
@@ -514,21 +524,12 @@ colnames(md)[colnames(md) == ""] <- paste0(
 # Detect sample column
 # --------------------------------------------------------
 
-sample_candidates <- c(
-  "sample",
-  "Sample",
-  "sample_id",
-  "SampleID",
-  "id",
-  "ID"
-)
-
+sample_candidates <- c("sample", "Sample", "sample_id","SampleID", "id", "ID")
 
 sample_col <- intersect(
   sample_candidates,
   colnames(md)
 )
-
 
 if (length(sample_col) == 0) {
 
@@ -541,179 +542,6 @@ if (length(sample_col) == 0) {
 }
 
 
-
-# --------------------------------------------------------
-# Metadata overview
-# --------------------------------------------------------
-
-cat("<h3>Metadata overview</h3>")
-
-cat('<div class="metric-grid">')
-
-
-html_card(
-  "Samples",
-  nrow(md)
-)
-
-html_card(
-  "Variables",
-  ncol(md)
-)
-
-
-html_card(
-  "Categorical variables",
-  sum(
-    vapply(
-      md,
-      function(x)
-        is.character(x) ||
-        is.factor(x) ||
-        is.logical(x),
-      logical(1)
-    )
-  )
-)
-
-
-html_card(
-  "Numeric variables",
-  sum(
-    vapply(
-      md,
-      is.numeric,
-      logical(1)
-    )
-  )
-)
-
-
-cat('</div>')
-
-
-
-# --------------------------------------------------------
-# Design variables
-# --------------------------------------------------------
-
-cat("<h3>Study design overview</h3>")
-
-
-design_cols <- setdiff(
-  colnames(md),
-  sample_col
-)
-
-
-if (length(design_cols) > 0) {
-
-
-  design_data <- md[, design_cols, drop = FALSE]
-
-
-  keep <- vapply(
-    design_data,
-    function(x)
-      is.character(x) ||
-      is.factor(x) ||
-      is.logical(x),
-    logical(1)
-  )
-
-
-  design_cols <- names(
-    design_data
-  )[keep]
-
-}
-
-
-if (length(design_cols) > 0) {
-
-
-  design_table <- md[
-    c(sample_col, design_cols),
-    drop = FALSE
-  ]
-
-
-  print(
-    knitr::kable(
-      design_table,
-      format="html",
-      caption =
-        "Sample overview and experimental design",
-      table.attr =
-        "class='table table-striped table-hover'"
-    )
-  )
-
-
-} else {
-
-
-  cat(
-    "<p><em>No categorical design variables detected.</em></p>"
-  )
-
-
-}
-
-
-
-
-# --------------------------------------------------------
-# Experimental factors
-# --------------------------------------------------------
-
-if (length(design_cols) > 0) {
-
-
-cat("<h3>Experimental factors</h3>")
-
-
-factor_summary <- data.frame(
-
-  factor = design_cols,
-
-  levels = vapply(
-    md[, design_cols, drop = FALSE],
-    function(x)
-      length(unique(x)),
-    numeric(1)
-  ),
-
-
-  values = vapply(
-    md[, design_cols, drop = FALSE],
-    function(x)
-      paste(unique(x), collapse=", "),
-    character(1)
-  ),
-
-  stringsAsFactors = FALSE
-
-)
-
-
-
-print(
-  knitr::kable(
-    factor_summary,
-    format="html",
-    caption="Experimental design factors",
-    table.attr =
-      "class='table table-striped table-hover'"
-  )
-)
-
-
-}
-
-
-
-
 # --------------------------------------------------------
 # Full metadata
 # --------------------------------------------------------
@@ -722,7 +550,6 @@ cat("<details>")
 cat(
 "<summary><strong>Show complete metadata table</strong></summary>"
 )
-
 
 print(
   knitr::kable(
@@ -733,211 +560,12 @@ print(
   )
 )
 
-
 cat("</details>")
-
 
 }
 
 
 ```
-
-
-```{r}
-
-# repro_dir <- file.path(outdir, "reproducibility")
-# 
-# metadata_file <- file.path(
-#   repro_dir,
-#   "clean_matched_metadata.tsv"
-# )
-# 
-# input_summary_file <- file.path(
-#   repro_dir,
-#   "clean_input_summary.tsv"
-# )
-# 
-# # --------------------------------------------------------
-# # Input summary
-# # --------------------------------------------------------
-# 
-# if (file.exists(input_summary_file)) {
-# 
-#   input_summary <- read.delim(
-#     input_summary_file,
-#     check.names = FALSE
-#   )
-# 
-#   cat("<h3>Input summary</h3>")
-# 
-#   if (
-#     all(c("metric", "value") %in% colnames(input_summary))
-#   ) {
-# 
-#     cat('<div class="metric-grid">')
-# 
-#     for (i in seq_len(nrow(input_summary))) {
-# 
-#       html_card(
-#         as.character(input_summary$metric[i]),
-#         as.character(input_summary$value[i])
-#       )
-# 
-#     }
-# 
-#     cat('</div>')
-# 
-#   } else {
-# 
-#     print(
-#       knitr::kable(
-#         input_summary,
-#         format = "html",
-#         table.attr = "class='table table-striped table-hover'"
-#       )
-#     )
-# 
-#   }
-# 
-#   cat("<br>")
-# }
-# 
-# # --------------------------------------------------------
-# # Metadata
-# # --------------------------------------------------------
-# 
-# md <- NULL
-# 
-# if (file.exists(metadata_file)) {
-# 
-#   md <- read.delim(
-#     metadata_file,
-#     check.names = FALSE
-#   )
-# 
-# } else if (!is.null(res$metadata)) {
-# 
-#   md <- as.data.frame(res$metadata)
-# 
-# }
-# 
-# if (!is.null(md) && nrow(md) > 0) {
-# 
-#   cat("<h3>Metadata summary</h3>")
-# 
-#   cat('<div class="metric-grid">')
-# 
-#   html_card(
-#     "Samples",
-#     nrow(md)
-#   )
-# 
-#   html_card(
-#     "Metadata variables",
-#     ncol(md)
-#   )
-# 
-#   html_card(
-#     "Categorical variables",
-#     sum(
-#       vapply(
-#         md,
-#         function(x)
-#           is.character(x) ||
-#           is.factor(x) ||
-#           is.logical(x),
-#         logical(1)
-#       )
-#     )
-#   )
-# 
-#   html_card(
-#     "Numeric variables",
-#     sum(
-#       vapply(
-#         md,
-#         is.numeric,
-#         logical(1)
-#       )
-#     )
-#   )
-# 
-#   cat('</div>')
-# 
-#   cat("<br>")
-# 
-#   # ------------------------------------------------------
-#   # Frequency tables for categorical variables
-#   # ------------------------------------------------------
-# 
-#   summary_cols <- names(md)
-# 
-#   summary_cols <- summary_cols[
-#     vapply(
-#       md,
-#       function(x)
-#         is.character(x) ||
-#         is.factor(x) ||
-#         is.logical(x),
-#       logical(1)
-#     )
-#   ]
-# 
-#   for (col in summary_cols) {
-#     
-#     tab <- tryCatch(
-#       as.data.frame(
-#         table(
-#           md[[col]],
-#           useNA = "ifany"
-#         )
-#       ),
-#       error = function(e) NULL
-#     )
-#     
-#     if (is.null(tab) || ncol(tab) != 2)
-#       next
-#     
-#     colnames(tab) <- c(col, "n")
-#     
-#     
-#     cat(
-#       sprintf(
-#         "<h3>%s</h3>",
-#         tools::toTitleCase(
-#           gsub("_", " ", col)
-#         )
-#       )
-#     )
-# 
-#     print(
-#       knitr::kable(
-#         tab,
-#         format = "html",
-#         table.attr = "class='table table-striped table-hover'"
-#       )
-#     )
-# 
-#     cat("<br>")
-#   }
-#   
-#   cat("<details>")
-#   cat("<summary><strong>Show full metadata table</strong></summary>")
-#   
-#   print(
-#     knitr::kable(
-#       md,
-#       format = "html",
-#       table.attr = "class='table table-striped table-hover'"
-#     )
-#   )
-#   
-#   cat("</details>")
-#   
-# }
-
-```
-
 
 
 # Differential expression summary
