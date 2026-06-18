@@ -317,6 +317,7 @@ run_deggo <- function(
     de_results$volcano_plots <- list()
     de_results$heatmaps <- list()
     de_results$go_results <- list()
+    de_results$go_plots <- list()
 
     log("[9/11] Exporting plots, heatmaps and GO", type = "step")
 
@@ -391,6 +392,33 @@ run_deggo <- function(
         output_dir = dirs$go,
         orgdb = orgdb
       )
+
+      go_df_i <- de_results$go_results[[nm]]$go_results
+
+      if (!is.null(go_df_i) && nrow(go_df_i) > 0) {
+
+        de_results$go_plots[[nm]] <- plot_go_terms(
+          go_df = go_df_i,
+          comparison = paste0(nm, " GO enrichment"),
+          top_n = 10,
+          style = "bw"
+        )
+
+        ggplot2::ggsave(
+          filename = file.path(dirs$go, paste0(nm, "_GO_terms.png")),
+          plot = de_results$go_plots[[nm]],
+          width = 8,
+          height = 6,
+          dpi = 300
+        )
+
+        ggplot2::ggsave(
+          filename = file.path(dirs$go, paste0(nm, "_GO_terms.pdf")),
+          plot = de_results$go_plots[[nm]],
+          width = 8,
+          height = 6
+        )
+      }
     }
 
     de_results$go_merged <- .merge_pairwise_go(
@@ -586,36 +614,36 @@ run_deggo <- function(
     orgdb = orgdb
   )
 
-  if (!is.null(de_results$go_results[[nm]])) {
+  go_df_i <- go_results$go_results
 
-    go_df_i <- de_results$go_results[[nm]]$go_results
+  go_plot <- NULL
 
-    if (!is.null(go_df_i) && nrow(go_df_i) > 0) {
+  if (!is.null(go_df_i) && nrow(go_df_i) > 0) {
 
-      de_results$go_plots[[nm]] <- plot_go_terms(
-        go_df = go_df_i,
-        comparison = paste0(nm, " GO enrichment"),
-        top_n = 10,
-        style = "bw"
-      )
+    go_plot <- plot_go_terms(
+      go_df = go_df_i,
+      comparison = "single_comparison GO enrichment",
+      top_n = 10,
+      style = "bw"
+    )
 
-      ggplot2::ggsave(
-        filename = file.path(dirs$go, paste0(nm, "_GO_terms.png")),
-        plot = de_results$go_plots[[nm]],
-        width = 8,
-        height = 6,
-        dpi = 300
-      )
+    ggplot2::ggsave(
+      filename = file.path(dirs$go, "single_comparison_GO_terms.png"),
+      plot = go_plot,
+      width = 8,
+      height = 6,
+      dpi = 300
+    )
 
-      ggplot2::ggsave(
-        filename = file.path(dirs$go, paste0(nm, "_GO_terms.pdf")),
-        plot = de_results$go_plots[[nm]],
-        width = 8,
-        height = 6
-      )
-    }
+    ggplot2::ggsave(
+      filename = file.path(dirs$go, "single_comparison_GO_terms.pdf"),
+      plot = go_plot,
+      width = 8,
+      height = 6
+    )
   }
 
+  de_results$go_plot <- go_plot
 
   log("[10/11] Exporting final results", type = "step")
 
