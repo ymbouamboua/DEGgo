@@ -41,6 +41,8 @@
 #' @param generate_report Logical. Generate DEGgo report.
 #' @param report_formats Character vector. Report formats: html and/or pdf.
 #' @param report_template Optional path to report R Markdown template.
+#' @param save_reproducibility Logical. Save run parameters and reproducibility files.
+#' @param save_clean_inputs Logical. Save cleaned counts and matched metadata.
 #' @param seed Random seed.
 #'
 #' @return A list containing DEG results, plots, GO results, reports, and output paths.
@@ -76,6 +78,8 @@ run_deggo <- function(
     generate_report = TRUE,
     report_formats = "html",
     report_template = NULL,
+    save_reproducibility = TRUE,
+    save_clean_inputs = TRUE,
     seed = 123
 ) {
 
@@ -113,6 +117,9 @@ run_deggo <- function(
   output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
 
   dirs <- .deggo_dirs(output_dir, analysis_mode)
+
+  repro_dir <- file.path(output_dir, "reproducibility")
+  dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
 
   deggo_version <- tryCatch(
     as.character(utils::packageVersion("DEGgo")),
@@ -234,6 +241,54 @@ run_deggo <- function(
 
   colnames(counts) <- sample_ids
   rownames(metadata) <- sample_ids
+
+  if (isTRUE(save_clean_inputs)) {
+
+    utils::write.table(
+      counts,
+      file.path(repro_dir, "clean_filtered_counts.tsv"),
+      sep = "\t",
+      quote = FALSE,
+      col.names = NA
+    )
+
+    utils::write.table(
+      metadata,
+      file.path(repro_dir, "clean_matched_metadata.tsv"),
+      sep = "\t",
+      quote = FALSE,
+      col.names = NA
+    )
+
+    input_summary <- data.frame(
+      metric = c(
+        "samples",
+        "genes_after_filtering",
+        "total_counts",
+        "median_library_size",
+        "min_library_size",
+        "max_library_size"
+      ),
+      value = c(
+        ncol(counts),
+        nrow(counts),
+        sum(counts, na.rm = TRUE),
+        stats::median(colSums(counts), na.rm = TRUE),
+        min(colSums(counts), na.rm = TRUE),
+        max(colSums(counts), na.rm = TRUE)
+      ),
+      stringsAsFactors = FALSE
+    )
+
+    utils::write.table(
+      input_summary,
+      file.path(repro_dir, "clean_input_summary.tsv"),
+      sep = "\t",
+      quote = FALSE,
+      row.names = FALSE
+    )
+  }
+
 
   # ======================================================= #
   # Pairwise mode
@@ -478,6 +533,8 @@ run_deggo <- function(
     log("[11/11] Generating DEGgo report", type = "step")
 
     de_results$run_params <- list(
+      deggo_version = deggo_version,
+      date = as.character(Sys.Date()),
       organism = organism,
       method = method,
       analysis_mode = analysis_mode,
@@ -489,7 +546,17 @@ run_deggo <- function(
       min_samples = min_samples,
       min_total = min_total,
       top_n_heatmap = top_n_heatmap,
-      output_dir = output_dir
+      top_n_labels = top_n_labels,
+      prepare_input = prepare_input,
+      gene_col = paste(gene_col, collapse = ", "),
+      feature_col = paste(feature_col, collapse = ", "),
+      sample_col = paste(sample_col, collapse = ", "),
+      design_formula = paste(deparse(design_formula), collapse = ""),
+      pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
+      pairwise_contrast_col = pairwise_contrast_col,
+      pairwise_mode = pairwise_mode,
+      output_dir = output_dir,
+      reproducibility_dir = repro_dir
     )
 
     de_results$report_files <- NULL
@@ -500,6 +567,46 @@ run_deggo <- function(
         output_dir = output_dir,
         formats = report_formats,
         report_template = report_template
+      )
+    }
+
+    if (isTRUE(save_reproducibility)) {
+
+      dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
+
+      params_df <- data.frame(
+        parameter = names(de_results$run_params),
+        value = vapply(
+          de_results$run_params,
+          function(x) paste(x, collapse = ", "),
+          character(1)
+        ),
+        stringsAsFactors = FALSE
+      )
+
+      utils::write.table(
+        params_df,
+        file.path(repro_dir, "run_parameters.tsv"),
+        sep = "\t",
+        quote = FALSE,
+        row.names = FALSE
+      )
+
+      saveRDS(
+        de_results$run_params,
+        file.path(repro_dir, "run_parameters.rds")
+      )
+
+      saveRDS(
+        list(
+          run_params = de_results$run_params,
+          metadata = metadata,
+          counts = counts,
+          summary = de_results$summary %||% NULL,
+          output_dir = output_dir,
+          output_dirs = dirs
+        ),
+        file.path(repro_dir, "DEGgo_reproducibility_bundle.rds")
       )
     }
 
@@ -677,6 +784,8 @@ run_deggo <- function(
   log("[11/11] Generating DEGgo report", type = "step")
 
   de_results$run_params <- list(
+    deggo_version = deggo_version,
+    date = as.character(Sys.Date()),
     organism = organism,
     method = method,
     analysis_mode = analysis_mode,
@@ -688,7 +797,17 @@ run_deggo <- function(
     min_samples = min_samples,
     min_total = min_total,
     top_n_heatmap = top_n_heatmap,
-    output_dir = output_dir
+    top_n_labels = top_n_labels,
+    prepare_input = prepare_input,
+    gene_col = paste(gene_col, collapse = ", "),
+    feature_col = paste(feature_col, collapse = ", "),
+    sample_col = paste(sample_col, collapse = ", "),
+    design_formula = paste(deparse(design_formula), collapse = ""),
+    pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
+    pairwise_contrast_col = pairwise_contrast_col,
+    pairwise_mode = pairwise_mode,
+    output_dir = output_dir,
+    reproducibility_dir = repro_dir
   )
 
   de_results$report_files <- NULL
@@ -702,11 +821,44 @@ run_deggo <- function(
     )
   }
 
-  log(
-    "==== DEGgo SINGLE ANALYSIS COMPLETE ====",
-    type = "done",
-    duration = as.numeric(difftime(Sys.time(), t_start, units = "secs"))
-  )
+  if (isTRUE(save_reproducibility)) {
 
+    dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
+
+    params_df <- data.frame(
+      parameter = names(de_results$run_params),
+      value = vapply(
+        de_results$run_params,
+        function(x) paste(x, collapse = ", "),
+        character(1)
+      ),
+      stringsAsFactors = FALSE
+    )
+
+    utils::write.table(
+      params_df,
+      file.path(repro_dir, "run_parameters.tsv"),
+      sep = "\t",
+      quote = FALSE,
+      row.names = FALSE
+    )
+
+    saveRDS(
+      de_results$run_params,
+      file.path(repro_dir, "run_parameters.rds")
+    )
+
+    saveRDS(
+      list(
+        run_params = de_results$run_params,
+        metadata = metadata,
+        counts = counts,
+        summary = de_results$summary %||% NULL,
+        output_dir = output_dir,
+        output_dirs = dirs
+      ),
+      file.path(repro_dir, "DEGgo_reproducibility_bundle.rds")
+    )
+  }
   return(de_results)
 }

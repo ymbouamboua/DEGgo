@@ -35,6 +35,8 @@ run_deggo(
   generate_report = TRUE,
   report_formats = "html",
   report_template = NULL,
+  save_reproducibility = TRUE,
+  save_clean_inputs = TRUE,
   seed = 123
 )
 }
@@ -98,6 +100,10 @@ run_deggo(
 \item{report_formats}{Character vector. Report formats: html and/or pdf.}
 
 \item{report_template}{Optional path to report R Markdown template.}
+
+\item{save_reproducibility}{Logical. Save run parameters and reproducibility files.}
+
+\item{save_clean_inputs}{Logical. Save cleaned counts and matched metadata.}
 
 \item{seed}{Random seed.}
 }

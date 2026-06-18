@@ -8,7 +8,7 @@ generate_deggo_report(
   results,
   output_dir = results$output_dir,
   formats = c("html", "pdf"),
-  quiet = TRUE,
+  quiet = FALSE,
   report_template = NULL
 )
 }

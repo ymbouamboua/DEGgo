@@ -65,7 +65,7 @@ generate_deggo_report <- function(
     results,
     output_dir = results$output_dir,
     formats = c("html", "pdf"),
-    quiet = TRUE,
+    quiet = FALSE,
     report_template = NULL
 ) {
 
@@ -135,29 +135,21 @@ generate_deggo_report <- function(
 
     output_file <- paste0("DEGgo_Report.", fmt)
 
-    report_files[[fmt]] <- tryCatch(
-      rmarkdown::render(
-        input = report_template,
-        output_file = output_file,
-        output_dir = output_dir,
-        output_format = output_format,
-        params = list(
-          results = results,
-          sig_deg = results$sig_deg,
-          go_results = results$go_results,
-          summary = results$summary,
-          output_dir = output_dir
-        ),
-        envir = new.env(parent = globalenv()),
-        quiet = FALSE
+    report_files[[fmt]] <- rmarkdown::render(
+      input = report_template,
+      output_file = output_file,
+      output_dir = output_dir,
+      output_format = output_format,
+      params = list(
+        results = results,
+        sig_deg = results$sig_deg,
+        go_results = results$go_results,
+        summary = results$summary,
+        metadata = results$metadata,
+        output_dir = output_dir
       ),
-      error = function(e) {
-        log(
-          paste("Failed to generate", fmt, "report:", e$message),
-          type = "warn"
-        )
-        NULL
-      }
+      envir = new.env(parent = globalenv()),
+      quiet = FALSE
     )
   }
 
