@@ -613,9 +613,9 @@ but contains single-comparison result files.
 
 If you use DEGgo in your work, please cite:
 
-> Yvon MBOUAMBOUA and Paolo Giacobini. DEGgo: an integrated framework
-> for bulk RNA-seq differential expression analysis and functional
-> enrichment.
+> Yvon MBOUAMBOUA, Vincent Prevot and Paolo Giacobini. DEGgo: an
+> integrated framework for bulk RNA-seq differential expression analysis
+> and functional enrichment.
 
 # License
 

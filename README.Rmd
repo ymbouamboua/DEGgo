@@ -569,7 +569,7 @@ For single analysis, the output directory has the same general structure but con
 
 If you use DEGgo in your work, please cite:
 
-> Yvon MBOUAMBOUA and Paolo Giacobini. DEGgo: an integrated framework for bulk RNA-seq differential expression analysis and functional enrichment.
+> Yvon MBOUAMBOUA, Vincent Prevot and Paolo Giacobini. DEGgo: an integrated framework for bulk RNA-seq differential expression analysis and functional enrichment.
 
 # License
 
