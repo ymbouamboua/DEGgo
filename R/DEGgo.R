@@ -23,7 +23,7 @@
 #' @param top_n_heatmap Number of top genes for heatmap.
 #' @param top_n_labels Number of top genes labeled in volcano plot.
 #' @param ontology GO ontology: BP, MF, or CC.
-#' @param organism Organism: human, mouse, or rat.
+#' @param organism Organism: human, mouse, rat or custom by user.
 #' @param orgdb Optional OrgDb object.
 #' @param method DE method: DESeq2, edgeR, or limma.
 #' @param analysis_mode Analysis mode: single or pairwise.
@@ -61,7 +61,7 @@ run_deggo <- function(
     top_n_heatmap = 50,
     top_n_labels = 10,
     ontology = c("BP", "MF", "CC"),
-    organism = c("human", "mouse", "rat"),
+    organism = c("human", "mouse", "rat", "custom"),
     orgdb = NULL,
     method = c("DESeq2", "edgeR", "limma"),
     analysis_mode = c("single", "pairwise"),

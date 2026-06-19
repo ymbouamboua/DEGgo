@@ -17,7 +17,7 @@ run_deggo(
   top_n_heatmap = 50,
   top_n_labels = 10,
   ontology = c("BP", "MF", "CC"),
-  organism = c("human", "mouse", "rat"),
+  organism = c("human", "mouse", "rat", "custom"),
   orgdb = NULL,
   method = c("DESeq2", "edgeR", "limma"),
   analysis_mode = c("single", "pairwise"),
@@ -65,7 +65,7 @@ run_deggo(
 
 \item{ontology}{GO ontology: BP, MF, or CC.}
 
-\item{organism}{Organism: human, mouse, or rat.}
+\item{organism}{Organism: human, mouse, rat or custom by user.}
 
 \item{orgdb}{Optional OrgDb object.}
 

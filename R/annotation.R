@@ -36,30 +36,100 @@
 #'
 #' @keywords internal
 #' @noRd
-.get_orgdb <- function(
-    organism = c("human", "mouse", "rat"),
-    orgdb = NULL
-) {
+# .get_orgdb <- function(
+#     organism = c("human", "mouse", "rat"),
+#     orgdb = NULL
+# ) {
+#
+#   if (!is.null(orgdb)) {
+#     return(orgdb)
+#   }
+#
+#   organism <- match.arg(organism)
+#
+#   pkg <- switch(
+#     organism,
+#     human = "org.Hs.eg.db",
+#     mouse = "org.Mm.eg.db",
+#     rat   = "org.Rn.eg.db"
+#   )
+#
+#   if (!requireNamespace(pkg, quietly = TRUE)) {
+#     stop("Install ", pkg, " first.", call. = FALSE)
+#   }
+#
+#   getExportedValue(pkg, pkg)
+# }
+.get_orgdb <- function(organism, orgdb = NULL) {
 
   if (!is.null(orgdb)) {
     return(orgdb)
   }
 
-  organism <- match.arg(organism)
-
-  pkg <- switch(
+  organism <- match.arg(
     organism,
-    human = "org.Hs.eg.db",
-    mouse = "org.Mm.eg.db",
-    rat   = "org.Rn.eg.db"
+    choices = c("human", "mouse", "rat", "custom")
   )
 
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    stop("Install ", pkg, " first.", call. = FALSE)
-  }
+  switch(
+    organism,
 
-  getExportedValue(pkg, pkg)
+    human = {
+      if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+        stop(
+          "Package 'org.Hs.eg.db' is required.",
+          call. = FALSE
+        )
+      }
+      org.Hs.eg.db::org.Hs.eg.db
+    },
+
+    mouse = {
+      if (!requireNamespace("org.Mm.eg.db", quietly = TRUE)) {
+        stop(
+          "Package 'org.Mm.eg.db' is required.",
+          call. = FALSE
+        )
+      }
+      org.Mm.eg.db::org.Mm.eg.db
+    },
+
+    rat = {
+      if (!requireNamespace("org.Rn.eg.db", quietly = TRUE)) {
+        stop(
+          "Package 'org.Rn.eg.db' is required.",
+          call. = FALSE
+        )
+      }
+      org.Rn.eg.db::org.Rn.eg.db
+    },
+
+    custom = {
+      stop(
+        paste0(
+          "For organism = 'custom', a valid OrgDb object must be supplied via `orgdb`.\n\n",
+
+          "Example:\n",
+          "library(org.Custom.eg.db)\n\n",
+
+          "results <- run_deggo(\n",
+          "  counts = counts,\n",
+          "  metadata = metadata,\n",
+          "  organism = 'custom',\n",
+          "  orgdb = org.Custom.eg.db::org.Custom.eg.db\n",
+          ")\n\n",
+
+          "Custom OrgDb packages can be generated with:\n",
+          "  AnnotationForge::makeOrgPackageFromNCBI()\n",
+          "or\n",
+          "  AnnotationForge::makeOrgPackage()\n"
+        ),
+        call. = FALSE
+      )
+    }
+  )
 }
+
 
 
 #' Map Ensembl identifiers to feature names
