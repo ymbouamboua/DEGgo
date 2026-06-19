@@ -176,7 +176,15 @@ emit_gallery <- function(files) {
     cat('<span class="figure-badge">', badge, '</span>')
     cat('<h3>', title, '</h3>')
     cat('</div>')
-    cat('<img src="', img_src, '" class="figure-img">')
+
+    cat('<a href="', img_src, '" target="_blank">')
+    cat('<img src="', img_src, '" class="figure-img" title="Click to open full-size figure">')
+    cat('</a>')
+
+    cat('<div class="figure-footer">')
+    cat('<a href="', img_src, '" target="_blank">Open full figure</a>')
+    cat('</div>')
+
     cat('</div>')
   }
 
@@ -184,6 +192,7 @@ emit_gallery <- function(files) {
 
   invisible(NULL)
 }
+
 
 
 plot_gallery_grid <- function(files, badge = "Figure") {
@@ -201,16 +210,21 @@ plot_gallery_grid <- function(files, badge = "Figure") {
     nm <- gsub("_", " ", nm)
     img_src <- html_img_src(f)
 
-    cat(
-      '<div class="figure-card">',
-      '<div class="figure-header">',
-      '<span class="figure-badge">', badge, '</span>',
-      '<h3>', nm, '</h3>',
-      '</div>',
-      '<img class="figure-img" src="', img_src, '" alt="', nm, '">',
-      '</div>',
-      sep = ""
-    )
+    cat('<div class="figure-card">')
+    cat('<div class="figure-header">')
+    cat('<span class="figure-badge">', badge, '</span>')
+    cat('<h3>', nm, '</h3>')
+    cat('</div>')
+
+    cat('<a href="', img_src, '" target="_blank">')
+    cat('<img class="figure-img" src="', img_src, '" alt="', nm, '" title="Click to open full-size figure">')
+    cat('</a>')
+
+    cat('<div class="figure-footer">')
+    cat('<a href="', img_src, '" target="_blank">Open full figure</a>')
+    cat('</div>')
+
+    cat('</div>')
   }
 
   cat("</div>")
@@ -337,6 +351,7 @@ object-fit: contain;
 border-radius: 12px;
 border: 1px solid #eee;
 background: white;
+cursor: zoom-in;
 }
 
 .figure-footer {
@@ -347,6 +362,11 @@ font-size: 13px;
 .figure-footer a {
 color: #00876C;
 font-weight: 700;
+}
+
+.figure-card:hover {
+  transform: translateY(-2px);
+  transition: 0.2s ease;
 }
 
 .table {

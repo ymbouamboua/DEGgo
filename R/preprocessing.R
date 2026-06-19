@@ -797,6 +797,7 @@ remove_flagged_samples <- function(
 #' }
 #'
 #' @export
+#'
 run_sample_qc <- function(
     counts,
     metadata,
@@ -804,9 +805,14 @@ run_sample_qc <- function(
     annotation_cols = c("condition", "treatment", "sex", "tissue"),
     dpi = 300
 ) {
+  `%||%` <- function(x, y) if (is.null(x) || length(x) == 0 || is.na(x)) y else x
 
   if (!requireNamespace("pheatmap", quietly = TRUE)) {
     stop("Package 'pheatmap' is required.", call. = FALSE)
+  }
+
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required.", call. = FALSE)
   }
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -817,18 +823,6 @@ run_sample_qc <- function(
   if (!is.numeric(mat)) {
     stop("counts must be numeric.", call. = FALSE)
   }
-
-  sample_metrics <- data.frame(
-    sample = colnames(mat),
-    library_size = colSums(mat, na.rm = TRUE),
-    detected_genes = colSums(mat > 0, na.rm = TRUE),
-    stringsAsFactors = FALSE
-  )
-
-  sample_metrics <- cbind(
-    sample_metrics,
-    metadata[sample_metrics$sample, intersect(annotation_cols, colnames(metadata)), drop = FALSE]
-  )
 
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
 
@@ -842,11 +836,47 @@ run_sample_qc <- function(
     stop("At least two matched samples are required for sample QC.", call. = FALSE)
   }
 
+  mat <- mat[, common_samples, drop = FALSE]
+  metadata <- metadata[common_samples, , drop = FALSE]
 
-  if (requireNamespace("ggplot2", quietly = TRUE)) {
+  meta_cols <- intersect(annotation_cols, colnames(metadata))
 
-    color_col <- intersect(annotation_cols, colnames(sample_metrics))[1]
+  sample_metrics <- data.frame(
+    sample = colnames(mat),
+    library_size = colSums(mat, na.rm = TRUE),
+    detected_genes = colSums(mat > 0, na.rm = TRUE),
+    stringsAsFactors = FALSE
+  )
 
+  if (length(meta_cols) > 0) {
+    sample_metrics <- cbind(
+      sample_metrics,
+      metadata[sample_metrics$sample, meta_cols, drop = FALSE]
+    )
+  }
+
+  color_priority <- c("condition", "treatment", "sex", "tissue")
+  color_col <- intersect(color_priority, colnames(sample_metrics))[1] %||% NULL
+
+  if (!is.null(color_col)) {
+    sample_metrics[[color_col]] <- factor(sample_metrics[[color_col]])
+
+    color_df <- sample_metrics[, color_col, drop = FALSE]
+    color_list <- .deggo_annotation_colors(color_df)
+    color_values <- color_list[[color_col]]
+
+    p_qc <- ggplot2::ggplot(
+      sample_metrics,
+      ggplot2::aes(
+        x = library_size,
+        y = detected_genes,
+        color = .data[[color_col]]
+      )
+    ) +
+      ggplot2::geom_point(size = 3, alpha = 0.9) +
+      ggplot2::scale_color_manual(values = color_values, drop = FALSE)
+
+  } else {
     p_qc <- ggplot2::ggplot(
       sample_metrics,
       ggplot2::aes(
@@ -854,40 +884,37 @@ run_sample_qc <- function(
         y = detected_genes
       )
     ) +
-      ggplot2::geom_point(
-        ggplot2::aes_string(color = color_col),
-        size = 3,
-        alpha = 0.9
-      ) +
-      ggplot2::geom_smooth(
-        method = "lm",
-        se = FALSE,
-        color = "black",
-        linewidth = 0.4
-      ) +
-      ggplot2::scale_x_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
-      ggplot2::scale_y_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
-      ggplot2::labs(
-        title = "Detected genes vs library size",
-        x = "Library size",
-        y = "Detected genes",
-        color = color_col
-      ) +
-      ggplot2::theme_bw(base_size = 12) +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(face = "bold"),
-        panel.grid.minor = ggplot2::element_blank()
-      )
-
-    ggplot2::ggsave(
-      filename = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),
-      plot = p_qc,
-      width = 7,
-      height = 5,
-      dpi = dpi
-    )
+      ggplot2::geom_point(size = 3, alpha = 0.9)
   }
 
+  p_qc <- p_qc +
+    ggplot2::geom_smooth(
+      method = "lm",
+      se = FALSE,
+      color = "black",
+      linewidth = 0.4
+    ) +
+    ggplot2::scale_x_continuous(
+      labels = function(x) format(x, big.mark = ",", scientific = FALSE)
+    ) +
+    ggplot2::scale_y_continuous(
+      labels = function(x) format(x, big.mark = ",", scientific = FALSE)
+    ) +
+    ggplot2::labs(
+      title = "Detected genes vs library size",
+      x = "Library size",
+      y = "Detected genes",
+      color = color_col
+    ) +
+    plot_theme(style = "bw", txtsize = 10)
+
+  ggplot2::ggsave(
+    filename = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),
+    plot = p_qc,
+    width = 7,
+    height = 5,
+    dpi = dpi
+  )
 
   utils::write.table(
     sample_metrics,
@@ -897,17 +924,9 @@ run_sample_qc <- function(
     row.names = FALSE
   )
 
-
-  mat <- mat[, common_samples, drop = FALSE]
-  metadata <- metadata[common_samples, , drop = FALSE]
-
   logmat <- log2(mat + 1)
 
-  annotation_col <- metadata[
-    ,
-    intersect(annotation_cols, colnames(metadata)),
-    drop = FALSE
-  ]
+  annotation_col <- metadata[, meta_cols, drop = FALSE]
 
   if (ncol(annotation_col) > 0) {
     annotation_col[] <- lapply(annotation_col, factor)
@@ -917,7 +936,11 @@ run_sample_qc <- function(
 
   ann_colors <- .deggo_annotation_colors(annotation_col)
 
-  cor_mat <- stats::cor(logmat, method = "spearman", use = "pairwise.complete.obs")
+  cor_mat <- stats::cor(
+    logmat,
+    method = "spearman",
+    use = "pairwise.complete.obs"
+  )
 
   pheatmap::pheatmap(
     cor_mat,
@@ -959,12 +982,13 @@ run_sample_qc <- function(
   )
 
   invisible(list(
+    metrics = sample_metrics,
     correlation = cor_mat,
     qc_dir = output_dir,
     files = list(
+      detected_genes_library_size = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),
       correlation_heatmap = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
       clustering = file.path(output_dir, "Hierarchical_Clustering.png"),
-      detected_genes_library_size = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),
       qc_metrics = file.path(output_dir, "Sample_QC_Metrics.tsv"),
       correlation_matrix = file.path(output_dir, "Sample_Correlation_Matrix.tsv")
     )

@@ -283,6 +283,103 @@ plot_theme <- function(
   th
 }
 
+
+
+# ========================================================= #
+# DEGgo colors
+# ========================================================= #
+
+#' DEGgo default color palettes
+#'
+#' @return A named list of color vectors.
+#' @keywords internal
+#' @noRd
+.deggo_colors <- function() {
+  list(
+    discrete = c(
+      "#1B9E77", "#D95F02", "#7570B3", "#E7298A",
+      "#66A61E", "#E6AB02", "#A6761D", "#666666",
+      "#1F78B4", "#B2DF8A", "#FB9A99", "#CAB2D6"
+    ),
+    regulation = c(
+      Up = "#740001",
+      Down = "#6497B1",
+      NS = "grey70"
+    ),
+    qc = c(
+      PASS = "#00A087",
+      FAIL = "#E64B35",
+      WARN = "#E6AB02"
+    ),
+    sex = c(
+      Female = "#CC79A7",
+      Male = "#0072B2",
+      F = "#CC79A7",
+      M = "#0072B2"
+    ),
+    treatment = c(
+      Control = "#4DBBD5",
+      Treated = "#D55E00",
+      CTRL = "#4DBBD5",
+      PBS = "#4DBBD5"
+    )
+  )
+}
+
+
+
+#' Make annotation colors
+#'
+#' @param annotation_col Annotation data frame.
+#'
+#' @return A named list of colors compatible with \code{pheatmap}.
+#' @keywords internal
+#' @noRd
+.deggo_annotation_colors <- function(annotation_col) {
+  if (is.null(annotation_col) || !ncol(annotation_col)) return(NULL)
+
+  pal <- .deggo_colors()
+  base <- pal[setdiff(names(pal), "discrete")]
+  discrete <- pal$discrete
+
+  out <- list()
+
+  for (nm in colnames(annotation_col)) {
+    levs <- levels(factor(annotation_col[[nm]]))
+
+    known_cols <- NULL
+
+    if (nm %in% names(base)) {
+      known_cols <- base[[nm]]
+    }
+
+    if (!is.null(known_cols)) {
+      matched <- known_cols[intersect(levs, names(known_cols))]
+      missing <- setdiff(levs, names(matched))
+
+      if (length(missing) > 0) {
+        extra <- stats::setNames(
+          rep(discrete, length.out = length(missing)),
+          missing
+        )
+        matched <- c(matched, extra)
+      }
+
+      out[[nm]] <- matched[levs]
+
+    } else {
+
+      out[[nm]] <- stats::setNames(
+        rep(discrete, length.out = length(levs)),
+        levs
+      )
+    }
+  }
+
+  out
+}
+
+
 # ========================================================= #
 # PLOT GENE EXPRESSION
 # ========================================================= #
@@ -1216,210 +1313,10 @@ plot_heatmap <- function(
   invisible(mat_use)
 }
 
-# ========================================================= #
-# .deggo_annotation_colors
-# ========================================================= #
-
-# .deggo_annotation_colors <- function(annotation_col) {
-#
-#   if (is.null(annotation_col) || ncol(annotation_col) == 0) {
-#     return(NULL)
-#   }
-#
-#   out <- list()
-#
-#   palettes <- c(
-#     sex       = "inferno",
-#     treatment = "cividis",
-#     tissue    = "viridis",
-#     condition = "plasma"
-#   )
-#
-#   for (nm in colnames(annotation_col)) {
-#
-#     levs <- levels(factor(annotation_col[[nm]]))
-#
-#     pal <- palettes[nm]
-#
-#     cols <- switch(
-#       ifelse(is.na(pal), "cividis", pal),
-#       inferno = viridisLite::inferno(length(levs)),
-#       magma   = viridisLite::magma(length(levs)),
-#       viridis = viridisLite::viridis(length(levs)),
-#       plasma  = viridisLite::plasma(length(levs)),
-#       cividis = viridisLite::cividis(length(levs))
-#     )
-#
-#     out[[nm]] <- stats::setNames(cols, levs)
-#   }
-#
-#   out
-# }
-
-#
-# .deggo_annotation_colors <- function(annotation_col) {
-#
-#   if (is.null(annotation_col) || ncol(annotation_col) == 0) {
-#     return(NULL)
-#   }
-#
-#   out <- list()
-#
-#   # -------------------------------------------------- #
-#   # Sex
-#   # -------------------------------------------------- #
-#
-#   if ("sex" %in% colnames(annotation_col)) {
-#
-#     levs <- levels(factor(annotation_col$sex))
-#
-#     cols <- c(
-#       Female = "#E64B35",  # coral/red
-#       Male   = "#4DBBD5"   # blue
-#     )
-#
-#     out$sex <- cols[levs]
-#   }
-#
-#   # -------------------------------------------------- #
-#   # Treatment
-#   # -------------------------------------------------- #
-#
-#   if ("treatment" %in% colnames(annotation_col)) {
-#
-#     levs <- levels(factor(annotation_col$treatment))
-#
-#     cols <- c(
-#       PBS  = "#7F7F7F",   # grey
-#       PAMH = "#00A087"    # teal
-#     )
-#
-#     out$treatment <- cols[levs]
-#   }
-#
-#   # -------------------------------------------------- #
-#   # Tissue
-#   # -------------------------------------------------- #
-#
-#   if ("tissue" %in% colnames(annotation_col)) {
-#
-#     levs <- levels(factor(annotation_col$tissue))
-#
-#     out$tissue <- stats::setNames(
-#       viridisLite::viridis(length(levs)),
-#       levs
-#     )
-#   }
-#
-#   # -------------------------------------------------- #
-#   # Condition
-#   # -------------------------------------------------- #
-#
-#   if ("condition" %in% colnames(annotation_col)) {
-#
-#     levs <- levels(factor(annotation_col$condition))
-#
-#     if (length(levs) <= 2) {
-#
-#       cols <- c(
-#         "#3C5488",
-#         "#E64B35"
-#       )[seq_along(levs)]
-#
-#     } else {
-#
-#       cols <- viridisLite::plasma(length(levs))
-#     }
-#
-#     out$condition <- stats::setNames(cols, levs)
-#   }
-#
-#   # -------------------------------------------------- #
-#   # Other variables
-#   # -------------------------------------------------- #
-#
-#   others <- setdiff(
-#     colnames(annotation_col),
-#     names(out)
-#   )
-#
-#   for (nm in others) {
-#
-#     levs <- levels(factor(annotation_col[[nm]]))
-#
-#     out[[nm]] <- stats::setNames(
-#       viridisLite::cividis(length(levs)),
-#       levs
-#     )
-#   }
-#
-#   out
-# }
-
-
-
-
-# ========================================================= #
-# DEGgo colors
-# ========================================================= #
-
-#' DEGgo default color palettes
-#'
-#' @return A named list of color vectors.
-#' @keywords internal
-#' @noRd
-.deggo_colors <- function() {
-  list(
-    tissue = c(BAT = "#E64B35", WAT = "#C77CFF", OVARY = "#7CAE00", TESTIS = "#00BFC4"),
-    treatment = c(PBS = "#4DBBD5", PAMH = "#D55E00"),
-    sex = c(Female = "#CC79A7", Male = "#0072B2"),
-    qc = c(PASS = "#00A087", FAIL = "#E64B35")
-  )
-}
-
-
-#' Make annotation colors
-#'
-#' @param annotation_col Annotation data frame.
-#'
-#' @return A named list of colors compatible with \code{pheatmap}.
-#' @keywords internal
-#' @noRd
-.deggo_annotation_colors <- function(annotation_col) {
-  if (is.null(annotation_col) || !ncol(annotation_col)) return(NULL)
-
-  base <- .deggo_colors()
-  out <- list()
-
-  for (nm in colnames(annotation_col)) {
-    levs <- levels(factor(annotation_col[[nm]]))
-
-    if (nm %in% names(base)) {
-      cols <- base[[nm]]
-      missing <- setdiff(levs, names(cols))
-      if (length(missing)) {
-        extra <- grDevices::hcl.colors(length(missing), "Dark 3")
-        cols <- c(cols, stats::setNames(extra, missing))
-      }
-      out[[nm]] <- cols[levs]
-    } else {
-      out[[nm]] <- stats::setNames(
-        grDevices::hcl.colors(length(levs), "Dark 3"),
-        levs
-      )
-    }
-  }
-
-  out
-}
-
-
-
 
 # ========================================================= #
 # GENE EXPRESSION HEATMAP
 # ========================================================= #
-
 #' Plot expression heatmap for selected genes
 #'
 #' Generates a clustered heatmap for user-defined genes.
@@ -1577,7 +1474,6 @@ plot_gene_heatmap <- function(
 # ========================================================= #
 # BULK RNA-SEQ QC
 # ========================================================= #
-
 #' Explore and QC bulk RNA-seq count data
 #'
 #' Generates pre-differential-expression quality control plots and metrics for
@@ -2296,7 +2192,9 @@ plot_go_terms <- function(
 }
 
 
-
+# ========================================================= #
+# PLOT ALL GO TERMS
+# ========================================================= #
 #' Plot GO enrichment terms for all pairwise comparisons
 #'
 #' Generates GO enrichment plots for every comparison returned by
