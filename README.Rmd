@@ -617,20 +617,81 @@ DEGgo provides built-in annotation support for the following organisms:
 | Mouse (*Mus musculus*) | `"mouse"` | `org.Mm.eg.db` |
 | Rat (*Rattus norvegicus*) | `"rat"` | `org.Rn.eg.db` |
 
-Support for additional organisms is currently under development. Future releases will expand compatibility to livestock, model organisms, and non-model species through integration of additional Bioconductor annotation databases and custom annotation workflows.
+Example
 
-# Custom annotation databases
+```{r}
 
-Advanced users may provide any compatible AnnotationDbi database through the orgdb argument:
-
-```{r organism}
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  organism = "human",
-  orgdb = org.Hs.eg.db
+  organism = "mouse"
 )
+
+
 ```
+
+## Custom annotation databases
+
+Starting with DEGgo 0.1.0, users can analyze virtually any organism by supplying a custom Bioconductor-compatible OrgDb object through the orgdb argument.
+
+This feature enables DEGgo workflows for:
+
+* Bacterial transcriptomics (Staphylococcus aureus, Escherichia coli, etc.)
+* Fungal species
+* Plant transcriptomics
+* Non-model organisms
+* Custom genome annotations
+
+Example: custom organism
+
+
+```{r}
+
+library(org.Custom.eg.db)
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "custom",
+  orgdb = org.Custom.eg.db
+)
+
+```
+
+Example: bacterial dataset
+
+```{r}
+
+library(org.Saureus.eg.db)
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "custom",
+  orgdb = org.Saureus.eg.db
+)
+
+```
+
+
+## Creating a custom OrgDb
+
+Custom annotation databases can be generated using Bioconductor’s AnnotationForge package:
+
+```{r}
+AnnotationForge::makeOrgPackageFromNCBI(...)
+```
+
+or
+
+```{r}
+
+AnnotationForge::makeOrgPackage(...)
+
+```
+
+
+Once installed, the resulting OrgDb package can be supplied directly to DEGgo for gene annotation and Gene Ontology enrichment analyses.
+
+Note: When organism = "custom", the orgdb argument is required. DEGgo will use the supplied annotation database throughout the annotation and enrichment workflow.
 
 
 # Platform compatibility and HPC support
