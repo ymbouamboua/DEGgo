@@ -565,6 +565,74 @@ DEGgo_results/
 For single analysis, the output directory has the same general structure but contains single-comparison result files.
 
 
+# R package dependencies
+
+## Core dependencies
+
+DEGgo relies on the following R packages:
+
+### Differential expression
+
+* DESeq2
+* edgeR
+* limma
+
+### Annotation
+
+* AnnotationDbi
+* biomaRt
+
+### Functional enrichment
+
+* clusterProfiler
+* enrichplot
+
+### Data processing
+
+* dplyr
+* tibble
+
+### Visualization
+
+* ggplot2
+* pheatmap
+* RColorBrewer
+* patchwork
+
+### Reporting
+
+* rmarkdown
+* knitr
+
+All required dependencies are installed automatically when installing DEGgo.
+
+
+# Supported organisms
+
+DEGgo provides built-in annotation support for the following organisms:
+
+| Organism | Parameter | OrgDb package |
+|:----------|:----------|:--------------|
+| Human (*Homo sapiens*) | `"human"` | `org.Hs.eg.db` |
+| Mouse (*Mus musculus*) | `"mouse"` | `org.Mm.eg.db` |
+| Rat (*Rattus norvegicus*) | `"rat"` | `org.Rn.eg.db` |
+
+Support for additional organisms is currently under development. Future releases will expand compatibility to livestock, model organisms, and non-model species through integration of additional Bioconductor annotation databases and custom annotation workflows.
+
+# Custom annotation databases
+
+Advanced users may provide any compatible AnnotationDbi database through the orgdb argument:
+
+```{r organism}
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "human",
+  orgdb = org.Hs.eg.db
+)
+```
+
+
 # Platform compatibility and HPC support
 
 DEGgo is designed to provide a flexible RNA-seq downstream analysis workflow that can be used across different computing environments. Although DEGgo is suitable for HPC environments and large-scale transcriptomic analyses, it can also be run on standard workstations.

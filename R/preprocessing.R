@@ -756,3 +756,217 @@ remove_flagged_samples <- function(
     removed_samples = remove_samples
   )
 }
+
+
+
+# ======================================================= #
+# Sample QC: correlation and hierarchical clustering
+# ======================================================= #
+#' Run sample-level RNA-seq quality control
+#'
+#' Generate sample-level quality control outputs from a raw or filtered count
+#' matrix, including a Spearman sample correlation heatmap, hierarchical
+#' clustering dendrogram, and sample correlation matrix.
+#'
+#' This function is designed to be used inside the DEGgo workflow after
+#' count filtering and metadata matching. It saves all QC files directly into
+#' the provided output directory.
+#'
+#' @param counts Numeric count matrix with genes in rows and samples in columns.
+#' @param metadata Sample metadata data frame. Row names must match sample names
+#'   in `colnames(counts)`.
+#' @param output_dir Output directory where QC files will be saved.
+#' @param annotation_cols Character vector of metadata columns used as heatmap
+#'   annotations.
+#' @param dpi Resolution used for the hierarchical clustering PNG.
+#'
+#' @return Invisibly returns a list containing the sample correlation matrix,
+#'   output directory, and paths to generated files.
+#'
+#' @details
+#' The function uses `log2(count + 1)` transformed counts to compute Spearman
+#' sample correlations and hierarchical clustering based on Euclidean distance.
+#'
+#' @examples
+#' \dontrun{
+#' qc <- run_sample_qc(
+#'   counts = counts,
+#'   metadata = metadata,
+#'   output_dir = "pairwise_QC"
+#' )
+#' }
+#'
+#' @export
+run_sample_qc <- function(
+    counts,
+    metadata,
+    output_dir,
+    annotation_cols = c("condition", "treatment", "sex", "tissue"),
+    dpi = 300
+) {
+
+  if (!requireNamespace("pheatmap", quietly = TRUE)) {
+    stop("Package 'pheatmap' is required.", call. = FALSE)
+  }
+
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  mat <- as.matrix(counts)
+  suppressWarnings(storage.mode(mat) <- "numeric")
+
+  if (!is.numeric(mat)) {
+    stop("counts must be numeric.", call. = FALSE)
+  }
+
+  sample_metrics <- data.frame(
+    sample = colnames(mat),
+    library_size = colSums(mat, na.rm = TRUE),
+    detected_genes = colSums(mat > 0, na.rm = TRUE),
+    stringsAsFactors = FALSE
+  )
+
+  sample_metrics <- cbind(
+    sample_metrics,
+    metadata[sample_metrics$sample, intersect(annotation_cols, colnames(metadata)), drop = FALSE]
+  )
+
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  if (is.null(rownames(metadata))) {
+    stop("metadata must have row names matching sample names.", call. = FALSE)
+  }
+
+  common_samples <- intersect(colnames(mat), rownames(metadata))
+
+  if (length(common_samples) < 2) {
+    stop("At least two matched samples are required for sample QC.", call. = FALSE)
+  }
+
+
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+
+    color_col <- intersect(annotation_cols, colnames(sample_metrics))[1]
+
+    p_qc <- ggplot2::ggplot(
+      sample_metrics,
+      ggplot2::aes(
+        x = library_size,
+        y = detected_genes
+      )
+    ) +
+      ggplot2::geom_point(
+        ggplot2::aes_string(color = color_col),
+        size = 3,
+        alpha = 0.9
+      ) +
+      ggplot2::geom_smooth(
+        method = "lm",
+        se = FALSE,
+        color = "black",
+        linewidth = 0.4
+      ) +
+      ggplot2::scale_x_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+      ggplot2::scale_y_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+      ggplot2::labs(
+        title = "Detected genes vs library size",
+        x = "Library size",
+        y = "Detected genes",
+        color = color_col
+      ) +
+      ggplot2::theme_bw(base_size = 12) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(face = "bold"),
+        panel.grid.minor = ggplot2::element_blank()
+      )
+
+    ggplot2::ggsave(
+      filename = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),
+      plot = p_qc,
+      width = 7,
+      height = 5,
+      dpi = dpi
+    )
+  }
+
+
+  utils::write.table(
+    sample_metrics,
+    file.path(output_dir, "Sample_QC_Metrics.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+
+  mat <- mat[, common_samples, drop = FALSE]
+  metadata <- metadata[common_samples, , drop = FALSE]
+
+  logmat <- log2(mat + 1)
+
+  annotation_col <- metadata[
+    ,
+    intersect(annotation_cols, colnames(metadata)),
+    drop = FALSE
+  ]
+
+  if (ncol(annotation_col) > 0) {
+    annotation_col[] <- lapply(annotation_col, factor)
+  } else {
+    annotation_col <- NULL
+  }
+
+  ann_colors <- .deggo_annotation_colors(annotation_col)
+
+  cor_mat <- stats::cor(logmat, method = "spearman", use = "pairwise.complete.obs")
+
+  pheatmap::pheatmap(
+    cor_mat,
+    annotation_col = annotation_col,
+    annotation_colors = ann_colors,
+    filename = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
+    main = "Sample correlation",
+    color = grDevices::colorRampPalette(
+      c("#6497b1", "#F7F7F7", "#740001")
+    )(100),
+    fontsize = 8,
+    width = 12,
+    height = 10
+  )
+
+  grDevices::png(
+    filename = file.path(output_dir, "Hierarchical_Clustering.png"),
+    width = 12,
+    height = 6,
+    units = "in",
+    res = dpi
+  )
+
+  plot(
+    stats::hclust(stats::dist(t(logmat))),
+    main = "Hierarchical clustering",
+    xlab = "",
+    sub = ""
+  )
+
+  grDevices::dev.off()
+
+  utils::write.table(
+    cor_mat,
+    file.path(output_dir, "Sample_Correlation_Matrix.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    col.names = NA
+  )
+
+  invisible(list(
+    correlation = cor_mat,
+    qc_dir = output_dir,
+    files = list(
+      correlation_heatmap = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
+      clustering = file.path(output_dir, "Hierarchical_Clustering.png"),
+      detected_genes_library_size = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),
+      qc_metrics = file.path(output_dir, "Sample_QC_Metrics.tsv"),
+      correlation_matrix = file.path(output_dir, "Sample_Correlation_Matrix.tsv")
+    )
+  ))
+}

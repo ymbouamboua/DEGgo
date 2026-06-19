@@ -17,67 +17,113 @@ params:
   metadata: NULL
   output_dir: NULL
 ---
-
-
-
+  
 ```{r setup, include=FALSE}
-
 knitr::opts_chunk$set(
   echo = FALSE,
   warning = FALSE,
-  message = FALSE,
-  results = "asis"
+  message = FALSE
 )
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 res <- params$results
-outdir <- params$output_dir
-md <- params$metadata %||% res$metadata
+results <- res
+outdir <- params$output_dir %||% res$output_dir
 
-sig <- params$sig_deg %||% res$sig_deg
-go  <- params$go_results %||% res$go_results
-sumtab <- params$summary %||% res$summary
+if (is.null(outdir) || is.na(outdir)) {
+  outdir <- getwd()
+}
+
+outdir <- normalizePath(outdir, winslash = "/", mustWork = FALSE)
+
+
+md <- res$metadata
+sig <- res$sig_deg
+go <- res$go_results
+sumtab <- res$summary
+
+html_escape <- function(x) {
+  x <- as.character(x)
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  x <- gsub(">", "&gt;", x, fixed = TRUE)
+  x <- gsub('"', "&quot;", x, fixed = TRUE)
+  x
+}
 
 html_card <- function(title, value, subtitle = NULL) {
   cat(
     '<div class="metric-card">',
-    '<div class="metric-title">', title, '</div>',
-    '<div class="metric-value">', value, '</div>',
-    if (!is.null(subtitle)) paste0('<div class="metric-subtitle">', subtitle, '</div>') else '',
+    '<div class="metric-title">', html_escape(title), '</div>',
+    '<div class="metric-value">', html_escape(value), '</div>',
+    if (!is.null(subtitle)) {
+      paste0('<div class="metric-subtitle">', html_escape(subtitle), '</div>')
+    } else {
+      ''
+    },
     '</div>'
   )
 }
 
-show_table <- function(x, n = 30) {
-  x <- as.data.frame(x)
-
-  if (nrow(x) == 0) {
-    cat("<p><em>No data available.</em></p>")
+show_table <- function(x, n = 20) {
+  x <- as.data.frame(x, stringsAsFactors = FALSE)
+  
+  if (!nrow(x)) {
+    cat("<p><em>No table content available.</em></p>")
     return(invisible(NULL))
   }
-
-  if (is.finite(n)) x <- head(x, n)
-
+  
+  if (is.finite(n)) {
+    x <- utils::head(x, n)
+  }
+  
   print(
     knitr::kable(
       x,
       format = "html",
+      row.names = FALSE,
+      escape = FALSE,
       table.attr = "class='table table-striped table-hover table-condensed'"
     )
   )
+  
+  invisible(NULL)
 }
 
-find_png <- function(path) {
-  if (length(path) == 0 || is.na(path)) return(character())
-  if (!dir.exists(path)) return(character())
+safe_list_png <- function(path, pattern = "\\.png$", full.names = TRUE, recursive = FALSE) {
+  if (is.null(path) || length(path) == 0 || anyNA(path) || !dir.exists(path[1])) {
+    return(character(0))
+  }
 
   list.files(
-    path,
-    pattern = "\\.png$",
-    recursive = TRUE,
-    full.names = TRUE
+    path = path[1],
+    pattern = pattern,
+    full.names = full.names,
+    recursive = recursive
   )
+}
+
+
+find_png <- function(path) {
+  safe_list_png(
+    path = path,
+    pattern = "\\.png$",
+    full.names = TRUE,
+    recursive = TRUE
+  )
+}
+
+
+find_first_dir <- function(paths) {
+  paths <- paths[!is.na(paths)]
+  paths <- paths[dir.exists(paths)]
+  
+  if (!length(paths)) {
+    return(NA_character_)
+  }
+  
+  paths[1]
 }
 
 clean_title <- function(x) {
@@ -86,329 +132,313 @@ clean_title <- function(x) {
   x <- gsub("Volcano Plot", "", x, ignore.case = TRUE)
   x <- gsub("GO terms", "", x, ignore.case = TRUE)
   x <- gsub("Heatmap", "", x, ignore.case = TRUE)
-  x <- gsub("PCA", "PCA", x, ignore.case = TRUE)
+  x <- gsub("Sample Correlation", "Sample correlation", x, ignore.case = TRUE)
+  x <- gsub("Hierarchical Clustering", "Hierarchical clustering", x, ignore.case = TRUE)
   trimws(x)
 }
 
 figure_badge <- function(f) {
   b <- basename(f)
-
+  
+  if (grepl("Correlation|Clustering|QC|Library|Detected", b, ignore.case = TRUE)) return("QC")
   if (grepl("PCA", b, ignore.case = TRUE)) return("PCA")
   if (grepl("Volcano", b, ignore.case = TRUE)) return("Volcano")
   if (grepl("Heatmap", b, ignore.case = TRUE)) return("Heatmap")
   if (grepl("GO", b, ignore.case = TRUE)) return("GO")
-
+  
   "Figure"
 }
 
+
+html_img_src <- function(f) {
+  f <- normalizePath(f, winslash = "/", mustWork = TRUE)
+  paste0("file://", f)
+}
+
+
 emit_gallery <- function(files) {
+  files <- files[file.exists(files)]
+
   if (length(files) == 0) {
     cat("<p><em>No plot found.</em></p>")
     return(invisible(NULL))
   }
 
-  files <- sort(files)
-
   cat('<div class="figure-grid">')
 
-  for (f in files) {
+  for (f in sort(files)) {
     title <- clean_title(f)
     badge <- figure_badge(f)
-    f <- normalizePath(f, winslash = "/", mustWork = TRUE)
+    img_src <- html_img_src(f)
 
     cat('<div class="figure-card">')
-
     cat('<div class="figure-header">')
     cat('<span class="figure-badge">', badge, '</span>')
     cat('<h3>', title, '</h3>')
     cat('</div>')
-
-    cat('<a href="', f, '" target="_blank">')
-    cat('<img src="', f, '" class="figure-img">')
-    cat('</a>')
-
-    cat('<div class="figure-footer">')
-    cat('<a href="', f, '" target="_blank">Open full figure</a>')
-    cat('</div>')
-
+    cat('<img src="', img_src, '" class="figure-img">')
     cat('</div>')
   }
 
   cat('</div>')
-}
 
-clean_go <- function(x) {
-  if (is.null(x)) return(data.frame())
-  if (!is.null(x$go_results)) x <- x$go_results
-  tryCatch(as.data.frame(x), error = function(e) data.frame())
-}
-
-find_first_dir <- function(paths) {
-  paths <- paths[dir.exists(paths)]
-  if (length(paths) == 0) return(NA_character_)
-  paths[1]
+  invisible(NULL)
 }
 
 
-# --------------------------------------------------------
-# Metadata helpers
-# --------------------------------------------------------
+plot_gallery_grid <- function(files, badge = "Figure") {
+  files <- files[file.exists(files)]
 
-detect_sample_column <- function(md) {
-
-  candidates <- c(
-    "sample",
-    "Sample",
-    "sample_id",
-    "SampleID",
-    "id",
-    "ID"
-  )
-
-  x <- intersect(candidates, colnames(md))
-
-  if (length(x) > 0) {
-    return(x[1])
+  if (length(files) == 0) {
+    cat("<p><em>No figures found.</em></p>")
+    return(invisible(NULL))
   }
 
-  colnames(md)[1]
+  cat('<div class="figure-grid">')
+
+  for (f in sort(files)) {
+    nm <- tools::file_path_sans_ext(basename(f))
+    nm <- gsub("_", " ", nm)
+    img_src <- html_img_src(f)
+
+    cat(
+      '<div class="figure-card">',
+      '<div class="figure-header">',
+      '<span class="figure-badge">', badge, '</span>',
+      '<h3>', nm, '</h3>',
+      '</div>',
+      '<img class="figure-img" src="', img_src, '" alt="', nm, '">',
+      '</div>',
+      sep = ""
+    )
+  }
+
+  cat("</div>")
+
+  invisible(NULL)
 }
 
 
+describe_output <- function(x) {
+  out <- rep("DEGgo output file or folder", length(x))
 
-detect_metadata_factors <- function(md, exclude = NULL) {
+  out[grepl("results$", x)] <- "Full differential expression results"
+  out[grepl("significant$", x)] <- "Significant DEGs only"
+  out[grepl("GO$", x)] <- "GO enrichment tables"
+  out[grepl("GO_plots$", x)] <- "GO enrichment visualizations"
+  out[grepl("heatmaps$", x)] <- "DEG heatmaps"
+  out[grepl("PCA$", x)] <- "Sample-level PCA plots"
+  out[grepl("volcano$", x)] <- "Volcano plots"
+  out[grepl("QC$|qc$", x)] <- "Sample QC plots and clustering"
+  out[grepl("reproducibility$", x)] <- "Clean inputs and run parameters"
+  out[grepl("summary\\.tsv$", x)] <- "Summary of all comparisons"
+  out[grepl("sessionInfo\\.txt$", x)] <- "Reproducibility and software versions"
 
-  cols <- setdiff(
-    colnames(md),
-    exclude
-  )
-
-  cols <- intersect(
-    cols,
-    colnames(md)
-  )
-
-  if (length(cols) == 0)
-    return(character())
-
-
-  keep <- vapply(
-    md[, cols, drop = FALSE],
-    function(x)
-      is.character(x) ||
-      is.factor(x) ||
-      is.logical(x),
-    logical(1)
-  )
-
-
-  cols[keep]
-
-}
-
-
-
-summarize_factor <- function(md, cols) {
-
-  if (length(cols) == 0)
-    return(data.frame())
-
-
-  data.frame(
-    factor = cols,
-
-    levels = vapply(
-      md[, cols, drop = FALSE],
-      function(x)
-        length(unique(x)),
-      numeric(1)
-    ),
-
-    distribution = vapply(
-      md[, cols, drop = FALSE],
-      function(x)
-        paste(
-          paste(names(table(x)),
-                as.vector(table(x)),
-                sep="="),
-          collapse=" | "
-        ),
-      character(1)
-    ),
-
-    stringsAsFactors = FALSE
-  )
+  out
 }
 
 
 ```
 
-
 <style>
 body {
-  font-size: 14px;
-  background: #fafafa;
+font-size: 14px;
+background: #fafafa;
 }
 
 h1, h2, h3 {
-  font-weight: 700;
+font-weight: 700;
 }
 
 h1 {
-  margin-top: 36px;
-  border-bottom: 3px solid #00876C;
-  padding-bottom: 8px;
+margin-top: 36px;
+border-bottom: 3px solid #00876C;
+padding-bottom: 8px;
 }
 
 h2 {
-  margin-top: 28px;
+margin-top: 28px;
 }
 
 .metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin: 20px 0;
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 14px;
+margin: 20px 0;
 }
 
 .metric-card {
-  background: white;
-  padding: 18px;
-  border-radius: 16px;
-  border: 1px solid #e6e6e6;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+background: white;
+padding: 18px;
+border-radius: 16px;
+border: 1px solid #e6e6e6;
+box-shadow: 0 6px 24px rgba(0,0,0,0.06);
 }
 
 .metric-title {
-  color: #666;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
+color: #666;
+font-size: 13px;
+font-weight: 700;
+text-transform: uppercase;
 }
 
 .metric-value {
-  font-size: 25px;
-  font-weight: 800;
-  margin-top: 8px;
-  color: #111;
+font-size: 25px;
+font-weight: 800;
+margin-top: 8px;
+color: #111;
 }
 
 .metric-subtitle {
-  color: #777;
-  margin-top: 6px;
-  font-size: 12px;
+color: #777;
+margin-top: 6px;
+font-size: 12px;
 }
 
 .figure-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(360px, 1fr));
-  gap: 24px;
-  margin-top: 20px;
+display: grid;
+grid-template-columns: repeat(2, minmax(360px, 1fr));
+gap: 24px;
+margin-top: 20px;
 }
 
 .figure-card {
-  background: white;
-  border: 1px solid #e6e6e6;
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.07);
+background: white;
+border: 1px solid #e6e6e6;
+border-radius: 18px;
+padding: 16px;
+box-shadow: 0 8px 28px rgba(0,0,0,0.07);
 }
 
 .figure-header {
-  margin-bottom: 12px;
+margin-bottom: 12px;
 }
 
 .figure-header h3 {
-  font-size: 16px;
-  margin: 8px 0 0 0;
-  line-height: 1.25;
+font-size: 16px;
+margin: 8px 0 0 0;
+line-height: 1.25;
 }
 
 .figure-badge {
-  display: inline-block;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: #00876C;
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
+display: inline-block;
+padding: 4px 11px;
+border-radius: 999px;
+background: #00876C;
+color: white;
+font-size: 12px;
+font-weight: 700;
 }
 
 .figure-img {
-  width: 100%;
-  max-height: 650px;
-  object-fit: contain;
-  border-radius: 12px;
-  border: 1px solid #eee;
-  background: white;
+width: 100%;
+max-height: 650px;
+object-fit: contain;
+border-radius: 12px;
+border: 1px solid #eee;
+background: white;
 }
 
 .figure-footer {
-  margin-top: 10px;
-  font-size: 13px;
+margin-top: 10px;
+font-size: 13px;
 }
 
 .figure-footer a {
-  color: #00876C;
-  font-weight: 700;
+color: #00876C;
+font-weight: 700;
 }
 
 .table {
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+background: white;
+border-radius: 10px;
+overflow: hidden;
+box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+}
+
+.output-table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 15px;
+background: white;
+border-radius: 12px;
+overflow: hidden;
+box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+}
+
+.output-table th {
+background: #00876C;
+color: white;
+text-align: left;
+padding: 12px;
+}
+
+.output-table td {
+padding: 12px;
+border-bottom: 1px solid #ececec;
+}
+
+.output-table tr:last-child td {
+border-bottom: none;
 }
 
 pre {
-  background: #111;
-  color: #eee;
-  padding: 16px;
-  border-radius: 12px;
-  max-height: 500px;
-  overflow-y: auto;
+background: #f4fbf8;
+color: #111;
+border-left: 5px solid #00876C;
+padding: 16px;
+border-radius: 12px;
+max-height: 500px;
+overflow-y: auto;
+font-size: 13px;
+line-height: 1.45;
+font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+font-weight: 500;
+text-shadow: none;
+box-shadow: none;
+-webkit-font-smoothing: auto;
+text-rendering: optimizeLegibility;
 }
 
 code {
-  color: #00876C;
+color: #006b57;
+text-shadow: none;
+font-weight: 500;
 }
 
 @media (max-width: 1100px) {
-  .figure-grid {
-    grid-template-columns: 1fr;
-  }
+.figure-grid {
+grid-template-columns: 1fr;
+}
 
-  .metric-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.metric-grid {
+grid-template-columns: repeat(2, 1fr);
+}
 }
 </style>
 
-## Overview
 
-```{r}
+# Overview
+
+```{r results='asis'}
+analysis_mode <- res$run_params$analysis_mode %||% "NA"
 
 analysis_label <- ifelse(
-  res$run_params$analysis_mode == "pairwise",
+  analysis_mode == "pairwise",
   "pairwise differential expression analyses across multiple experimental groups",
   "a differential expression analysis"
 )
 
 cat(
   sprintf(
-    "<p>
-    This report summarizes %s performed with <strong>DEGgo</strong>.
-    Results include quality control, gene expression analysis,
-    visualization of significant genes, Gene Ontology enrichment,
-    and reproducibility information.
-    </p>",
+    "<p>This report summarizes %s performed with <strong>DEGgo</strong>.</p>",
     analysis_label
   )
 )
 
 cat('<div class="metric-grid">')
 
-html_card("Analysis mode", res$run_params$analysis_mode %||% "NA")
+html_card("Analysis mode", analysis_mode)
 html_card("Method", res$run_params$method %||% "NA")
 html_card("Organism", res$run_params$organism %||% "NA")
 html_card("DEGgo version", res$version %||% "development")
@@ -417,463 +447,290 @@ cat('</div>')
 
 cat("<p><strong>Output directory:</strong><br>")
 cat("<code>", outdir, "</code></p>")
-
 ```
-
 
 
 # Sample metadata
 
+```{r sample-metadata, results='asis'}
+# ---------------------------------------------------------
+# Locate reproducibility files
+# ---------------------------------------------------------
 
-```{r}
+outdir <- params$output_dir %||% res$output_dir
+outdir <- normalizePath(outdir, winslash = "/", mustWork = FALSE)
 
 repro_dir <- file.path(outdir, "reproducibility")
 
-metadata_file <- file.path(
-  repro_dir,
-  "clean_matched_metadata.tsv"
-)
+metadata_file <- file.path(repro_dir, "clean_matched_metadata.tsv")
+input_summary_file <- file.path(repro_dir, "clean_input_summary.tsv")
 
-input_summary_file <- file.path(
-  repro_dir,
-  "clean_input_summary.tsv"
-)
-
-
-# --------------------------------------------------------
+# ---------------------------------------------------------
 # Input summary
-# --------------------------------------------------------
+# ---------------------------------------------------------
 
 if (file.exists(input_summary_file)) {
-
+  
   input_summary <- read.delim(
     input_summary_file,
+    sep = "\t",
+    header = TRUE,
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
-
+  
   cat("<h3>Input summary</h3>")
-
-  if (all(c("metric","value") %in% colnames(input_summary))) {
-
+  
+  if (all(c("metric", "value") %in% colnames(input_summary))) {
+    
     cat('<div class="metric-grid">')
-
+    
     for (i in seq_len(nrow(input_summary))) {
-
       html_card(
         as.character(input_summary$metric[i]),
         as.character(input_summary$value[i])
       )
     }
-    cat('</div>')
+    
+    cat("</div>")
+    
   } else {
-
-    print(
-      knitr::kable(
-        input_summary,
-        format = "html",
-        table.attr =
-          "class='table table-striped table-hover'"
-      )
-    )
+    show_table(input_summary, n = nrow(input_summary))
   }
 }
 
+# ---------------------------------------------------------
+# Complete metadata table
+# ---------------------------------------------------------
 
-# --------------------------------------------------------
-# Load metadata
-# --------------------------------------------------------
-
-md <- NULL
+md2 <- NULL
 
 if (file.exists(metadata_file)) {
-
-  md <- read.delim(
+  
+  md2 <- read.delim(
     metadata_file,
+    sep = "\t",
+    header = TRUE,
     check.names = FALSE,
     stringsAsFactors = FALSE
   )
-
+  
+} else if (!is.null(params$metadata)) {
+  
+  md2 <- as.data.frame(params$metadata, stringsAsFactors = FALSE)
+  
 } else if (!is.null(res$metadata)) {
-
-  md <- as.data.frame(
-    res$metadata,
-    stringsAsFactors = FALSE
-  )
-
+  
+  md2 <- as.data.frame(res$metadata, stringsAsFactors = FALSE)
+  
+} else if (!is.null(md)) {
+  
+  md2 <- as.data.frame(md, stringsAsFactors = FALSE)
 }
 
-
-# --------------------------------------------------------
-# Clean metadata columns
-# --------------------------------------------------------
-
-if (!is.null(md) && nrow(md) > 0) {
-
-colnames(md) <- make.unique(
-  trimws(colnames(md))
-)
-
-colnames(md)[colnames(md) == ""] <- paste0(
-  "variable_",
-  seq_len(sum(colnames(md) == ""))
-)
-
-
-# --------------------------------------------------------
-# Detect sample column
-# --------------------------------------------------------
-
-sample_candidates <- c("sample", "Sample", "sample_id","SampleID", "id", "ID")
-
-sample_col <- intersect(
-  sample_candidates,
-  colnames(md)
-)
-
-if (length(sample_col) == 0) {
-
-  sample_col <- colnames(md)[1]
-
-} else {
-
-  sample_col <- sample_col[1]
-
-}
-
-
-# --------------------------------------------------------
-# Full metadata
-# --------------------------------------------------------
-
-cat("<details>")
-cat(
-"<summary><strong>Show complete metadata table</strong></summary>"
-)
-
-print(
-  knitr::kable(
-    md,
-    format="html",
-    table.attr =
-      "class='table table-striped table-hover'"
-  )
-)
-
-cat("</details>")
-
-}
-
-
-```
-
-
-# Differential expression summary
-
-```{r}
-
-if (!is.null(res$summary)) {
-
-  s <- as.data.frame(res$summary)
-
-  cat('<div class="metric-grid">')
-
-  html_card(
-    "Comparisons",
-    nrow(s)
-  )
-
-  html_card(
-    "Significant DEGs",
-    format(sum(s$significant, na.rm = TRUE), big.mark = ",")
-  )
-
-  html_card(
-    "Upregulated",
-    format(sum(s$up, na.rm = TRUE), big.mark = ",")
-  )
-
-  html_card(
-    "Downregulated",
-    format(sum(s$down, na.rm = TRUE), big.mark = ",")
-  )
-
-  cat('</div>')
-
-  cat("<br>")
-
-  if (!is.null(res$summary)) {
-
-  s <- as.data.frame(res$summary)
-
-  plot_df <- rbind(
-    data.frame(
-      comparison = s$comparison,
-      count = s$up,
-      regulation = "Up"
-    ),
-    data.frame(
-      comparison = s$comparison,
-      count = s$down,
-      regulation = "Down"
-    )
-  )
-
-  p <- ggplot2::ggplot(
-    plot_df,
-    ggplot2::aes(
-      x = stats::reorder(
-        comparison,
-        count,
-        FUN = sum
-      ),
-      y = count,
-      fill = regulation
-    )
-  ) +
-    ggplot2::geom_col(width = 0.8) +
-    ggplot2::coord_flip() +
-    ggplot2::scale_fill_manual(
-      values = c(
-        Up = "#740001",
-        Down = "#6497b1"
-      )
-    ) +
-    ggplot2::labs(
-      x = NULL,
-      y = "Number of DEGs",
-      fill = NULL
-    ) +
-    ggplot2::theme_bw(base_size = 12) +
-    ggplot2::theme(
-      legend.position = "top",
-      panel.grid.major.y = ggplot2::element_blank(),
-      axis.text.y = ggplot2::element_text(size = 10)
-    )
-
-  print(p)
+if (!is.null(md2) && nrow(md2) > 0 && ncol(md2) > 0) {
+  
+  colnames(md2) <- make.unique(trimws(colnames(md2)))
+  
+  # If row names were exported as the first unnamed column
+  if (colnames(md2)[1] %in% c("", "X", "row.names", "Row.names")) {
+    colnames(md2)[1] <- "sample"
   }
   
-  knitr::kable(
-    s,
-    format = "html",
-    caption = "Pairwise differential expression summary",
-    table.attr = "class='table table-striped table-hover'"
+  # Remove fully empty columns
+  keep_cols <- vapply(
+    md2,
+    function(x) any(!is.na(x) & trimws(as.character(x)) != ""),
+    logical(1)
   )
-
-} else {
-
-  cat("<p><em>No DEG summary available.</em></p>")
-
+  md2 <- md2[, keep_cols, drop = FALSE]
+  
+  # Add sample column if absent
+  if (!"sample" %in% colnames(md2)) {
+    rn <- rownames(md2)
+    if (is.null(rn) || all(rn == as.character(seq_len(nrow(md2))))) {
+      rn <- seq_len(nrow(md2))
+    }
+    md2 <- cbind(sample = rn, md2)
+  }
+  
+  rownames(md2) <- NULL
+  md2[] <- lapply(md2, as.character)
 }
-
 ```
 
 
+# Quality control 
+## Sample quality assessment
+
+```{r results='asis'}
+qc_dir <- results$output_dirs$qc %||% find_first_dir(c(
+  file.path(outdir, "pairwise_QC"),
+  file.path(outdir, "single_QC"),
+  file.path(outdir, "sample_QC")
+))
+
+qc_files <- find_png(qc_dir)
+
+qc_files <- qc_files[
+  grepl(
+    "Sample_Correlation|Hierarchical_Clustering|QC_Flags|Library_Size|Detected_Genes",
+    basename(qc_files)
+  )
+]
+
+emit_gallery(qc_files)
+```
 
 
-## Quality control and PCA plots
+## Principal Component Analysis (PCA)
 
-```{r}
-
-pca_dir <- find_first_dir(c(
+```{r results='asis'}
+pca_dir <- results$output_dirs$pca %||% find_first_dir(c(
   file.path(outdir, "pairwise_PCA"),
+  file.path(outdir, "single_PCA"),
   file.path(outdir, "PCA"),
   file.path(outdir, "pca")
 ))
 
 pca_files <- find_png(pca_dir)
 emit_gallery(pca_files)
-
 ```
 
 
-## Differential expression volcano plots
+
+
+# Differential expression summary
+
+```{r results='asis'}
+if (!is.null(sumtab)) {
+  
+  s <- as.data.frame(sumtab)
+  
+  cat('<div class="metric-grid">')
+  
+  html_card("Comparisons", nrow(s))
+  html_card("Significant DEGs", format(sum(s$significant, na.rm = TRUE), big.mark = ","))
+  html_card("Upregulated", format(sum(s$up, na.rm = TRUE), big.mark = ","))
+  html_card("Downregulated", format(sum(s$down, na.rm = TRUE), big.mark = ","))
+  
+  cat('</div>')
+  
+  show_table(s, n = nrow(s))
+  
+} else {
+  
+  cat("<p><em>No DEG summary available.</em></p>")
+}
+```
 
 ```{r}
-
-volcano_dir <- find_first_dir(c(
-  file.path(outdir, "pairwise_volcano"),
-  file.path(outdir, "volcano"),
-  file.path(outdir, "Volcano")
-))
-
-volcano_files <- find_png(volcano_dir)
-emit_gallery(volcano_files)
-
+if (!is.null(sumtab)) {
+  
+  s <- as.data.frame(sumtab)
+  
+  if (all(c("comparison", "up", "down") %in% colnames(s))) {
+    
+    plot_df <- rbind(
+      data.frame(comparison = s$comparison, count = s$up, regulation = "Up"),
+      data.frame(comparison = s$comparison, count = s$down, regulation = "Down")
+    )
+    
+    ggplot2::ggplot(
+      plot_df,
+      ggplot2::aes(
+        x = stats::reorder(comparison, count, FUN = sum),
+        y = count,
+        fill = regulation
+      )
+    ) +
+      ggplot2::geom_col(width = 0.8) +
+      ggplot2::coord_flip() +
+      ggplot2::scale_fill_manual(values = c(Up = "#740001", Down = "#6497b1")) +
+      ggplot2::labs(x = NULL, y = "Number of DEGs", fill = NULL) +
+      ggplot2::theme_bw(base_size = 12) +
+      ggplot2::theme(
+        legend.position = "top",
+        panel.grid.major.y = ggplot2::element_blank(),
+        axis.text.y = ggplot2::element_text(size = 10)
+      )
+  }
+}
 ```
 
 
-## DEG heatmap
 
-```{r}
+## Volcano plots
 
-heatmap_dir <- find_first_dir(c(
-  file.path(outdir, "pairwise_heatmaps"),
-  file.path(outdir, "heatmaps"),
-  file.path(outdir, "Heatmaps")
-))
+```{r volcano-gallery, results='asis'}
+volcano_files <- safe_list_png(
+  file.path(outdir, "pairwise_volcano")
+)
 
-heatmap_files <- find_png(heatmap_dir)
-emit_gallery(heatmap_files)
-
+plot_gallery_grid(volcano_files)
 ```
 
+## Heatmaps
+
+```{r heatmap-gallery, results='asis'}
+heatmap_files <- safe_list_png(
+  file.path(outdir, "pairwise_heatmaps")
+)
+
+plot_gallery_grid(heatmap_files)
+```
 
 
 # Gene Ontology enrichment summary
 
-```{r}
-
+```{r go-summary, results='asis'}
 go_summary_file <- list.files(
   path = outdir,
-  pattern = "^ALL_pairwise_GO_.*_merged\\.tsv$",
+  pattern = "merged\\.tsv$",
   recursive = TRUE,
   full.names = TRUE
 )
+
+go_merged <- NULL
 
 if (length(go_summary_file) > 0) {
 
   go_merged <- utils::read.delim(
     go_summary_file[1],
-    check.names = FALSE
+    check.names = FALSE,
+    stringsAsFactors = FALSE
   )
-
-  ontology_value <- "BP"
-
-  if ("ONTOLOGY" %in% colnames(go_merged)) {
-    ontology_value <- unique(go_merged$ONTOLOGY)[1]
-  }
 
   cat('<div class="metric-grid">')
 
-  html_card(
-    "GO comparisons",
-    length(unique(go_merged$comparison))
-  )
-
-  html_card(
-    "Unique GO terms",
-    length(unique(go_merged$ID))
-  )
-
-  html_card(
-    "Enriched rows",
-    format(nrow(go_merged), big.mark = ",")
-  )
-
+  html_card("GO comparisons", length(unique(go_merged$comparison %||% NA)))
+  html_card("Unique GO terms", length(unique(go_merged$ID %||% NA)))
+  html_card("Enriched rows", format(nrow(go_merged), big.mark = ","))
   html_card(
     "Ontology",
-    ontology_value
+    if ("ONTOLOGY" %in% colnames(go_merged)) unique(go_merged$ONTOLOGY)[1] else "BP"
   )
 
-  cat('</div>')
+  cat("</div>")
 
-  cat("<br>")
+  if ("comparison" %in% colnames(go_merged) && "ID" %in% colnames(go_merged)) {
 
-  go_summary <- aggregate(
-    ID ~ comparison,
-    data = go_merged,
-    FUN = length
-  )
-
-  colnames(go_summary) <- c(
-    "comparison",
-    "enriched_GO_terms"
-  )
-
-  if ("p.adjust" %in% colnames(go_merged)) {
-
-    min_padj <- aggregate(
-      p.adjust ~ comparison,
+    go_summary <- aggregate(
+      ID ~ comparison,
       data = go_merged,
-      FUN = function(x) min(x, na.rm = TRUE)
+      FUN = length
     )
 
-    colnames(min_padj) <- c(
-      "comparison",
-      "best_padj"
-    )
+    colnames(go_summary) <- c("comparison", "enriched_GO_terms")
 
-    go_summary <- merge(
-      go_summary,
-      min_padj,
-      by = "comparison",
-      all.x = TRUE
-    )
+    cat("<h3>GO terms per comparison</h3>")
+    show_table(go_summary, n = nrow(go_summary))
   }
-
-  if ("Count" %in% colnames(go_merged)) {
-
-    gene_count <- aggregate(
-      Count ~ comparison,
-      data = go_merged,
-      FUN = function(x) sum(x, na.rm = TRUE)
-    )
-
-    colnames(gene_count) <- c(
-      "comparison",
-      "total_gene_hits"
-    )
-
-    go_summary <- merge(
-      go_summary,
-      gene_count,
-      by = "comparison",
-      all.x = TRUE
-    )
-  }
-
-  go_summary <- go_summary[
-    order(go_summary$enriched_GO_terms, decreasing = TRUE),
-    ,
-    drop = FALSE
-  ]
-
-  if (nrow(go_summary) > 0) {
-
-    p_go <- ggplot2::ggplot(
-      go_summary,
-      ggplot2::aes(
-        x = stats::reorder(
-          comparison,
-          enriched_GO_terms
-        ),
-        y = enriched_GO_terms
-      )
-    ) +
-      ggplot2::geom_col(
-        width = 0.8,
-        fill = "#00876C"
-      ) +
-      ggplot2::coord_flip() +
-      ggplot2::labs(
-        x = NULL,
-        y = "Number of enriched GO terms"
-      ) +
-      ggplot2::theme_bw(base_size = 12) +
-      ggplot2::theme(
-        panel.grid.major.y = ggplot2::element_blank(),
-        axis.text.y = ggplot2::element_text(size = 10)
-      )
-
-    print(p_go)
-  }
-
-  cat("<br>")
-
-  knitr::kable(
-    go_summary,
-    format = "html",
-    caption = "Summary of merged pairwise GO enrichment results",
-    table.attr = "class='table table-striped table-hover'"
-  )
-
-  cat("<br>")
 
   keep_cols <- intersect(
     c(
       "comparison",
+      "Regulation",
       "ID",
       "Description",
       "GeneRatio",
@@ -885,115 +742,82 @@ if (length(go_summary_file) > 0) {
     colnames(go_merged)
   )
 
-  if ("p.adjust" %in% colnames(go_merged)) {
+  top_go <- go_merged[, keep_cols, drop = FALSE]
 
-    top_go <- go_merged[
-      order(go_merged$p.adjust, decreasing = FALSE),
-      keep_cols,
-      drop = FALSE
-    ]
-
-  } else {
-
-    top_go <- go_merged[, keep_cols, drop = FALSE]
-
+  if ("p.adjust" %in% colnames(top_go)) {
+    top_go <- top_go[order(top_go$p.adjust), , drop = FALSE]
   }
 
-  cat("<h3>Top enriched GO terms across all comparisons</h3>")
-
+  cat("<h3>Top enriched GO terms</h3>")
   show_table(top_go, n = 50)
 
 } else {
 
   cat("<p><em>No merged GO summary file found.</em></p>")
-
 }
-
 ```
 
 
+## GO plots
 
+```{r go-gallery, results='asis'}
+go_files <- safe_list_png(
+  file.path(outdir, "pairwise_GO")
+)
 
-## Gene ontology plots
-
-```{r}
-
-go_dir <- find_first_dir(c(
-  file.path(outdir, "pairwise_GO"),
-  file.path(outdir, "GO"),
-  file.path(outdir, "go")
-))
-
-go_files <- find_png(go_dir)
-emit_gallery(go_files)
-
+plot_gallery_grid(go_files)
 ```
 
 
-## Output files
+# Output files
 
-```{r}
+```{r output-files, results='asis'}
+output_items <- list.files(
+  path = outdir,
+  full.names = FALSE,
+  recursive = FALSE
+)
 
-if (dir.exists(outdir)) {
-  files <- list.files(outdir, recursive = TRUE, full.names = FALSE)
-  files <- files[!grepl("\\.html$", files)]
+output_table <- data.frame(
+  Folder = output_items,
+  Content = describe_output(output_items),
+  stringsAsFactors = FALSE
+)
 
-  show_table(data.frame(file = files), n = 300)
-}
+output_table <- output_table[order(output_table$Folder), ]
 
+knitr::kable(
+  output_table,
+  align = c("l", "l"),
+  caption = "DEGgo output structure"
+)
 ```
 
 
 # Reproducibility
 
-```{r}
-
+```{r reproducibility, results='asis'}
 repro_dir <- file.path(outdir, "reproducibility")
 
-param_file <- file.path(
-  repro_dir,
-  "run_parameters.tsv"
-)
-
-if (file.exists(param_file)) {
-
-  run_params <- read.delim(
-    param_file,
-    check.names = FALSE
-  )
-
-  knitr::kable(
-    run_params,
-    format = "html",
-    caption = "DEGgo analysis parameters",
-    table.attr = "class='table table-striped table-hover'"
-  )
-
-} else {
-
-  cat("<p><em>No reproducibility parameters available.</em></p>")
-
+run_params <- file.path(repro_dir, "run_parameters.tsv")
+# input_summary <- file.path(repro_dir, "clean_input_summary.tsv")
+# 
+if (file.exists(run_params)) {
+  cat("## Run parameters\n\n")
+  knitr::kable(read.delim(run_params, stringsAsFactors = FALSE))
 }
-
-```
-
-
-## Session information
-
-```{r}
+# 
+# if (file.exists(input_summary)) {
+#   cat("\n\n## Clean input summary\n\n")
+#   knitr::kable(read.delim(input_summary, stringsAsFactors = FALSE))
+# }
 
 session_file <- file.path(outdir, "sessionInfo.txt")
 
-cat("<pre>")
-
 if (file.exists(session_file)) {
+  cat("\n\n## Session info\n\n")
+  cat("<details><summary>Show session info</summary><pre>")
   cat(paste(readLines(session_file), collapse = "\n"))
-} else {
-  print(sessionInfo())
+  cat("</pre></details>")
 }
-
-cat("</pre>")
-
 ```
-
-

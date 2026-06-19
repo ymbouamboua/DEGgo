@@ -41,6 +41,16 @@ DEGgo
   - [4. Extract GO terms using biological
     keywords](#4-extract-go-terms-using-biological-keywords)
 - [Output structure](#output-structure)
+- [R package dependencies](#r-package-dependencies)
+  - [Core dependencies](#core-dependencies)
+    - [Differential expression](#differential-expression)
+    - [Annotation](#annotation)
+    - [Functional enrichment](#functional-enrichment)
+    - [Data processing](#data-processing)
+    - [Visualization](#visualization)
+    - [Reporting](#reporting)
+- [Supported organisms](#supported-organisms)
+- [Custom annotation databases](#custom-annotation-databases)
 - [Platform compatibility and HPC
   support](#platform-compatibility-and-hpc-support)
 - [Citation](#citation)
@@ -610,6 +620,77 @@ DEGgo_results/
 
 For single analysis, the output directory has the same general structure
 but contains single-comparison result files.
+
+# R package dependencies
+
+## Core dependencies
+
+DEGgo relies on the following R packages:
+
+### Differential expression
+
+- DESeq2
+- edgeR
+- limma
+
+### Annotation
+
+- AnnotationDbi
+- biomaRt
+
+### Functional enrichment
+
+- clusterProfiler
+- enrichplot
+
+### Data processing
+
+- dplyr
+- tibble
+
+### Visualization
+
+- ggplot2
+- pheatmap
+- RColorBrewer
+- patchwork
+
+### Reporting
+
+- rmarkdown
+- knitr
+
+All required dependencies are installed automatically when installing
+DEGgo.
+
+# Supported organisms
+
+DEGgo provides built-in annotation support for the following organisms:
+
+| Organism                  | Parameter | OrgDb package  |
+|:--------------------------|:----------|:---------------|
+| Human (*Homo sapiens*)    | `"human"` | `org.Hs.eg.db` |
+| Mouse (*Mus musculus*)    | `"mouse"` | `org.Mm.eg.db` |
+| Rat (*Rattus norvegicus*) | `"rat"`   | `org.Rn.eg.db` |
+
+Support for additional organisms is currently under development. Future
+releases will expand compatibility to livestock, model organisms, and
+non-model species through integration of additional Bioconductor
+annotation databases and custom annotation workflows.
+
+# Custom annotation databases
+
+Advanced users may provide any compatible AnnotationDbi database through
+the orgdb argument:
+
+``` r
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "human",
+  orgdb = org.Hs.eg.db
+)
+```
 
 # Platform compatibility and HPC support
 

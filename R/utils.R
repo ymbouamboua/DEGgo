@@ -11,32 +11,20 @@
 #' Create deggo directories
 #' @keywords internal
 #' @noRd
-.deggo_dirs <- function(output_dir, analysis_mode = "pairwise") {
-
-  if (analysis_mode == "pairwise") {
-    dirs <- list(
-      results     = file.path(output_dir, "pairwise_results"),
-      significant = file.path(output_dir, "pairwise_significant"),
-      volcano     = file.path(output_dir, "pairwise_volcano"),
-      heatmaps    = file.path(output_dir, "pairwise_heatmaps"),
-      go          = file.path(output_dir, "pairwise_GO"),
-      pca         = file.path(output_dir, "pairwise_PCA")
-    )
-  } else {
-    dirs <- list(
-      results     = file.path(output_dir, "results"),
-      significant = file.path(output_dir, "significant"),
-      volcano     = file.path(output_dir, "volcano_plots"),
-      heatmaps    = file.path(output_dir, "heatmaps"),
-      go          = file.path(output_dir, "GO"),
-      pca         = file.path(output_dir, "PCA")
-    )
-  }
+.deggo_dirs <- function(output_dir, analysis_mode) {
+  dirs <- list(
+    qc = file.path(output_dir, paste0(analysis_mode, "_QC")),
+    pca = file.path(output_dir, paste0(analysis_mode, "_PCA")),
+    volcano = file.path(output_dir, paste0(analysis_mode, "_volcano")),
+    heatmaps = file.path(output_dir, paste0(analysis_mode, "_heatmaps")),
+    results = file.path(output_dir, paste0(analysis_mode, "_results")),
+    significant = file.path(output_dir, paste0(analysis_mode, "_significant")),
+    go = file.path(output_dir, paste0(analysis_mode, "_GO"))
+  )
 
   invisible(lapply(dirs, dir.create, recursive = TRUE, showWarnings = FALSE))
   dirs
 }
-
 
 
 # ========================================================= #
@@ -376,3 +364,338 @@ extract_expression <- function(
 
   expr_long
 }
+
+
+
+# ======================================================= #
+# .write_deggo_manifest
+# ======================================================= #
+#' Write DEGgo output manifest
+#'
+#' Internal helper used by DEGgo reports to summarize generated output files.
+#'
+#' @param output_dir DEGgo output directory.
+#' @param analysis_mode Analysis mode: "single" or "pairwise".
+#' @param method Differential expression method.
+#'
+#' @return Invisibly returns a data frame.
+#'
+#' @keywords internal
+#' @noRd
+.write_deggo_manifest <- function(
+    output_dir,
+    dirs,
+    analysis_mode = c("single", "pairwise")
+) {
+
+  analysis_mode <- match.arg(analysis_mode)
+
+  manifest <- data.frame(
+    Folder = c(
+      basename(dirs$results),
+      basename(dirs$significant),
+      basename(dirs$go),
+      basename(dirs$heatmaps),
+      basename(dirs$pca),
+      basename(dirs$qc),
+      paste0(analysis_mode, "_summary.tsv"),
+      "sessionInfo.txt",
+      "reproducibility"
+    ),
+    Content = c(
+      "Full differential expression results",
+      "Significant DEGs only",
+      "GO enrichment tables and GO plots",
+      "DEG heatmaps",
+      "Sample-level PCA plots",
+      "Sample correlation and hierarchical clustering",
+      "Summary of differential expression results",
+      "Reproducibility and software versions",
+      "Run parameters and cleaned input files"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  utils::write.table(
+    manifest,
+    file.path(output_dir, "DEGgo_output_manifest.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  invisible(manifest)
+}
+
+
+# ======================================================= #
+# .safe_report
+# ======================================================= #
+#' Safely generate a DEGgo report
+#'
+#' Internal wrapper around [generate_deggo_report()] that prevents report
+#' generation errors from stopping the main DEGgo workflow.
+#'
+#' @param res DEGgo result object.
+#'
+#' @return Report output invisibly, or `NULL` if report generation is disabled
+#'   or fails.
+#'
+#' @keywords internal
+#' @noRd
+.safe_report <- function(
+    res,
+    output_dir,
+    generate_report = TRUE,
+    report_formats = "html",
+    report_template = NULL
+) {
+  if (!isTRUE(generate_report)) return(NULL)
+
+  tryCatch(
+    generate_deggo_report(
+      results = res,
+      output_dir = output_dir,
+      formats = report_formats,
+      report_template = report_template
+    ),
+    error = function(e) {
+      warning("Report generation failed: ", conditionMessage(e), call. = FALSE)
+      NULL
+    }
+  )
+}
+
+
+# ======================================================= #
+# .make_run_params
+# ======================================================= #
+#' Create DEGgo run parameter metadata
+#'
+#' Builds a named list describing the main parameters used in the current
+#' DEGgo run. This is used for reproducibility tracking and reporting.
+#'
+#' @return A named list of run parameters.
+#'
+#' @keywords internal
+#' @noRd
+.make_run_params <- function(
+    deggo_version,
+    organism,
+    method,
+    analysis_mode,
+    ontology,
+    padj_cutoff,
+    logfc_cutoff,
+    filter_method,
+    min_count,
+    min_samples,
+    min_total,
+    top_n_heatmap,
+    top_n_labels,
+    prepare_input,
+    gene_col,
+    feature_col,
+    sample_col,
+    design_formula,
+    pairwise_group_cols,
+    pairwise_contrast_col,
+    pairwise_mode,
+    output_dir,
+    repro_dir
+) {
+  `%||%` <- function(x, y) if (is.null(x)) y else x
+
+  list(
+    deggo_version = deggo_version,
+    date = as.character(Sys.Date()),
+    organism = organism,
+    method = method,
+    analysis_mode = analysis_mode,
+    ontology = ontology,
+    padj_cutoff = padj_cutoff,
+    logfc_cutoff = logfc_cutoff,
+    filter_method = filter_method,
+    min_count = min_count,
+    min_samples = min_samples,
+    min_total = min_total,
+    top_n_heatmap = top_n_heatmap,
+    top_n_labels = top_n_labels,
+    prepare_input = prepare_input,
+    gene_col = paste(gene_col, collapse = ", "),
+    feature_col = paste(feature_col, collapse = ", "),
+    sample_col = paste(sample_col, collapse = ", "),
+    design_formula = paste(deparse(design_formula), collapse = ""),
+    pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
+    pairwise_contrast_col = pairwise_contrast_col,
+    pairwise_mode = pairwise_mode,
+    output_dir = output_dir,
+    reproducibility_dir = repro_dir
+  )
+}
+
+# ======================================================= #
+# .save_repro
+# ======================================================= #
+#' Save DEGgo reproducibility files
+#'
+#' Writes DEGgo run parameters to the reproducibility directory.
+#'
+#' @param res DEGgo result object containing a `run_params` element.
+#'
+#' @return Invisibly returns `NULL`.
+#'
+#' @keywords internal
+#' @noRd
+.save_repro <- function(
+    res,
+    repro_dir,
+    save_reproducibility = TRUE
+) {
+  if (!isTRUE(save_reproducibility)) return(invisible(NULL))
+
+  params_df <- data.frame(
+    parameter = names(res$run_params),
+    value = vapply(
+      res$run_params,
+      function(x) paste(x, collapse = ", "),
+      character(1)
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  utils::write.table(
+    params_df,
+    file.path(repro_dir, "run_parameters.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  invisible(NULL)
+}
+
+# ======================================================= #
+# .save_clean_input_files
+# ======================================================= #
+#' Save cleaned input files
+#'
+#' Saves the filtered count matrix, matched metadata, and a summary of the
+#' cleaned input data to the reproducibility directory.
+#'
+#' @return Invisibly returns `NULL`.
+#'
+#' @keywords internal
+#' @noRd
+.save_clean_input_files <- function(
+    counts,
+    metadata,
+    repro_dir,
+    save_clean_inputs = TRUE
+) {
+  if (!isTRUE(save_clean_inputs)) return(invisible(NULL))
+
+  utils::write.table(
+    counts,
+    file.path(repro_dir, "clean_filtered_counts.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    col.names = NA
+  )
+
+  utils::write.table(
+    metadata,
+    file.path(repro_dir, "clean_matched_metadata.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  lib_sizes <- colSums(counts, na.rm = TRUE)
+
+  input_summary <- data.frame(
+    metric = c(
+      "samples",
+      "genes_after_filtering",
+      "total_counts",
+      "median_library_size",
+      "min_library_size",
+      "max_library_size"
+    ),
+    value = c(
+      ncol(counts),
+      nrow(counts),
+      sum(counts, na.rm = TRUE),
+      stats::median(lib_sizes, na.rm = TRUE),
+      min(lib_sizes, na.rm = TRUE),
+      max(lib_sizes, na.rm = TRUE)
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  utils::write.table(
+    input_summary,
+    file.path(repro_dir, "clean_input_summary.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  invisible(NULL)
+}
+
+
+# ======================================================= #
+# .make_pca_list
+# ======================================================= #
+#' Generate PCA plots for DEGgo results
+#'
+#' Creates PCA plots colored by sample and available metadata variables such as
+#' tissue, treatment, sex, and condition.
+#'
+#' @param dds A DESeq2 dataset object.
+#' @param md A metadata data frame matched to the count matrix.
+#'
+#' @return A named list of PCA plot objects.
+#'
+#' @keywords internal
+#' @noRd
+.make_pca_list <- function(dds, md, pca_dir) {
+  pca_list <- list()
+
+  pca_list$sample <- plot_pca(
+    dds = dds,
+    metadata = md,
+    output_dir = pca_dir,
+    filename = "PCA_by_sample",
+    color_by = "sample",
+    title = "PCA by sample"
+  )
+
+  for (col in intersect(c("tissue", "treatment", "sex", "condition"), colnames(md))) {
+    pca_list[[col]] <- plot_pca(
+      dds = dds,
+      metadata = md,
+      output_dir = pca_dir,
+      filename = paste0("PCA_by_", col),
+      color_by = col,
+      title = paste("PCA by", col)
+    )
+  }
+
+  if (all(c("tissue", "treatment") %in% colnames(md))) {
+    pca_list$tissue_treatment <- plot_pca(
+      dds = dds,
+      metadata = md,
+      output_dir = pca_dir,
+      filename = "PCA_tissue_treatment",
+      color_by = "tissue",
+      shape_by = "treatment",
+      title = "PCA tissue + treatment"
+    )
+  }
+
+  pca_list
+}
+
+

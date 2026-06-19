@@ -47,6 +47,7 @@
 #'
 #' @return A list containing DEG results, plots, GO results, reports, and output paths.
 #' @export
+#'
 run_deggo <- function(
     counts,
     metadata,
@@ -83,6 +84,8 @@ run_deggo <- function(
     seed = 123
 ) {
 
+  `%||%` <- function(x, y) if (is.null(x)) y else x
+
   set.seed(seed)
 
   method <- match.arg(method)
@@ -97,9 +100,7 @@ run_deggo <- function(
 
   log("==== STARTING DEGgo ANALYSIS ====", type = "header")
 
-  if (is.null(output_dir)) {
-    output_dir <- "DEGgo_results"
-  }
+  if (is.null(output_dir)) output_dir <- "DEGgo_results"
 
   output_dir <- file.path(
     output_dir,
@@ -127,6 +128,25 @@ run_deggo <- function(
   )
 
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  if (is.null(report_template)) {
+    report_template <- system.file(
+      "rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd",
+      package = "DEGgo"
+    )
+
+    if (!nzchar(report_template) || !file.exists(report_template)) {
+      report_template <- file.path(
+        getwd(),
+        "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
+      )
+    }
+  }
+
+
+  # ----------------------------- #
+  # Input preparation
+  # ----------------------------- #
 
   log("[1/11] Matching counts and metadata", type = "step")
 
@@ -156,14 +176,26 @@ run_deggo <- function(
     counts <- round(counts)
     storage.mode(counts) <- "integer"
 
-    if ("sample" %in% colnames(metadata)) {
+    scol <- sample_col[sample_col %in% colnames(metadata)][1]
+
+    if (!is.na(scol)) {
+      rownames(metadata) <- metadata[[scol]]
+    } else if ("sample" %in% colnames(metadata)) {
       rownames(metadata) <- metadata$sample
+    } else {
+      stop("No sample column found in metadata.", call. = FALSE)
     }
   }
 
   if (!is.matrix(counts)) {
     stop("counts must be a matrix after input preparation.", call. = FALSE)
   }
+
+  log("[2/11] Loading annotation database", type = "step")
+
+  orgdb <- .get_orgdb(organism = organism, orgdb = orgdb)
+
+  log("[3/11] Validating inputs", type = "step")
 
   if (analysis_mode == "pairwise") {
 
@@ -175,33 +207,23 @@ run_deggo <- function(
       stop("'pairwise_group_cols' is required for pairwise mode.", call. = FALSE)
     }
 
-    missing_pairwise_cols <- setdiff(pairwise_group_cols, colnames(metadata))
+    missing_cols <- setdiff(pairwise_group_cols, colnames(metadata))
 
-    if (length(missing_pairwise_cols) > 0) {
+    if (length(missing_cols) > 0) {
       stop(
         "Missing pairwise grouping columns: ",
-        paste(missing_pairwise_cols, collapse = ", "),
+        paste(missing_cols, collapse = ", "),
         call. = FALSE
       )
     }
   }
-
-  log("[2/11] Loading annotation database", type = "step")
-
-  orgdb <- .get_orgdb(
-    organism = organism,
-    orgdb = orgdb
-  )
-
-  log("[3/11] Validating inputs", type = "step")
 
   if (!"condition" %in% colnames(metadata)) {
     if (analysis_mode == "pairwise") {
       metadata$condition <- apply(
         metadata[, pairwise_group_cols, drop = FALSE],
         1,
-        paste,
-        collapse = "_"
+        function(x) paste(gsub("\\s+", "_", x), collapse = "_")
       )
     } else {
       stop("Metadata must contain 'condition'.", call. = FALSE)
@@ -242,53 +264,28 @@ run_deggo <- function(
   colnames(counts) <- sample_ids
   rownames(metadata) <- sample_ids
 
-  if (isTRUE(save_clean_inputs)) {
+  .save_clean_input_files(
+    counts = counts,
+    metadata = metadata,
+    repro_dir = repro_dir,
+    save_clean_inputs = save_clean_inputs
+  )
 
-    utils::write.table(
-      counts,
-      file.path(repro_dir, "clean_filtered_counts.tsv"),
-      sep = "\t",
-      quote = FALSE,
-      col.names = NA
+  # ------------------------------------------------------- #
+  # Sample QC
+  # ------------------------------------------------------- #
+
+  log("[6/11] Sample quality control", type = "step")
+
+  sample_qc <- run_sample_qc(
+    counts = counts,
+    metadata = metadata,
+    output_dir = dirs$qc,
+    annotation_cols = intersect(
+      c("condition", "treatment", "sex", "tissue"),
+      colnames(metadata)
     )
-
-    utils::write.table(
-      metadata,
-      file.path(repro_dir, "clean_matched_metadata.tsv"),
-      sep = "\t",
-      quote = FALSE,
-      col.names = NA
-    )
-
-    input_summary <- data.frame(
-      metric = c(
-        "samples",
-        "genes_after_filtering",
-        "total_counts",
-        "median_library_size",
-        "min_library_size",
-        "max_library_size"
-      ),
-      value = c(
-        ncol(counts),
-        nrow(counts),
-        sum(counts, na.rm = TRUE),
-        stats::median(colSums(counts), na.rm = TRUE),
-        min(colSums(counts), na.rm = TRUE),
-        max(colSums(counts), na.rm = TRUE)
-      ),
-      stringsAsFactors = FALSE
-    )
-
-    utils::write.table(
-      input_summary,
-      file.path(repro_dir, "clean_input_summary.tsv"),
-      sep = "\t",
-      quote = FALSE,
-      row.names = FALSE
-    )
-  }
-
+  )
 
   # ======================================================= #
   # Pairwise mode
@@ -296,7 +293,7 @@ run_deggo <- function(
 
   if (analysis_mode == "pairwise") {
 
-    log("[6/11] Running pairwise DESeq2 contrasts", type = "step")
+    log("[7/11] Running pairwise DESeq2 contrasts", type = "step")
 
     de_results <- run_deseq2_pairwise(
       counts = counts,
@@ -307,58 +304,17 @@ run_deggo <- function(
       pairwise_mode = pairwise_mode
     )
 
-    de_results$dds <- .annotate_dds(
+    de_results$dds <- .annotate_dds(de_results$dds, orgdb = orgdb)
+
+    log("[8/11] PCA analysis", type = "step")
+
+    de_results$pca <- .make_pca_list(
       dds = de_results$dds,
-      orgdb = orgdb
+      md = de_results$metadata,
+      pca_dir = dirs$pca
     )
 
-    log("[7/11] PCA analysis", type = "step")
-
-    de_results$pca <- list(
-      sample = plot_pca(
-        de_results$dds,
-        de_results$metadata,
-        dirs$pca,
-        "PCA_by_sample",
-        color_by = "sample",
-        title = "PCA by sample"
-      ),
-      tissue = plot_pca(
-        de_results$dds,
-        de_results$metadata,
-        dirs$pca,
-        "PCA_by_tissue",
-        color_by = "tissue",
-        title = "PCA by tissue"
-      ),
-      treatment = plot_pca(
-        de_results$dds,
-        de_results$metadata,
-        dirs$pca,
-        "PCA_by_treatment",
-        color_by = "treatment",
-        title = "PCA by treatment"
-      ),
-      sex = plot_pca(
-        de_results$dds,
-        de_results$metadata,
-        dirs$pca,
-        "PCA_by_sex",
-        color_by = "sex",
-        title = "PCA by sex"
-      ),
-      tissue_treatment = plot_pca(
-        de_results$dds,
-        de_results$metadata,
-        dirs$pca,
-        "PCA_tissue_treatment",
-        color_by = "tissue",
-        shape_by = "treatment",
-        title = "PCA tissue + treatment"
-      )
-    )
-
-    log("[8/11] Annotating DE tables", type = "step")
+    log("[9/11] Annotating DE tables", type = "step")
 
     de_results$results <- lapply(
       de_results$results,
@@ -374,13 +330,13 @@ run_deggo <- function(
     de_results$go_results <- list()
     de_results$go_plots <- list()
 
-    log("[9/11] Exporting plots, heatmaps and GO", type = "step")
+    log("[10/11] Exporting plots, heatmaps and GO", type = "step")
 
     vsd_pairwise <- DESeq2::vst(de_results$dds, blind = FALSE)
 
     for (nm in names(de_results$results)) {
 
-      log("Processing comparison:", nm, type = "info")
+      log("Processing comparison: ", nm, type = "info")
 
       res_df_i <- de_results$results[[nm]]
 
@@ -431,11 +387,11 @@ run_deggo <- function(
         main = nm,
         filename = paste0(nm, "_Heatmap"),
         annotation_cols = intersect(
-          c("treatment", "sex", "tissue"),
+          c("condition", "treatment", "sex", "tissue"),
           colnames(de_results$metadata)
         ),
         order_by = intersect(
-          c("tissue", "sex", "treatment"),
+          c("condition", "tissue", "sex", "treatment"),
           colnames(de_results$metadata)
         )
       )
@@ -460,16 +416,16 @@ run_deggo <- function(
         )
 
         ggplot2::ggsave(
-          filename = file.path(dirs$go, paste0(nm, "_GO_terms.png")),
-          plot = de_results$go_plots[[nm]],
+          file.path(dirs$go, paste0(nm, "_GO_terms.png")),
+          de_results$go_plots[[nm]],
           width = 8,
           height = 6,
           dpi = 300
         )
 
         ggplot2::ggsave(
-          filename = file.path(dirs$go, paste0(nm, "_GO_terms.pdf")),
-          plot = de_results$go_plots[[nm]],
+          file.path(dirs$go, paste0(nm, "_GO_terms.pdf")),
+          de_results$go_plots[[nm]],
           width = 8,
           height = 6
         )
@@ -482,7 +438,7 @@ run_deggo <- function(
       ontology = ontology
     )
 
-    log("[10/11] Summarizing pairwise results", type = "step")
+    log("[11/11] Summarizing pairwise results", type = "step")
 
     de_results$summary <- do.call(
       rbind,
@@ -524,17 +480,18 @@ run_deggo <- function(
       row.names = FALSE
     )
 
+    de_results$counts <- counts
+    de_results$metadata <- de_results$metadata %||% metadata
     de_results$output_dir <- output_dir
     de_results$output_dirs <- dirs
     de_results$version <- deggo_version
 
     .safe_write_session_info(output_dir)
 
-    log("[11/11] Generating DEGgo report", type = "step")
+    log("[12/12] Generating DEGgo report", type = "step")
 
-    de_results$run_params <- list(
+    de_results$run_params <- .make_run_params(
       deggo_version = deggo_version,
-      date = as.character(Sys.Date()),
       organism = organism,
       method = method,
       analysis_mode = analysis_mode,
@@ -548,73 +505,45 @@ run_deggo <- function(
       top_n_heatmap = top_n_heatmap,
       top_n_labels = top_n_labels,
       prepare_input = prepare_input,
-      gene_col = paste(gene_col, collapse = ", "),
-      feature_col = paste(feature_col, collapse = ", "),
-      sample_col = paste(sample_col, collapse = ", "),
-      design_formula = paste(deparse(design_formula), collapse = ""),
-      pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
+      gene_col = gene_col,
+      feature_col = feature_col,
+      sample_col = sample_col,
+      design_formula = design_formula,
+      pairwise_group_cols = pairwise_group_cols,
       pairwise_contrast_col = pairwise_contrast_col,
       pairwise_mode = pairwise_mode,
       output_dir = output_dir,
-      reproducibility_dir = repro_dir
+      repro_dir = repro_dir
     )
 
-    de_results$report_files <- NULL
+    de_results$output_manifest <- .write_deggo_manifest(
+      output_dir = output_dir,
+      dirs = dirs,
+      analysis_mode = analysis_mode
+    )
 
-    if (isTRUE(generate_report)) {
-      de_results$report_files <- generate_deggo_report(
-        results = de_results,
-        output_dir = output_dir,
-        formats = report_formats,
-        report_template = report_template
-      )
-    }
+    .save_repro(
+      res = de_results,
+      repro_dir = repro_dir,
+      save_reproducibility = save_reproducibility
+    )
 
-    if (isTRUE(save_reproducibility)) {
+    de_results$report_files <- .safe_report(
+      res = de_results,
+      output_dir = output_dir,
+      generate_report = generate_report,
+      report_formats = report_formats,
+      report_template = report_template
+    )
 
-      dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
-
-      params_df <- data.frame(
-        parameter = names(de_results$run_params),
-        value = vapply(
-          de_results$run_params,
-          function(x) paste(x, collapse = ", "),
-          character(1)
-        ),
-        stringsAsFactors = FALSE
-      )
-
-      utils::write.table(
-        params_df,
-        file.path(repro_dir, "run_parameters.tsv"),
-        sep = "\t",
-        quote = FALSE,
-        row.names = FALSE
-      )
-
-      saveRDS(
-        de_results$run_params,
-        file.path(repro_dir, "run_parameters.rds")
-      )
-
-      saveRDS(
-        list(
-          run_params = de_results$run_params,
-          metadata = metadata,
-          counts = counts,
-          summary = de_results$summary %||% NULL,
-          output_dir = output_dir,
-          output_dirs = dirs
-        ),
-        file.path(repro_dir, "DEGgo_reproducibility_bundle.rds")
-      )
-    }
 
     log(
       "==== DEGgo PAIRWISE ANALYSIS COMPLETE ====",
       type = "done",
       duration = as.numeric(difftime(Sys.time(), t_start, units = "secs"))
     )
+
+    de_results$sample_qc <- sample_qc
 
     return(de_results)
   }
@@ -634,11 +563,7 @@ run_deggo <- function(
   )
 
   dds <- de_results$dds %||% de_results$object
-
-  dds <- .annotate_dds(
-    dds = dds,
-    orgdb = orgdb
-  )
+  dds <- .annotate_dds(dds, orgdb = orgdb)
 
   res_df <- de_results$res_df
 
@@ -711,8 +636,6 @@ run_deggo <- function(
 
   log("[9/11] Running GO enrichment", type = "step")
 
-  go_results <- list()
-
   go_results <- run_go_enrichment(
     sig_deg = sig_deg,
     comparison = "single_comparison",
@@ -721,9 +644,8 @@ run_deggo <- function(
     orgdb = orgdb
   )
 
-  go_df_i <- go_results$go_results
-
   go_plot <- NULL
+  go_df_i <- go_results$go_results
 
   if (!is.null(go_df_i) && nrow(go_df_i) > 0) {
 
@@ -735,22 +657,20 @@ run_deggo <- function(
     )
 
     ggplot2::ggsave(
-      filename = file.path(dirs$go, "single_comparison_GO_terms.png"),
-      plot = go_plot,
+      file.path(dirs$go, "single_comparison_GO_terms.png"),
+      go_plot,
       width = 8,
       height = 6,
       dpi = 300
     )
 
     ggplot2::ggsave(
-      filename = file.path(dirs$go, "single_comparison_GO_terms.pdf"),
-      plot = go_plot,
+      file.path(dirs$go, "single_comparison_GO_terms.pdf"),
+      go_plot,
       width = 8,
       height = 6
     )
   }
-
-  de_results$go_plot <- go_plot
 
   log("[10/11] Exporting final results", type = "step")
 
@@ -767,9 +687,16 @@ run_deggo <- function(
   de_results$pca_plot <- pca_plot
   de_results$heatmap_matrix <- heatmap_matrix
   de_results$go_results <- go_results
-  de_results$output_dir <- output_dir
-  de_results$output_dirs <- dirs
-  de_results$version <- deggo_version
+  de_results$go_plot <- go_plot
+
+  de_results$summary <- data.frame(
+    comparison = "single_comparison",
+    total_genes = nrow(res_df),
+    significant = nrow(sig_deg),
+    up = sum(sig_deg$log2FoldChange > logfc_cutoff, na.rm = TRUE),
+    down = sum(sig_deg$log2FoldChange < -logfc_cutoff, na.rm = TRUE),
+    stringsAsFactors = FALSE
+  )
 
   de_results$gene_annotation <- data.frame(
     ENSEMBL = rownames(dds),
@@ -779,13 +706,18 @@ run_deggo <- function(
     stringsAsFactors = FALSE
   )
 
+  de_results$counts <- counts
+  de_results$metadata <- metadata
+  de_results$output_dir <- output_dir
+  de_results$output_dirs <- dirs
+  de_results$version <- deggo_version
+
   .safe_write_session_info(output_dir)
 
   log("[11/11] Generating DEGgo report", type = "step")
 
-  de_results$run_params <- list(
+  de_results$run_params <- .make_run_params(
     deggo_version = deggo_version,
-    date = as.character(Sys.Date()),
     organism = organism,
     method = method,
     analysis_mode = analysis_mode,
@@ -799,77 +731,45 @@ run_deggo <- function(
     top_n_heatmap = top_n_heatmap,
     top_n_labels = top_n_labels,
     prepare_input = prepare_input,
-    gene_col = paste(gene_col, collapse = ", "),
-    feature_col = paste(feature_col, collapse = ", "),
-    sample_col = paste(sample_col, collapse = ", "),
-    design_formula = paste(deparse(design_formula), collapse = ""),
-    pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
+    gene_col = gene_col,
+    feature_col = feature_col,
+    sample_col = sample_col,
+    design_formula = design_formula,
+    pairwise_group_cols = pairwise_group_cols,
     pairwise_contrast_col = pairwise_contrast_col,
     pairwise_mode = pairwise_mode,
     output_dir = output_dir,
-    reproducibility_dir = repro_dir
+    repro_dir = repro_dir
   )
 
-  de_results$report_files <- NULL
 
-
-  pkg_root <- normalizePath(
-    file.path(dirname(sys.frame(1)$ofile %||% getwd()), ".."),
-    mustWork = FALSE
+  de_results$output_manifest <- .write_deggo_manifest(
+    output_dir = output_dir,
+    dirs = dirs,
+    analysis_mode = analysis_mode
   )
 
-  file.path(
-    pkg_root,
-    "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
+  .save_repro(
+    res = de_results,
+    repro_dir = repro_dir,
+    save_reproducibility = save_reproducibility
   )
 
-  if (isTRUE(generate_report)) {
-    de_results$report_files <- generate_deggo_report(
-      results = de_results,
-      output_dir = output_dir,
-      formats = report_formats,
-      report_template = report_template
-    )
-  }
+  de_results$report_files <- .safe_report(
+    res = de_results,
+    output_dir = output_dir,
+    generate_report = generate_report,
+    report_formats = report_formats,
+    report_template = report_template
+  )
 
-  if (isTRUE(save_reproducibility)) {
+  log(
+    "==== DEGgo SINGLE ANALYSIS COMPLETE ====",
+    type = "done",
+    duration = as.numeric(difftime(Sys.time(), t_start, units = "secs"))
+  )
 
-    dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
+  de_results$sample_qc <- sample_qc
 
-    params_df <- data.frame(
-      parameter = names(de_results$run_params),
-      value = vapply(
-        de_results$run_params,
-        function(x) paste(x, collapse = ", "),
-        character(1)
-      ),
-      stringsAsFactors = FALSE
-    )
-
-    utils::write.table(
-      params_df,
-      file.path(repro_dir, "run_parameters.tsv"),
-      sep = "\t",
-      quote = FALSE,
-      row.names = FALSE
-    )
-
-    saveRDS(
-      de_results$run_params,
-      file.path(repro_dir, "run_parameters.rds")
-    )
-
-    saveRDS(
-      list(
-        run_params = de_results$run_params,
-        metadata = metadata,
-        counts = counts,
-        summary = de_results$summary %||% NULL,
-        output_dir = output_dir,
-        output_dirs = dirs
-      ),
-      file.path(repro_dir, "DEGgo_reproducibility_bundle.rds")
-    )
-  }
   return(de_results)
 }
