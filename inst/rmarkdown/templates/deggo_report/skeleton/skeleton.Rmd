@@ -151,9 +151,22 @@ figure_badge <- function(f) {
 
 
 html_img_src <- function(f) {
+
   f <- normalizePath(f, winslash = "/", mustWork = TRUE)
-  paste0("file://", f)
+
+  out_abs <- normalizePath(
+    outdir,
+    winslash = "/",
+    mustWork = TRUE
+  )
+
+  sub(
+    paste0("^", out_abs, "/?"),
+    "",
+    f
+  )
 }
+
 
 
 emit_gallery <- function(files) {
@@ -603,7 +616,7 @@ emit_gallery(qc_files)
 ```
 
 
-## Principal Component Analysis (PCA)
+## Principal component analysis (PCA)
 
 ```{r results='asis'}
 pca_dir <- results$output_dirs$pca %||% find_first_dir(c(
@@ -643,6 +656,71 @@ if (!is.null(sumtab)) {
   cat("<p><em>No DEG summary available.</em></p>")
 }
 ```
+
+## DE summary table
+
+```{r analysis-summary}
+summary_df <- params$summary %||% results$summary
+
+if (!is.null(summary_df) && nrow(summary_df) > 0) {
+
+  summary_df <- as.data.frame(summary_df)
+  summary_df$comparison <- as.character(summary_df$comparison)
+
+  comp_levels <- unique(summary_df$comparison)
+
+  comparison_cols <- grDevices::hcl.colors(
+    n = length(comp_levels),
+    palette = "Set 3"
+  )
+
+  DT::datatable(
+    summary_df,
+    rownames = FALSE,
+    options = list(
+      pageLength = 10,
+      scrollX = TRUE,
+      dom = "tip"
+    )
+  ) %>%
+    DT::formatStyle(
+      "comparison",
+      backgroundColor = DT::styleEqual(
+        levels = comp_levels,
+        values = comparison_cols
+      ),
+      color = "#333333",
+      fontWeight = "bold"
+    ) %>%
+    DT::formatStyle(
+      "significant",
+      background = DT::styleColorBar(
+        summary_df$significant,
+        "#F4A261"
+      ),
+      backgroundSize = "98% 88%",
+      backgroundRepeat = "no-repeat",
+      backgroundPosition = "center"
+    ) %>%
+    DT::formatStyle(
+      "up",
+      color = "#740001",
+      fontWeight = "bold"
+    ) %>%
+    DT::formatStyle(
+      "down",
+      color = "#6497B1",
+      fontWeight = "bold"
+    )
+
+} else {
+  cat("No summary table available.")
+}
+
+```
+
+
+## DE summary plot
 
 ```{r}
 if (!is.null(sumtab)) {
