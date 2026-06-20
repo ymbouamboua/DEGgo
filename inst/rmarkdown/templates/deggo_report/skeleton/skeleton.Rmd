@@ -230,17 +230,266 @@ describe_output <- function(x) {
 }
 ```
 
+<!-- <style> -->
+<!-- :root { -->
+<!--   --deggo-green: #00876C; -->
+<!--   --deggo-green-dark: #005F4B; -->
+<!--   --deggo-bg: #F7FAF9; -->
+<!--   --deggo-card: #FFFFFF; -->
+<!--   --deggo-text: #1F2933; -->
+<!--   --deggo-muted: #6B7280; -->
+<!--   --deggo-border: #E5E7EB; -->
+<!--   --deggo-red: #740001; -->
+<!--   --deggo-blue: #6497B1; -->
+<!-- } -->
+
+<!-- :root { -->
+<!--   --deggo-navy: #002B5C; -->
+<!--   --deggo-navy-dark: #001A38; -->
+<!--   --deggo-blue: #0057B8; -->
+<!--   --deggo-red: #D90000; -->
+<!--   --deggo-red-dark: #740001; -->
+<!--   --deggo-light: #F8FAFC; -->
+<!--   --deggo-card: #FFFFFF; -->
+<!--   --deggo-text: #0B1F3A; -->
+<!--   --deggo-muted: #5B677A; -->
+<!--   --deggo-border: #DCE3EC; -->
+
+<!--   --deggo-bg: #F8FAFC; -->
+<!--   --deggo-green: #0057B8; -->
+<!--   --deggo-green-dark: #002B5C; -->
+<!-- } -->
+
+<!-- body { -->
+<!--   font-size: 14px; -->
+<!--   background: var(--deggo-bg); -->
+<!--   color: var(--deggo-text); -->
+<!--   line-height: 1.6; -->
+<!-- } -->
+
+<!-- h1, h2, h3 { -->
+<!--   font-weight: 750; -->
+<!--   color: #111827; -->
+<!-- } -->
+
+<!-- h1 { -->
+<!--   margin-top: 42px; -->
+<!--   border-bottom: 4px solid var(--deggo-green); -->
+<!--   padding-bottom: 10px; -->
+<!-- } -->
+
+<!-- h2 { -->
+<!--   margin-top: 34px; -->
+<!--   color: var(--deggo-green-dark); -->
+<!-- } -->
+
+<!-- h3 { -->
+<!--   margin-top: 22px; -->
+<!-- } -->
+
+<!-- a { -->
+<!--   color: var(--deggo-green); -->
+<!-- } -->
+
+<!-- .section-note { -->
+<!--   background: #EEF8F5; -->
+<!--   border-left: 5px solid var(--deggo-green); -->
+<!--   border-radius: 12px; -->
+<!--   padding: 14px 18px; -->
+<!--   margin: 14px 0 22px 0; -->
+<!--   box-shadow: 0 4px 14px rgba(0,0,0,0.04); -->
+<!-- } -->
+
+<!-- .section-note-title { -->
+<!--   font-weight: 800; -->
+<!--   color: var(--deggo-green-dark); -->
+<!--   text-transform: uppercase; -->
+<!--   font-size: 12px; -->
+<!--   letter-spacing: 0.04em; -->
+<!--   margin-bottom: 4px; -->
+<!-- } -->
+
+<!-- .section-note-text { -->
+<!--   color: #374151; -->
+<!--   font-size: 14px; -->
+<!-- } -->
+
+<!-- .metric-grid { -->
+<!--   display: grid; -->
+<!--   grid-template-columns: repeat(4, 1fr); -->
+<!--   gap: 14px; -->
+<!--   margin: 20px 0; -->
+<!-- } -->
+
+<!-- .metric-card { -->
+<!--   background: var(--deggo-card); -->
+<!--   padding: 18px; -->
+<!--   border-radius: 16px; -->
+<!--   border: 1px solid var(--deggo-border); -->
+<!--   box-shadow: 0 8px 26px rgba(0,0,0,0.055); -->
+<!-- } -->
+
+<!-- .metric-title { -->
+<!--   color: var(--deggo-muted); -->
+<!--   font-size: 12px; -->
+<!--   font-weight: 800; -->
+<!--   text-transform: uppercase; -->
+<!--   letter-spacing: 0.04em; -->
+<!-- } -->
+
+<!-- .metric-value { -->
+<!--   font-size: 26px; -->
+<!--   font-weight: 850; -->
+<!--   margin-top: 8px; -->
+<!--   color: #111827; -->
+<!-- } -->
+
+<!-- .metric-subtitle { -->
+<!--   color: var(--deggo-muted); -->
+<!--   margin-top: 6px; -->
+<!--   font-size: 12px; -->
+<!-- } -->
+
+<!-- .figure-grid { -->
+<!--   display: grid; -->
+<!--   grid-template-columns: repeat(2, minmax(360px, 1fr)); -->
+<!--   gap: 24px; -->
+<!--   margin-top: 20px; -->
+<!-- } -->
+
+<!-- .figure-card { -->
+<!--   background: var(--deggo-card); -->
+<!--   border: 1px solid var(--deggo-border); -->
+<!--   border-radius: 18px; -->
+<!--   padding: 16px; -->
+<!--   box-shadow: 0 8px 28px rgba(0,0,0,0.065); -->
+<!-- } -->
+
+<!-- .figure-card:hover { -->
+<!--   transform: translateY(-2px); -->
+<!--   transition: 0.2s ease; -->
+<!--   box-shadow: 0 12px 34px rgba(0,0,0,0.10); -->
+<!-- } -->
+
+<!-- .figure-header h3 { -->
+<!--   font-size: 16px; -->
+<!--   margin: 8px 0 0 0; -->
+<!--   line-height: 1.25; -->
+<!-- } -->
+
+<!-- .figure-badge { -->
+<!--   display: inline-block; -->
+<!--   padding: 4px 11px; -->
+<!--   border-radius: 999px; -->
+<!--   background: var(--deggo-green); -->
+<!--   color: white; -->
+<!--   font-size: 12px; -->
+<!--   font-weight: 800; -->
+<!-- } -->
+
+<!-- .figure-img { -->
+<!--   width: 100%; -->
+<!--   max-height: 650px; -->
+<!--   object-fit: contain; -->
+<!--   border-radius: 12px; -->
+<!--   border: 1px solid #EEF0F2; -->
+<!--   background: white; -->
+<!--   cursor: zoom-in; -->
+<!-- } -->
+
+<!-- .figure-footer { -->
+<!--   margin-top: 10px; -->
+<!--   font-size: 13px; -->
+<!-- } -->
+
+<!-- .figure-footer a { -->
+<!--   color: var(--deggo-green); -->
+<!--   font-weight: 800; -->
+<!-- } -->
+
+<!-- .table, -->
+<!-- .dataTable { -->
+<!--   background: white; -->
+<!--   border-radius: 12px; -->
+<!--   overflow: hidden; -->
+<!--   box-shadow: 0 5px 20px rgba(0,0,0,0.045); -->
+<!-- } -->
+
+<!-- table.dataTable thead th { -->
+<!--   background: var(--deggo-green) !important; -->
+<!--   color: white !important; -->
+<!--   border-bottom: none !important; -->
+<!-- } -->
+
+<!-- table.dataTable tbody td { -->
+<!--   vertical-align: middle; -->
+<!-- } -->
+
+<!-- .output-table { -->
+<!--   width: 100%; -->
+<!--   border-collapse: collapse; -->
+<!--   margin-top: 15px; -->
+<!--   background: white; -->
+<!--   border-radius: 12px; -->
+<!--   overflow: hidden; -->
+<!--   box-shadow: 0 4px 18px rgba(0,0,0,0.05); -->
+<!-- } -->
+
+<!-- .output-table th { -->
+<!--   background: var(--deggo-green); -->
+<!--   color: white; -->
+<!--   text-align: left; -->
+<!--   padding: 12px; -->
+<!-- } -->
+
+<!-- .output-table td { -->
+<!--   padding: 12px; -->
+<!--   border-bottom: 1px solid #ececec; -->
+<!-- } -->
+
+<!-- pre { -->
+<!--   background: #F4FBF8; -->
+<!--   color: #111827; -->
+<!--   border-left: 5px solid var(--deggo-green); -->
+<!--   padding: 16px; -->
+<!--   border-radius: 12px; -->
+<!--   max-height: 500px; -->
+<!--   overflow-y: auto; -->
+<!--   font-size: 13px; -->
+<!--   line-height: 1.45; -->
+<!--   font-family: Menlo, Monaco, Consolas, "Courier New", monospace; -->
+<!-- } -->
+
+<!-- code { -->
+<!--   color: var(--deggo-green-dark); -->
+<!--   font-weight: 600; -->
+<!-- } -->
+
+<!-- @media (max-width: 1100px) { -->
+<!--   .figure-grid { -->
+<!--     grid-template-columns: 1fr; -->
+<!--   } -->
+
+<!--   .metric-grid { -->
+<!--     grid-template-columns: repeat(2, 1fr); -->
+<!--   } -->
+<!-- } -->
+<!-- </style> -->
+
+
 <style>
 :root {
-  --deggo-green: #00876C;
-  --deggo-green-dark: #005F4B;
-  --deggo-bg: #F7FAF9;
+  --deggo-navy: #002B5C;
+  --deggo-navy-dark: #001A38;
+  --deggo-blue: #0057B8;
+  --deggo-red: #D90000;
+  --deggo-red-dark: #740001;
+
+  --deggo-bg: #F8FAFC;
   --deggo-card: #FFFFFF;
-  --deggo-text: #1F2933;
-  --deggo-muted: #6B7280;
-  --deggo-border: #E5E7EB;
-  --deggo-red: #740001;
-  --deggo-blue: #6497B1;
+  --deggo-text: #0B1F3A;
+  --deggo-muted: #5B677A;
+  --deggo-border: #DCE3EC;
 }
 
 body {
@@ -252,18 +501,18 @@ body {
 
 h1, h2, h3 {
   font-weight: 750;
-  color: #111827;
+  color: var(--deggo-navy-dark);
 }
 
 h1 {
   margin-top: 42px;
-  border-bottom: 4px solid var(--deggo-green);
+  border-bottom: 4px solid var(--deggo-navy);
   padding-bottom: 10px;
 }
 
 h2 {
   margin-top: 34px;
-  color: var(--deggo-green-dark);
+  color: var(--deggo-navy);
 }
 
 h3 {
@@ -271,12 +520,12 @@ h3 {
 }
 
 a {
-  color: var(--deggo-green);
+  color: var(--deggo-blue);
 }
 
 .section-note {
-  background: #EEF8F5;
-  border-left: 5px solid var(--deggo-green);
+  background: #EEF4FB;
+  border-left: 5px solid var(--deggo-blue);
   border-radius: 12px;
   padding: 14px 18px;
   margin: 14px 0 22px 0;
@@ -285,7 +534,7 @@ a {
 
 .section-note-title {
   font-weight: 800;
-  color: var(--deggo-green-dark);
+  color: var(--deggo-navy);
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.04em;
@@ -324,7 +573,7 @@ a {
   font-size: 26px;
   font-weight: 850;
   margin-top: 8px;
-  color: #111827;
+  color: var(--deggo-navy-dark);
 }
 
 .metric-subtitle {
@@ -364,7 +613,7 @@ a {
   display: inline-block;
   padding: 4px 11px;
   border-radius: 999px;
-  background: var(--deggo-green);
+  background: var(--deggo-navy);
   color: white;
   font-size: 12px;
   font-weight: 800;
@@ -386,7 +635,7 @@ a {
 }
 
 .figure-footer a {
-  color: var(--deggo-green);
+  color: var(--deggo-blue);
   font-weight: 800;
 }
 
@@ -399,7 +648,7 @@ a {
 }
 
 table.dataTable thead th {
-  background: var(--deggo-green) !important;
+  background: var(--deggo-navy) !important;
   color: white !important;
   border-bottom: none !important;
 }
@@ -419,7 +668,7 @@ table.dataTable tbody td {
 }
 
 .output-table th {
-  background: var(--deggo-green);
+  background: var(--deggo-navy);
   color: white;
   text-align: left;
   padding: 12px;
@@ -427,13 +676,13 @@ table.dataTable tbody td {
 
 .output-table td {
   padding: 12px;
-  border-bottom: 1px solid #ececec;
+  border-bottom: 1px solid #ECEFF4;
 }
 
 pre {
-  background: #F4FBF8;
-  color: #111827;
-  border-left: 5px solid var(--deggo-green);
+  background: #F3F7FC;
+  color: var(--deggo-navy-dark);
+  border-left: 5px solid var(--deggo-blue);
   padding: 16px;
   border-radius: 12px;
   max-height: 500px;
@@ -444,7 +693,7 @@ pre {
 }
 
 code {
-  color: var(--deggo-green-dark);
+  color: var(--deggo-navy);
   font-weight: 600;
 }
 
@@ -796,7 +1045,7 @@ if (!is.null(summary_df) && nrow(summary_df) > 0) {
       "significant",
       background = DT::styleColorBar(
         summary_df$significant,
-        "#F4A261"
+        "#DCE3EC"
       ),
       backgroundSize = "98% 88%",
       backgroundRepeat = "no-repeat",
@@ -885,12 +1134,14 @@ heatmap_files <- find_png(heatmap_dir)
 plot_gallery(heatmap_files, badge = "Heatmap", empty = "No heatmaps found.")
 ```
 
+
 # Gene Ontology enrichment summary
 
 ```{r go-summary, results='asis'}
+
 section_note(
   "Gene Ontology enrichment",
-  "This section summarizes enriched biological processes or functional categories associated with upregulated and downregulated genes."
+  "This section summarizes the number of enriched GO terms detected for each comparison and regulation direction."
 )
 
 go_summary_file <- list.files(
@@ -903,6 +1154,7 @@ go_summary_file <- list.files(
 go_merged <- NULL
 
 if (length(go_summary_file) > 0) {
+
   go_merged <- utils::read.delim(
     go_summary_file[1],
     check.names = FALSE,
@@ -910,54 +1162,125 @@ if (length(go_summary_file) > 0) {
   )
 
   cat('<div class="metric-grid">')
-  html_card("GO comparisons", length(unique(go_merged$comparison %||% NA)))
-  html_card("Unique GO terms", length(unique(go_merged$ID %||% NA)))
-  html_card("Enriched rows", format(nrow(go_merged), big.mark = ","))
+
+  html_card(
+    "GO comparisons",
+    if ("comparison" %in% colnames(go_merged)) length(unique(go_merged$comparison)) else "NA"
+  )
+
+  html_card(
+    "Unique GO terms",
+    if ("ID" %in% colnames(go_merged)) length(unique(go_merged$ID)) else "NA"
+  )
+
+  html_card(
+    "Enriched rows",
+    format(nrow(go_merged), big.mark = ",")
+  )
+
   html_card(
     "Ontology",
-    if ("ONTOLOGY" %in% colnames(go_merged)) unique(go_merged$ONTOLOGY)[1] else "BP"
+    if ("ONTOLOGY" %in% colnames(go_merged)) {
+      paste(unique(go_merged$ONTOLOGY), collapse = ", ")
+    } else {
+      "BP"
+    }
   )
+
   cat("</div>")
 
-  if ("comparison" %in% colnames(go_merged) && "ID" %in% colnames(go_merged)) {
-    go_summary <- aggregate(
-      ID ~ comparison,
-      data = go_merged,
-      FUN = length
+  if (all(c("comparison", "ID") %in% colnames(go_merged))) {
+
+    if (!"Regulation" %in% colnames(go_merged)) {
+      go_merged$Regulation <- "All"
+    }
+
+    go_summary <- as.data.frame(
+      table(
+        comparison = go_merged$comparison,
+        Regulation = go_merged$Regulation
+      ),
+      stringsAsFactors = FALSE
     )
 
-    colnames(go_summary) <- c("comparison", "enriched_GO_terms")
-
-    cat("<h3>GO terms per comparison</h3>")
-    show_table(go_summary, n = nrow(go_summary))
-  }
-
-  keep_cols <- intersect(
-    c(
+    colnames(go_summary) <- c(
       "comparison",
       "Regulation",
-      "ID",
-      "Description",
-      "GeneRatio",
-      "BgRatio",
-      "p.adjust",
-      "qvalue",
-      "Count"
-    ),
-    colnames(go_merged)
-  )
+      "enriched_GO_terms"
+    )
 
-  top_go <- go_merged[, keep_cols, drop = FALSE]
+    go_summary <- go_summary[go_summary$enriched_GO_terms > 0, , drop = FALSE]
 
-  if ("p.adjust" %in% colnames(top_go)) {
-    top_go <- top_go[order(top_go$p.adjust), , drop = FALSE]
+    go_summary$comparison <- as.character(go_summary$comparison)
+    go_summary$Regulation <- as.character(go_summary$Regulation)
+    go_summary$enriched_GO_terms <- as.integer(go_summary$enriched_GO_terms)
+
+    go_summary <- go_summary[
+      order(go_summary$comparison, go_summary$Regulation),
+      ,
+      drop = FALSE
+    ]
+
+    cat("<h3>GO terms per comparison</h3>")
+
+    if (nrow(go_summary) > 0) {
+
+      comp_levels <- unique(go_summary$comparison)
+
+      comparison_cols <- grDevices::hcl.colors(
+        n = length(comp_levels),
+        palette = "Set 3"
+      )
+
+      DT::datatable(
+        go_summary,
+        rownames = FALSE,
+        options = list(
+          pageLength = 10,
+          scrollX = TRUE,
+          dom = "tip"
+        )
+      ) %>%
+        DT::formatStyle(
+          "comparison",
+          backgroundColor = DT::styleEqual(
+            levels = comp_levels,
+            values = comparison_cols
+          ),
+          color = "#333333",
+          fontWeight = "bold"
+        ) %>%
+        DT::formatStyle(
+          "Regulation",
+          color = DT::styleEqual(
+            c("Up", "Down", "All"),
+            c("#740001", "#6497b1", "#002B5C")
+          ),
+          fontWeight = "bold"
+        ) %>%
+        DT::formatStyle(
+          "enriched_GO_terms",
+          background = DT::styleColorBar(
+            go_summary$enriched_GO_terms,
+            "#DCE3EC"
+          ),
+          backgroundSize = "98% 88%",
+          backgroundRepeat = "no-repeat",
+          backgroundPosition = "center"
+        )
+
+    } else {
+      cat("<p><em>No enriched GO terms found after summarization.</em></p>")
+    }
+
+  } else {
+    cat("<p><em>No comparison or ID column found in merged GO table.</em></p>")
   }
 
-  cat("<h3>Top enriched GO terms</h3>")
-  show_table(top_go, n = 50)
 } else {
   cat("<p><em>No merged GO summary file found.</em></p>")
 }
+
 ```
 
 ## GO plots
