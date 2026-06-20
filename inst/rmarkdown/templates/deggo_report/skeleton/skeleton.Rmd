@@ -8,7 +8,7 @@ output:
     toc_depth: 3
     number_sections: true
     theme: flatly
-    self_contained: true
+    self_contained: false
 params:
   results: NULL
   sig_deg: NULL
@@ -493,12 +493,14 @@ cat("<p><strong>Output directory:</strong><br>")
 cat("<code>", html_escape(outdir), "</code></p>")
 ```
 
+
 # Sample metadata
 
 ```{r sample-metadata, results='asis'}
+
 section_note(
   "Sample metadata",
-  "This section reports the matched sample metadata used for the analysis. These variables define the experimental design and can be used for PCA coloring, contrasts, and quality control interpretation."
+  "This section reports the matched sample metadata used for the analysis. Informative metadata variables are automatically summarized."
 )
 
 repro_dir <- file.path(outdir, "reproducibility")
@@ -551,6 +553,7 @@ if (file.exists(metadata_file)) {
 }
 
 if (!is.null(md2) && nrow(md2) > 0 && ncol(md2) > 0) {
+
   colnames(md2) <- make.unique(trimws(colnames(md2)))
 
   if (colnames(md2)[1] %in% c("", "X", "row.names", "Row.names")) {
@@ -567,21 +570,124 @@ if (!is.null(md2) && nrow(md2) > 0 && ncol(md2) > 0) {
 
   if (!"sample" %in% colnames(md2)) {
     rn <- rownames(md2)
+
     if (is.null(rn) || all(rn == as.character(seq_len(nrow(md2))))) {
       rn <- seq_len(nrow(md2))
     }
+
     md2 <- cbind(sample = rn, md2)
   }
 
   rownames(md2) <- NULL
   md2[] <- lapply(md2, as.character)
 
+  ## ------------------------------------------------------
+  ## Automatic metadata summary
+  ## ------------------------------------------------------
+  
+  excluded_vars <- c(
+    "sample",
+    "comparison_group",
+    res$run_params$pairwise_contrast_col %||% NULL
+  )
+  
+  summary_vars <- setdiff(names(md2), excluded_vars)
+
+  summary_vars <- summary_vars[
+    vapply(
+      md2[summary_vars],
+      function(x) {
+        x <- as.character(x)
+        x <- x[!is.na(x) & trimws(x) != ""]
+
+        nlev <- length(unique(x))
+
+        nlev >= 2 &&
+          nlev <= max(20, floor(nrow(md2) * 0.8))
+      },
+      logical(1)
+    )
+  ]
+
+  cat("<h3>Experimental design summary</h3>")
+  
+  if (length(summary_vars)) {
+    
+    meta_summary <- do.call(
+      rbind,
+      lapply(summary_vars, function(v) {
+        
+        x <- as.character(md2[[v]])
+        x <- x[!is.na(x) & trimws(x) != ""]
+        
+        tab <- sort(table(x), decreasing = TRUE)
+        
+        data.frame(
+          Variable = v,
+          Level = names(tab),
+          N = as.integer(tab),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+    
+    cat(
+      as.character(
+        knitr::kable(
+          meta_summary,
+          format = "html",
+          row.names = FALSE,
+          align = c("l", "l", "r"),
+          #caption = "Metadata summary",
+          table.attr = "class='table table-striped table-hover table-condensed output-table'"
+        )
+      )
+    )
+    
+  } else {
+    cat("<p><em>No informative metadata variables detected.</em></p>")
+  }
+  
+  
+  ## ------------------------------------------------------
+  ## Matched metadata table
+  ## ------------------------------------------------------
+  
   cat("<h3>Matched metadata</h3>")
-  show_table(md2, n = nrow(md2))
+  
+  cat(
+    paste0(
+      "<p><strong>",
+      nrow(md2),
+      "</strong> samples × <strong>",
+      ncol(md2),
+      "</strong> metadata variables.</p>"
+    )
+  )
+  
+  cat("<details>")
+  cat("<summary><strong>Show full matched metadata</strong></summary><br>")
+  
+  cat(
+    as.character(
+      knitr::kable(
+        md2,
+        format = "html",
+        row.names = FALSE,
+        caption = "Matched metadata",
+        table.attr = "class='table table-striped table-hover table-condensed output-table'"
+      )
+    )
+  )
+  
+  cat("</details>")
+  
 } else {
   cat("<p><em>No metadata table available.</em></p>")
 }
+
 ```
+
 
 # Quality control
 
@@ -939,4 +1045,3 @@ if (file.exists(session_file)) {
   cat("</pre></details>")
 }
 ```
-
