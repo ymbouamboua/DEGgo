@@ -1,0 +1,186 @@
+# DEGgo
+
+- [Overview](#overview)
+- [Workflow](#workflow)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Main functions](#main-functions)
+- [Supported organisms](#supported-organisms)
+- [Documentation](#documentation)
+- [Citation](#citation)
+- [License](#license)
+
+![](https://img.shields.io/badge/R-%3E%3D4.3-blue)![](https://img.shields.io/badge/license-MIT-green)![](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
+
+![DEGgo package logo showing an integrated workflow for bulk RNA-seq
+analysis](reference/figures/DEGgo_logo.png)
+
+## Overview
+
+DEGgo is an R package for automated bulk RNA-seq downstream analysis.
+
+It provides an end-to-end workflow from raw count matrices and sample
+metadata to:
+
+- quality control;
+- sample validation;
+- differential expression analysis;
+- Gene Ontology enrichment;
+- publication-ready visualizations;
+- automated HTML/PDF reporting.
+
+DEGgo supports DESeq2, edgeR, and limma and is designed for both
+bioinformaticians and experimental biologists.
+
+## Workflow
+
+![](reference/figures/DEGgo_workflow.png)
+
+## Installation
+
+``` r
+
+
+install.packages("remotes")
+remotes::install_github("ymbouamboua/DEGgo")
+```
+
+``` r
+
+library(DEGgo)
+```
+
+## Quick start
+
+``` r
+
+
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "mouse",
+  method = "DESeq2",
+  analysis_mode = "single",
+  contrast = c("condition", "treated", "control")
+)
+
+results$summary
+```
+
+## Main functions
+
+| Function | Description |
+|----|----|
+| [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md) | Raw and cleaned RNA-seq quality control |
+| [`remove_flagged_samples()`](https://ymbouamboua.github.io/DEGgo/reference/remove_flagged_samples.md) | Remove failed or low-quality samples |
+| [`marker_score_check()`](https://ymbouamboua.github.io/DEGgo/reference/marker_score_check.md) | Tissue marker scoring and sample swap detection |
+| [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md) | Marker or selected-gene heatmap |
+| [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md) | Main DEGgo differential expression workflow |
+| [`run_go_enrichment()`](https://ymbouamboua.github.io/DEGgo/reference/run_go_enrichment.md) | Gene Ontology enrichment for DEG results |
+| [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md) | Publication-ready GO plot |
+| [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md) | Plot GO terms across multiple comparisons |
+| [`extract_expression()`](https://ymbouamboua.github.io/DEGgo/reference/extract_expression.md) | Extract raw, normalized, log2-normalized or VST expression values |
+| [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md) | Plot normalized gene expression for selected genes |
+| [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md) | Generate HTML/PDF DEGgo report |
+| [`deggo_extract_deg_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_deg_genes.md) | Extract genes of interest from DEG results |
+| [`deggo_extract_go_genes_pairwise()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes_pairwise.md) | Extract GO terms containing selected genes |
+| [`deggo_extract_go_keywords()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_keywords.md) | Extract GO terms matching biological keywords |
+
+## Supported organisms
+
+DEGgo provides built-in annotation support for the following organisms:
+
+| Organism                  | Parameter | OrgDb package  |
+|:--------------------------|:----------|:---------------|
+| Human (*Homo sapiens*)    | `"human"` | `org.Hs.eg.db` |
+| Mouse (*Mus musculus*)    | `"mouse"` | `org.Mm.eg.db` |
+| Rat (*Rattus norvegicus*) | `"rat"`   | `org.Rn.eg.db` |
+
+Custom organisms are supported through user-supplied Bioconductor OrgDb
+annotation databases.
+
+## Documentation
+
+The complete DEGgo tutorial and advanced workflows are available in the
+package vignette:
+
+``` r
+
+
+browseVignettes("DEGgo")
+```
+
+# Citation
+
+If you use DEGgo in your work, please cite:
+
+> Yvon MBOUAMBOUA, Vincent Prevot and Paolo Giacobini. DEGgo: an
+> integrated framework for bulk RNA-seq differential expression analysis
+> and functional enrichment.
+
+# License
+
+MIT © Yvon MBOUAMBOUA
+
+# Package index
+
+## Main workflow
+
+- [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md)
+  : Run DEGgo bulk RNA-seq downstream analysis
+- [`run_go_enrichment()`](https://ymbouamboua.github.io/DEGgo/reference/run_go_enrichment.md)
+  : Run Gene Ontology enrichment analysis
+- [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md)
+  : Generate DEGgo HTML/PDF Report
+
+## Quality control
+
+- [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md)
+  : Explore and QC bulk RNA-seq count data
+- [`check_raw_counts()`](https://ymbouamboua.github.io/DEGgo/reference/check_raw_counts.md)
+  : Validate raw count table
+- [`run_sample_qc()`](https://ymbouamboua.github.io/DEGgo/reference/run_sample_qc.md)
+  : Run sample-level RNA-seq quality control
+- [`remove_flagged_samples()`](https://ymbouamboua.github.io/DEGgo/reference/remove_flagged_samples.md)
+  : Remove flagged samples from counts and metadata
+- [`marker_score_check()`](https://ymbouamboua.github.io/DEGgo/reference/marker_score_check.md)
+  : Validate sample identity using marker gene signatures
+
+## Visualization
+
+- [`plot_volcano()`](https://ymbouamboua.github.io/DEGgo/reference/plot_volcano.md)
+  : Generate volcano plot for differential expression results
+- [`plot_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_heatmap.md)
+  : Generate DEGgo heatmap
+- [`plot_pca()`](https://ymbouamboua.github.io/DEGgo/reference/plot_pca.md)
+  : Generate DEGgo PCA plot
+- [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md)
+  : Plot GO terms by regulation status
+- [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md)
+  : Plot GO enrichment terms for all pairwise comparisons
+- [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md)
+  : Plot normalized gene expression
+- [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md)
+  : Plot expression heatmap for selected genes
+
+## Expression analysis
+
+- [`extract_expression()`](https://ymbouamboua.github.io/DEGgo/reference/extract_expression.md)
+  : Extract normalized gene expression
+
+## Gene and GO extraction
+
+- [`deggo_extract_deg_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_deg_genes.md)
+  : Extract selected DEG genes from DEGgo results
+- [`deggo_extract_go_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes.md)
+  : Extract genes found in GO terms
+- [`deggo_extract_go_genes_pairwise()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes_pairwise.md)
+  : Extract selected genes from pairwise GO results
+- [`deggo_extract_go_keywords()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_keywords.md)
+  : Extract GO terms matching keywords
+
+# Articles
+
+### Vignettes
+
+- [DEGgo](https://ymbouamboua.github.io/DEGgo/articles/DEGgo.md):

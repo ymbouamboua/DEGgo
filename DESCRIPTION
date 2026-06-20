@@ -39,5 +39,6 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/ymbouamboua/DEGgo
+URL: https://ymbouamboua.github.io/DEGgo/,
+    https://github.com/ymbouamboua/DEGgo
 BugReports: https://github.com/ymbouamboua/DEGgo/issues

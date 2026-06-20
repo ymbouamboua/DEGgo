@@ -4,6 +4,10 @@ template:
   bootstrap: 5
   bootswatch: flatly
 
+home:
+  title: DEGgo
+  description: Automated bulk RNA-seq differential expression and Gene Ontology analysis.
+
 navbar:
   structure:
     left: [intro, reference, articles, news]
@@ -12,6 +16,48 @@ navbar:
   components:
     github:
       icon: fab fa-github
+      aria-label: GitHub repository
       href: https://github.com/ymbouamboua/DEGgo
 
+reference:
 
+- title: Main workflow
+  contents:
+    - run_deggo
+    - run_go_enrichment
+    - generate_deggo_report
+
+- title: Quality control
+  contents:
+    - explore_bulk_rnaseq
+    - check_raw_counts
+    - run_sample_qc
+    - remove_flagged_samples
+    - marker_score_check
+
+- title: Visualization
+  contents:
+    - plot_volcano
+    - plot_heatmap
+    - plot_pca
+    - plot_go_terms
+    - plot_all_go_terms
+    - plot_gene_expression
+    - plot_gene_heatmap
+
+- title: Expression analysis
+  contents:
+    - extract_expression
+
+- title: Gene and GO extraction
+  contents:
+    - deggo_extract_deg_genes
+    - deggo_extract_go_genes
+    - deggo_extract_go_genes_pairwise
+    - deggo_extract_go_keywords
+
+articles:
+- title: Vignettes
+  navbar: Vignettes
+  contents:
+    - DEGgo
