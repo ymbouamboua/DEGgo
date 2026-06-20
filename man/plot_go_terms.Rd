@@ -32,7 +32,7 @@ plot_go_terms(
 
 \item{size_range}{Point size range.}
 
-\item{style}{Theme style passed to \code{plot_theme()}.}
+\item{style}{Theme style passed to \code{.deggo_theme()}.}
 
 \item{x_angle}{X-axis text angle.}
 

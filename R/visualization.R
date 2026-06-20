@@ -30,8 +30,9 @@
 #' @param ... Additional arguments passed to \code{ggplot2::theme()}.
 #'
 #' @return A ggplot2 theme object.
-#' @export
-plot_theme <- function(
+#' @keywords internal
+#' @noRd
+.deggo_theme <- function(
     style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
     txtsize = 12,
     xy.val = TRUE,
@@ -533,7 +534,7 @@ plot_gene_expression <- function(
 
   p <- p +
     ggplot2::labs(title = gene, x = x, y = y_label) +
-    plot_theme(style = "classic", txtsize = txtsize, x.ang = x_ang)
+    .deggo_theme(style = "classic", txtsize = txtsize, x.ang = x_ang)
 
   if (!is.null(output_dir)) {
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -592,7 +593,7 @@ plot_gene_expression <- function(
 #' @param width Plot width.
 #' @param height Plot height.
 #' @param txtsize Base text size.
-#' @param style Plot style passed to \code{plot_theme()}.
+#' @param style Plot style passed to \code{.deggo_theme()}.
 #' @param dpi PNG resolution.
 #'
 #' @return A \code{ggplot} object.
@@ -809,7 +810,7 @@ plot_volcano <- function(
       } else {
         expression(-log[10]~italic(P))
       }
-    ) + plot_theme(style = "classic",txtsize = txtsize)
+    ) + .deggo_theme(style = "classic",txtsize = txtsize)
 
   if (nrow(top_genes) > 0) {
     p <- p +
@@ -1028,7 +1029,7 @@ plot_pca <- function(
 
   pca_plot <- pca_plot +
     ggplot2::scale_color_manual(values = pca_colors) +
-    plot_theme(style = "classic",txtsize = 10) +
+    .deggo_theme(style = "classic",txtsize = 10) +
     ggplot2::labs(
       title = title,
       x = paste0("PC1: ", percent_var[1], "% variance"),
@@ -1582,12 +1583,12 @@ explore_bulk_rnaseq <- function(
 
   p_lib <- ggplot2::ggplot(qc, ggplot2::aes(stats::reorder(sample, library_size), library_size / 1e6)) +
     fill_aes + ggplot2::geom_col() + ggplot2::coord_flip() +
-    plot_theme(style = "classic", txtsize = 8) +
+    .deggo_theme(style = "classic", txtsize = 8) +
     ggplot2::labs(x = NULL, y = "Library size (million reads)", title = "Library size")
 
   p_det <- ggplot2::ggplot(qc, ggplot2::aes(stats::reorder(sample, detected_genes), detected_genes)) +
     fill_aes + ggplot2::geom_col() + ggplot2::coord_flip() +
-    plot_theme(style = "classic", txtsize = 8) +
+    .deggo_theme(style = "classic", txtsize = 8) +
     ggplot2::labs(x = NULL, y = "Detected genes", title = "Detected genes")
 
   ggplot2::ggsave(file.path(output_dir, "Library_Size.png"), p_lib, width = width, height = height, dpi = dpi)
@@ -1604,12 +1605,12 @@ explore_bulk_rnaseq <- function(
   p_box <- ggplot2::ggplot(df_long, ggplot2::aes(sample, expression)) +
     ggplot2::geom_boxplot(outlier.size = 0.15) +
     ggplot2::coord_flip() +
-    plot_theme(style = "classic", txtsize = 8) +
+    .deggo_theme(style = "classic", txtsize = 8) +
     ggplot2::labs(x = NULL, y = "log2(count + 1)", title = "Expression distribution")
 
   p_density <- ggplot2::ggplot(df_long, ggplot2::aes(expression)) +
     color_aes + ggplot2::geom_density(linewidth = 0.4, alpha = 0.7) +
-    plot_theme(style = "classic", txtsize = 8) +
+    .deggo_theme(style = "classic", txtsize = 8) +
     ggplot2::labs(x = "log2(count + 1)", y = "Density", title = "Expression density")
 
   ggplot2::ggsave(file.path(output_dir, "Expression_Boxplot.png"), p_box, width = width, height = height, dpi = dpi)
@@ -1693,7 +1694,7 @@ explore_bulk_rnaseq <- function(
       p <- ggplot2::ggplot(pca_df, aes_use) +
         ggplot2::geom_point(size = 4, alpha = 0.9) +
         ggplot2::scale_color_manual(values = cols) +
-        plot_theme(style = "classic", txtsize = 8) +
+        .deggo_theme(style = "classic", txtsize = 8) +
         ggplot2::labs(
           title = title,
           x = paste0("PC1: ", percent_var[1], "% variance"),
@@ -1810,7 +1811,7 @@ explore_bulk_rnaseq <- function(
     ggplot2::geom_col() +
     ggplot2::coord_flip() +
     ggplot2::scale_fill_manual(values = .deggo_colors()$qc) +
-    plot_theme(style = "classic", txtsize = 8) +
+    .deggo_theme(style = "classic", txtsize = 8) +
     ggplot2::labs(x = NULL, y = "Number of QC flags", fill = "QC status", title = "Sample QC flags")
 
   ggplot2::ggsave(file.path(output_dir, "QC_Flags.png"), p_qc, width = width, height = height, dpi = dpi)
@@ -2014,7 +2015,7 @@ marker_score_check <- function(
         y = "Mean marker score",
         fill = "Marker set"
       ) +
-      plot_theme()
+      .deggo_theme()
   }
 
   list(
@@ -2040,7 +2041,7 @@ marker_score_check <- function(
 #' @param wrap_width Width for wrapping GO term labels.
 #' @param color_values Named colors for Up and Down.
 #' @param size_range Point size range.
-#' @param style Theme style passed to \code{plot_theme()}.
+#' @param style Theme style passed to \code{.deggo_theme()}.
 #' @param x_angle X-axis text angle.
 #' @param font_size Base font size.
 #'
@@ -2188,7 +2189,7 @@ plot_go_terms <- function(
       color = "Regulation",
       title = comparison %||% "GO enrichment"
     ) +
-    plot_theme(style = style, x.ang = x_angle, txtsize = font_size)
+    .deggo_theme(style = style, x.ang = x_angle, txtsize = font_size)
 }
 
 

@@ -906,7 +906,7 @@ run_sample_qc <- function(
       y = "Detected genes",
       color = color_col
     ) +
-    plot_theme(style = "bw", txtsize = 10)
+    .deggo_theme(style = "bw", txtsize = 10)
 
   ggplot2::ggsave(
     filename = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),

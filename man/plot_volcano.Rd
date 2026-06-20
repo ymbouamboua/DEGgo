@@ -76,7 +76,7 @@ automatically tries \code{"SYMBOL"}, \code{"gene"}, then \code{"ENSEMBL"}.}
 
 \item{dpi}{PNG resolution.}
 
-\item{style}{Plot style passed to \code{plot_theme()}.}
+\item{style}{Plot style passed to \code{.deggo_theme()}.}
 
 \item{txtsize}{Base text size.}
 }

@@ -1,0 +1,15 @@
+url: https://ymbouamboua.github.io/DEGgo/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [github]
+
+  components:
+    github:
+      icon: fab fa-github
+      href: https://github.com/ymbouamboua/DEGgo
