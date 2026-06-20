@@ -8,12 +8,12 @@ test_that("deggo_extract_deg_genes handles DEGgo results object", {
       stringsAsFactors = FALSE
     )
   )
-  
+
   out <- deggo_extract_deg_genes(
     results = results,
     genes = c("Amh", "Lep")
   )
-  
+
   expect_true(is.data.frame(out))
   expect_true(nrow(out) >= 0)
 })
@@ -34,12 +34,15 @@ test_that("deggo_extract_go_keywords handles nested GO results", {
       )
     )
   )
-  
+
   out <- deggo_extract_go_keywords(
     results = results,
     keywords = c("lipid", "immune")
   )
-  
+
   expect_true(is.data.frame(out))
   expect_true(nrow(out) >= 0)
 })
+
+
+

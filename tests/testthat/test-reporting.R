@@ -21,7 +21,7 @@ test_that("generate_deggo_report errors for unsupported format", {
     ),
     version = "0.1.0"
   )
-  
+
   expect_error(
     generate_deggo_report(
       results = results,
@@ -30,3 +30,46 @@ test_that("generate_deggo_report errors for unsupported format", {
     )
   )
 })
+
+
+test_that("generate_deggo_report accepts html format", {
+
+  expect_error(
+    generate_deggo_report(
+      results = list(),
+      output_dir = tempdir(),
+      formats = "html"
+    ),
+    NA
+  )
+
+})
+
+
+test_that("generate_deggo_report accepts pdf format", {
+
+  expect_error(
+    generate_deggo_report(
+      results = list(),
+      output_dir = tempdir(),
+      formats = "pdf"
+    ),
+    NA
+  )
+
+})
+
+
+test_that("generate_deggo_report accepts multiple formats", {
+
+  expect_error(
+    generate_deggo_report(
+      results = list(),
+      output_dir = tempdir(),
+      formats = c("html","pdf")
+    ),
+    NA
+  )
+
+})
+
