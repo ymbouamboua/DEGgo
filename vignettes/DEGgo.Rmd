@@ -8,11 +8,13 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   eval = FALSE
 )
+
 ```
 
 <p align="center">
@@ -47,15 +49,19 @@ DEGgo provides a complete workflow from raw count matrices and sample metadata t
 
 Install DEGgo from GitHub:
 
-```{r installation, eval=FALSE}
+```{r installation}
+
 install.packages("remotes", repos = "https://cloud.r-project.org")
 remotes::install_github("ymbouamboua/DEGgo")
+
 ```
 
 Load the package:
 
-```{r load-package, eval=FALSE}
+```{r load-package}
+
 library(DEGgo)
+
 ```
 
 ## Workflow
@@ -113,7 +119,8 @@ The dataset contains human RNA-seq raw counts from airway smooth muscle cells tr
 
 The example data are stored in `inst/extdata` and can be accessed with `system.file()`.
 
-```{r load-airway-data, eval=FALSE}
+```{r load-airway-data}
+
 counts <- read.delim(
   system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
   check.names = FALSE
@@ -127,11 +134,15 @@ metadata <- read.delim(
 dim(counts)
 head(counts[, 1:5])
 head(metadata)
+
 ```
 
 ## Run DEGgo on airway
 
-```{r run-deggo-airway, eval=FALSE}
+```{r run-deggo-airway}
+
+metadata$condition <- metadata$dex
+
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
@@ -140,8 +151,8 @@ results <- run_deggo(
   sample_col = "SampleName",
   method = "DESeq2",
   analysis_mode = "single",
-  design_formula = ~ cell + dex,
-  contrast = c("dex", "trt", "untrt"),
+  design_formula = ~ cell + condition,
+  contrast = c("condition", "trt", "untrt"),
   filter_method = "count",
   min_count = 5,
   min_samples = 2,
@@ -155,6 +166,7 @@ results <- run_deggo(
 
 results$summary
 results$report_files
+
 ```
 
 ## Output files
@@ -171,8 +183,10 @@ DEGgo creates a complete output directory containing:
 
 The main report is available at:
 
-```{r airway-report-path, eval=FALSE}
+```{r airway-report-path}
+
 file.path("DEGgo_airway", "DEGgo_Report.html")
+
 ```
 
 # Main functions
@@ -198,7 +212,8 @@ file.path("DEGgo_airway", "DEGgo_Report.html")
 
 Before differential expression analysis, DEGgo can explore library size, detected genes, sample correlation, clustering and marker expression.
 
-```{r raw-qc, eval=FALSE}
+```{r raw-qc}
+
 qc <- explore_bulk_rnaseq(
   counts = counts,
   metadata = metadata,
@@ -207,11 +222,13 @@ qc <- explore_bulk_rnaseq(
 )
 
 qc$qc
+
 ```
 
 Flagged samples can be removed before re-running the analysis.
 
-```{r remove-flagged-samples, eval=FALSE}
+```{r remove-flagged-samples}
+
 cleaned <- remove_flagged_samples(
   counts = counts,
   metadata = metadata,
@@ -224,13 +241,15 @@ cleaned <- remove_flagged_samples(
 
 counts_clean <- cleaned$counts
 metadata_clean <- cleaned$metadata
+
 ```
 
 # Single comparison mode
 
 Use `analysis_mode = "single"` when the experiment contains one main contrast, such as treated vs control.
 
-```{r run-deggo-single-template, eval=FALSE}
+```{r run-deggo-single-template}
+
 results_single <- run_deggo(
   counts = counts,
   metadata = metadata,
@@ -252,6 +271,7 @@ results_single <- run_deggo(
 
 results_single$summary
 results_single$report_files
+
 ```
 
 # Pairwise contrast mode
@@ -260,7 +280,8 @@ Use `analysis_mode = "pairwise"` when the experiment contains multiple structure
 
 The following example is a template for a mouse experiment with treatment, sex and tissue metadata columns.
 
-```{r pairwise-contrasts-template, eval=FALSE}
+```{r pairwise-contrasts-template}
+
 pairwise_contrasts <- list(
   WAT_Female_PAMH_vs_PBS = c("comparison_group", "PAMH_Female_WAT", "PBS_Female_WAT"),
   WAT_Male_PAMH_vs_PBS = c("comparison_group", "PAMH_Male_WAT", "PBS_Male_WAT"),
@@ -268,10 +289,12 @@ pairwise_contrasts <- list(
   BAT_Male_PAMH_vs_PBS = c("comparison_group", "PAMH_Male_BAT", "PBS_Male_BAT"),
   Ovary_PAMH_vs_PBS = c("comparison_group", "PAMH_Female_OVARY", "PBS_Female_OVARY"),
   Testis_PAMH_vs_PBS = c("comparison_group", "PAMH_Male_TESTIS", "PBS_Male_TESTIS")
+  
 )
 ```
 
-```{r run-deggo-pairwise-template, eval=FALSE}
+```{r run-deggo-pairwise-template}
+
 results_pairwise <- run_deggo(
   counts = counts_mouse,
   metadata = metadata_mouse,
@@ -293,13 +316,15 @@ results_pairwise <- run_deggo(
 
 results_pairwise$summary
 results_pairwise$report_files
+
 ```
 
 # Automated HTML/PDF report
 
 DEGgo can automatically generate an HTML or PDF report from an existing result object.
 
-```{r report-existing-results, eval=FALSE}
+```{r report-existing-results}
+
 report_files <- generate_deggo_report(
   results = results,
   output_dir = results$output_dir,
@@ -307,20 +332,24 @@ report_files <- generate_deggo_report(
 )
 
 report_files
+
 ```
 
 PDF generation requires a LaTeX installation, for example TinyTeX.
 
-```{r install-tinytex, eval=FALSE}
+```{r install-tinytex}
+
 install.packages("tinytex", repos = "https://cloud.r-project.org")
 tinytex::install_tinytex()
+
 ```
 
 # Gene expression extraction and plotting
 
 Expression values can be extracted from the fitted object and plotted for selected genes.
 
-```{r extract-expression, eval=FALSE}
+```{r extract-expression}
+
 expr_df <- extract_expression(
   dds = results$dds,
   metadata = results$metadata,
@@ -330,9 +359,11 @@ expr_df <- extract_expression(
 )
 
 head(expr_df)
+
 ```
 
-```{r plot-one-gene, eval=FALSE}
+```{r plot-one-gene}
+
 plot_gene_expression(
   expr_df,
   gene = "TSPAN6",
@@ -341,13 +372,15 @@ plot_gene_expression(
   facet = "cell",
   geom = "violin"
 )
+
 ```
 
 # GO enrichment
 
 GO enrichment is automatically run inside `run_deggo()` when significant genes are detected. It can also be run manually.
 
-```{r run-go-enrichment, eval=FALSE}
+```{r run-go-enrichment}
+
 go <- run_go_enrichment(
   sig_deg = results$sig_deg,
   comparison = "dex_trt_vs_untrt",
@@ -358,31 +391,39 @@ go <- run_go_enrichment(
 
 go$go_results
 go$go_plot
+
 ```
 
-```{r plot-go-terms, eval=FALSE}
+```{r plot-go-terms}
+
 plot_go_terms(
   go_df = go$go_results,
   comparison = "Dexamethasone treated vs untreated",
   top_n = 15
 )
+
 ```
 
 # Extract genes and GO terms of interest
 
-```{r genes-interest, eval=FALSE}
+```{r genes-interest}
+
 genes_interest <- c(
   "FKBP5", "DUSP1", "KLF15", "PER1",
   "TSC22D3", "ZBTB16", "TSPAN6", "DPM1"
 )
+
 ```
 
 ```{r extract-deg-genes}
+
 gene_summary <- deggo_extract_deg_genes(results, genes_interest)
 gene_summary
+
 ```
 
-```{r extract-go-keywords, eval=FALSE}
+```{r extract-go-keywords}
+
 go_keywords <- c(
   "glucocorticoid", "steroid", "inflammation",
   "immune", "cytokine", "airway", "epithelial"
@@ -394,6 +435,7 @@ go_keywords_results <- deggo_extract_go_keywords(
 )
 
 go_keywords_results
+
 ```
 
 # Output structure
@@ -444,7 +486,8 @@ DEGgo_pairwise/
 
 Users can analyze additional organisms by supplying a Bioconductor-compatible OrgDb object through the `orgdb` argument.
 
-```{r custom-orgdb, eval=FALSE}
+```{r custom-orgdb}
+
 library(org.Custom.eg.db)
 
 results_custom <- run_deggo(
@@ -453,6 +496,7 @@ results_custom <- run_deggo(
   organism = "custom",
   orgdb = org.Custom.eg.db
 )
+
 ```
 
 # Platform compatibility and HPC support

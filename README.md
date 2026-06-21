@@ -16,6 +16,9 @@ DEGgo
 
 <img src="https://img.shields.io/badge/R-%3E%3D4.3-blue">
 <img src="https://img.shields.io/badge/license-MIT-green">
+<a href="https://doi.org/10.5281/zenodo.20785178">
+<img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg" alt="DOI">
+</a>
 <img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social">
 </p>
 
@@ -23,7 +26,7 @@ DEGgo
 
 <img src="man/figures/DEGgo_logo.png"
        alt="DEGgo package logo showing an integrated workflow for bulk RNA-seq analysis"
-       width="350">
+       width="400">
 </p>
 
 ## Overview
@@ -47,17 +50,19 @@ bioinformaticians and experimental biologists.
 
 <p align="center">
 
-<img src="man/figures/DEGgo_workflow.png" width="600">
+<img src="man/figures/DEGgo_workflow.png" width="500">
 </p>
 
 ## Installation
 
 ``` r
+
 install.packages("remotes")
 remotes::install_github("ymbouamboua/DEGgo")
 ```
 
 ``` r
+
 library(DEGgo)
 ```
 
@@ -70,6 +75,7 @@ Bioconductor `airway` package. This dataset contains human RNA-seq count
 data from airway smooth muscle cells treated with dexamethasone.
 
 ``` r
+
 counts <- read.delim(
   system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
   check.names = FALSE
@@ -80,12 +86,14 @@ metadata <- read.delim(
   check.names = FALSE
 )
 
+metadata$condition <- metadata$dex
+
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
   gene_col = "gene_id",
   organism = "human",
-  sample_col = "SampleName",
+  sample_col = "Run",
   method = "DESeq2",
   analysis_mode = "single",
   design_formula = ~ cell + dex,
@@ -140,16 +148,19 @@ The complete DEGgo tutorial and advanced workflows are available in the
 package vignette:
 
 ``` r
+
 browseVignettes("DEGgo")
 ```
 
-# Citation
+## Citation
 
-If you use DEGgo in your work, please cite:
+If you use DEGgo, please cite:
 
-> Yvon MBOUAMBOUA, Vincent Prevot and Paolo Giacobini. DEGgo: an
-> integrated framework for bulk RNA-seq differential expression analysis
-> and functional enrichment.
+Yvon Mbouamboua. (2026).  
+DEGgo: automated bulk RNA-seq differential expression analysis and Gene
+Ontology enrichment.  
+Zenodo.  
+<https://doi.org/10.5281/zenodo.20785178>
 
 # License
 
