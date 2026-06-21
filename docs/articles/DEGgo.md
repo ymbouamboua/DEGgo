@@ -1,7 +1,6 @@
 # DEGgo
 
-![DEGgo package logo showing an integrated workflow for bulk RNA-seq
-analysis](../reference/figures/DEGgo_logo.png)
+![DEGgo package logo](../reference/figures/DEGgo_logo.png)
 
 ![R version badge](https://img.shields.io/badge/R-%3E%3D4.3-blue)![MIT
 license badge](https://img.shields.io/badge/license-MIT-green)![GitHub
@@ -28,7 +27,7 @@ metadata to biological interpretation:
 
 ### Installation
 
-The package can be installed from GitHub:
+Install DEGgo from GitHub:
 
 ``` r
 
@@ -36,7 +35,7 @@ install.packages("remotes", repos = "https://cloud.r-project.org")
 remotes::install_github("ymbouamboua/DEGgo")
 ```
 
-Load DEGgo:
+Load the package:
 
 ``` r
 
@@ -45,55 +44,129 @@ library(DEGgo)
 
 ### Workflow
 
-![DEGgo bulk RNA-seq workflow from raw counts and metadata through
-quality control, differential expression analysis, Gene Ontology
-enrichment, visualization and HTML report
-generation](../reference/figures/DEGgo_workflow.png)
+![DEGgo bulk RNA-seq workflow](../reference/figures/DEGgo_workflow.png)
+
+DEGgo follows a standard bulk RNA-seq workflow:
+
+1.  input preparation and sample matching;
+2.  quality control;
+3.  low-expression filtering;
+4.  differential expression analysis;
+5.  DEG annotation and export;
+6.  PCA, heatmap and volcano visualization;
+7.  Gene Ontology enrichment;
+8.  automated report generation.
 
 ### Input data
 
 #### Count table
 
-DEGgo accepts raw count tables or matrices. Gene annotation columns can
-be automatically detected using `gene_col` and `feature_col`.
+DEGgo accepts raw count tables or matrices. The count table should
+contain one gene identifier column and one column per sample.
 
 ``` text
-gene_id      gene_name    Sample1    Sample2    Sample3
-ENSMUSG1     Adipoq       120        145        98
-ENSMUSG2     Lep          65         80         50
-ENSMUSG3     Ucp1         12         18         250
+gene_id          gene_name    Sample1    Sample2    Sample3
+ENSG00000000003  TSPAN6       120        145        98
+ENSG00000000005  TNMD         65         80         50
+ENSG00000000419  DPM1         12         18         250
 ```
 
 #### Metadata
 
-Metadata must contain one row per sample. A `sample` column is expected
-or automatically detected using `sample_col`.
+Metadata must contain one row per sample. The sample identifier column
+is supplied using `sample_col`.
 
 ``` text
-sample      tissue    sex       treatment
-Sample1     WAT       Female    PBS
-Sample2     WAT       Female    PAMH
-Sample3     BAT       Female    PBS
+sample      condition    batch
+Sample1     control      A
+Sample2     treated      A
+Sample3     control      B
 ```
 
-For pairwise analysis, DEGgo can build a comparison variable from
-multiple metadata columns:
+The sample names in the metadata must match the sample columns in the
+count table.
+
+## Example analysis with the airway dataset
+
+This vignette demonstrates a complete DEGgo workflow using a small
+DEGgo-ready dataset derived from the Bioconductor `airway` package.
+
+The dataset contains human RNA-seq raw counts from airway smooth muscle
+cells treated with dexamethasone. The differential expression analysis
+compares treated samples (`trt`) against untreated samples (`untrt`)
+while accounting for the cell line effect.
+
+### Load example data
+
+The example data are stored in `inst/extdata` and can be accessed with
+[`system.file()`](https://rdrr.io/r/base/system.file.html).
 
 ``` r
 
-pairwise_group_cols = c("treatment", "sex", "tissue")
+counts <- read.delim(
+  system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
+  check.names = FALSE
+)
+
+metadata <- read.delim(
+  system.file("extdata", "airway_metadata.tsv", package = "DEGgo"),
+  check.names = FALSE
+)
+
+dim(counts)
+head(counts[, 1:5])
+head(metadata)
 ```
 
-This creates groups such as:
+### Run DEGgo on airway
 
-``` text
-PBS_Female_WAT
-PAMH_Female_WAT
-PBS_Male_BAT
-PAMH_Male_BAT
+``` r
+
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  gene_col = "gene_id",
+  organism = "human",
+  sample_col = "SampleName",
+  method = "DESeq2",
+  analysis_mode = "single",
+  design_formula = ~ cell + dex,
+  contrast = c("dex", "trt", "untrt"),
+  filter_method = "count",
+  min_count = 5,
+  min_samples = 2,
+  min_total = 10,
+  padj_cutoff = 0.05,
+  logfc_cutoff = 0.25,
+  output_dir = "DEGgo_airway",
+  generate_report = TRUE,
+  report_formats = "html"
+)
+
+results$summary
+results$report_files
 ```
 
-### Main functions
+### Output files
+
+DEGgo creates a complete output directory containing:
+
+- differential expression results;
+- significant DEG tables;
+- volcano plots;
+- PCA plots;
+- heatmaps;
+- Gene Ontology enrichment results;
+- an HTML report.
+
+The main report is available at:
+
+``` r
+
+file.path("DEGgo_airway", "DEGgo_Report.html")
+```
+
+## Main functions
 
 | Function | Description |
 |----|----|
@@ -112,26 +185,24 @@ PAMH_Male_BAT
 | [`deggo_extract_go_genes_pairwise()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes_pairwise.md) | Extract GO terms containing selected genes |
 | [`deggo_extract_go_keywords()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_keywords.md) | Extract GO terms matching biological keywords |
 
-## Complete DEGgo workflow
+## Quality control workflow
 
-### 1. Raw count quality control
+Before differential expression analysis, DEGgo can explore library size,
+detected genes, sample correlation, clustering and marker expression.
 
 ``` r
 
 qc <- explore_bulk_rnaseq(
   counts = counts,
   metadata = metadata,
-  markers = c(
-    "Adipoq", "Lep", "Ucp1",
-    "Amh", "Amhr2", "Ar", "Akr1c3"
-  ),
-  output_dir = file.path(outdir, "DEGgo_QC_raw")
+  markers = c("TSPAN6", "DPM1", "SCYL3"),
+  output_dir = "DEGgo_airway_QC_raw"
 )
 
 qc$qc
 ```
 
-### 2. Remove flagged samples
+Flagged samples can be removed before re-running the analysis.
 
 ``` r
 
@@ -139,92 +210,53 @@ cleaned <- remove_flagged_samples(
   counts = counts,
   metadata = metadata,
   qc_table = qc$qc,
-  sample_col = "sample",
+  sample_col = "SampleName",
   remove_col = "recommend_remove",
-  gene_cols = c("gene_id", "gene_name"),
+  gene_cols = "gene_id",
   verbose = TRUE
 )
 
-counts <- cleaned$counts
-metadata <- cleaned$metadata
+counts_clean <- cleaned$counts
+metadata_clean <- cleaned$metadata
 ```
 
-### 3. Re-run QC after cleaning
+## Single comparison mode
 
-``` r
-
-qc_clean <- explore_bulk_rnaseq(
-  counts = counts,
-  metadata = metadata,
-  markers = c(
-    "Adipoq", "Lep", "Ucp1",
-    "Amh", "Amhr2", "Ar", "Akr1c3"
-  ),
-  output_dir = file.path(outdir, "DEGgo_QC_clean")
-)
-
-qc_clean$qc
-```
-
-### 4. Tissue marker validation
-
-``` r
-
-marker_sets <- list(
-  BAT = c("Ucp1", "Cidea", "Ppargc1a", "Prdm16", "Dio2", "Elovl3"),
-  WAT = c("Adipoq", "Lep", "Retn", "Fabp4", "Pparg", "Lpl"),
-  TESTIS = c("Amh", "Amhr2", "Sox9", "Dhh", "Star", "Cyp11a1", "Cyp17a1", "Insl3"),
-  OVARY = c("Foxl2", "Fshr", "Cyp19a1", "Bmp15", "Gdf9")
-)
-
-marker_check <- marker_score_check(
-  counts = counts,
-  metadata = metadata,
-  marker_sets = marker_sets,
-  sample_col = "sample",
-  group_col = "tissue",
-  feature_col = "gene_name"
-)
-
-marker_check$scores
-marker_check$swaps
-marker_check$plot
-```
-
-## Differential expression analysis
-
-### Single comparison mode
-
-Use `analysis_mode = "single"` when you have one contrast such as `PAMH`
-vs `PBS`, `KO` vs `WT`, or `treated` vs `control`.
+Use `analysis_mode = "single"` when the experiment contains one main
+contrast, such as treated vs control.
 
 ``` r
 
 results_single <- run_deggo(
   counts = counts,
   metadata = metadata,
-  organism = "mouse",
+  gene_col = "gene_id",
+  organism = "human",
   method = "DESeq2",
   analysis_mode = "single",
-  contrast = c("condition", "PAMH", "PBS"),
-  design_formula = ~ condition,
+  sample_col = "SampleName",
+  design_formula = ~ cell + dex,
+  contrast = c("dex", "trt", "untrt"),
   filter_method = "count",
-  min_count = 2,
+  min_count = 5,
   min_samples = 2,
   min_total = 10,
   generate_report = TRUE,
   report_formats = "html",
-  output_dir = file.path(outdir, "DEGgo_single")
+  output_dir = "DEGgo_single"
 )
 
 results_single$summary
 results_single$report_files
 ```
 
-### Pairwise contrast mode
+## Pairwise contrast mode
 
-Use `analysis_mode = "pairwise"` when your experiment contains multiple
+Use `analysis_mode = "pairwise"` when the experiment contains multiple
 structured comparisons, such as treatment by sex by tissue.
+
+The following example is a template for a mouse experiment with
+treatment, sex and tissue metadata columns.
 
 ``` r
 
@@ -240,12 +272,13 @@ pairwise_contrasts <- list(
 
 ``` r
 
-results <- run_deggo(
-  counts = counts,
-  metadata = metadata,
+results_pairwise <- run_deggo(
+  counts = counts_mouse,
+  metadata = metadata_mouse,
   organism = "mouse",
   method = "DESeq2",
   analysis_mode = "pairwise",
+  sample_col = "sample",
   pairwise_group_cols = c("treatment", "sex", "tissue"),
   pairwise_contrast_col = "comparison_group",
   pairwise_contrasts = pairwise_contrasts,
@@ -255,17 +288,17 @@ results <- run_deggo(
   min_total = 10,
   generate_report = TRUE,
   report_formats = "html",
-  output_dir = outdir
+  output_dir = "DEGgo_pairwise"
 )
 
-results$summary
-results$report_files
+results_pairwise$summary
+results_pairwise$report_files
 ```
 
 ## Automated HTML/PDF report
 
-DEGgo can automatically generate an HTML or PDF report at the end of
-[`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md).
+DEGgo can automatically generate an HTML or PDF report from an existing
+result object.
 
 ``` r
 
@@ -288,12 +321,15 @@ tinytex::install_tinytex()
 
 ## Gene expression extraction and plotting
 
+Expression values can be extracted from the fitted object and plotted
+for selected genes.
+
 ``` r
 
 expr_df <- extract_expression(
   dds = results$dds,
   metadata = results$metadata,
-  genes = c("Adipoq", "Lep", "Ucp1", "Amh", "Amhr2"),
+  genes = c("TSPAN6", "DPM1", "SCYL3"),
   assay = "vst",
   gene_col = "SYMBOL"
 )
@@ -305,24 +341,28 @@ head(expr_df)
 
 plot_gene_expression(
   expr_df,
-  gene = "Adipoq",
-  x = "treatment",
-  color = "treatment",
-  facet = "tissue",
+  gene = "TSPAN6",
+  x = "dex",
+  color = "dex",
+  facet = "cell",
   geom = "violin"
 )
 ```
 
 ## GO enrichment
 
+GO enrichment is automatically run inside
+[`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md)
+when significant genes are detected. It can also be run manually.
+
 ``` r
 
 go <- run_go_enrichment(
-  sig_deg = results$sig_deg$WAT_Female_PAMH_vs_PBS,
-  comparison = "WAT_Female_PAMH_vs_PBS",
+  sig_deg = results$sig_deg,
+  comparison = "dex_trt_vs_untrt",
   ontology = "BP",
-  orgdb = org.Mm.eg.db::org.Mm.eg.db,
-  output_dir = file.path(outdir, "GO_WAT_Female_PAMH_vs_PBS")
+  orgdb = org.Hs.eg.db::org.Hs.eg.db,
+  output_dir = file.path("DEGgo_airway", "GO_dex_trt_vs_untrt")
 )
 
 go$go_results
@@ -333,7 +373,7 @@ go$go_plot
 
 plot_go_terms(
   go_df = go$go_results,
-  comparison = "WAT Female PAMH vs PBS",
+  comparison = "Dexamethasone treated vs untreated",
   top_n = 15
 )
 ```
@@ -343,11 +383,8 @@ plot_go_terms(
 ``` r
 
 genes_interest <- c(
-  "Amh", "Amhr2", "Ar", "Akr1c3",
-  "Star", "Cyp11a1", "Cyp17a1", "Cyp19a1",
-  "Foxl2", "Fshr", "Sox9", "Insl3",
-  "Pparg", "Fabp4", "Adipoq", "Lep",
-  "Ucp1", "Prdm16", "Ppargc1a", "Cidea"
+  "FKBP5", "DUSP1", "KLF15", "PER1",
+  "TSC22D3", "ZBTB16", "TSPAN6", "DPM1"
 )
 ```
 
@@ -360,11 +397,8 @@ gene_summary
 ``` r
 
 go_keywords <- c(
-  "tgf", "bmp", "smad", "inflammation", "immune",
-  "steroidogenesis", "androgen", "steroid",
-  "adipocyte", "lipid", "fatty acid",
-  "thermogenesis", "mitochond", "hormone",
-  "reproductive", "gonad", "ovary", "testis"
+  "glucocorticoid", "steroid", "inflammation",
+  "immune", "cytokine", "airway", "epithelial"
 )
 
 go_keywords_results <- deggo_extract_go_keywords(
@@ -377,21 +411,38 @@ go_keywords_results
 
 ## Output structure
 
+A typical DEGgo output directory contains:
+
 ``` text
-DEGgo_results/
-└── DEGgo_YYYY_MM_DD_DESeq2_pairwise/
-    ├── pairwise_DESeq2_results/
-    ├── pairwise_DESeq2_significant/
-    ├── pairwise_volcano/
-    ├── pairwise_heatmaps/
-    ├── pairwise_PCA/
-    ├── pairwise_GO/
-    ├── pairwise_GO_plots/
-    ├── DEGgo_Report.html
-    ├── DEGgo_Report.pdf
-    ├── pairwise_summary.tsv
-    ├── session_info.txt
-    └── DEGgo_results.rds
+DEGgo_airway/
+├── DEGgo_Report.html
+├── DESeq2_results/
+├── DESeq2_significant/
+├── volcano/
+├── heatmaps/
+├── PCA/
+├── GO/
+├── GO_plots/
+├── DEGgo_output_manifest.tsv
+├── session_info.txt
+└── DEGgo_results.rds
+```
+
+For pairwise analyses, DEGgo creates comparison-specific directories:
+
+``` text
+DEGgo_pairwise/
+├── pairwise_DESeq2_results/
+├── pairwise_DESeq2_significant/
+├── pairwise_volcano/
+├── pairwise_heatmaps/
+├── pairwise_PCA/
+├── pairwise_GO/
+├── pairwise_GO_plots/
+├── pairwise_summary.tsv
+├── DEGgo_Report.html
+├── session_info.txt
+└── DEGgo_results.rds
 ```
 
 ## Supported organisms
@@ -411,7 +462,7 @@ Bioconductor-compatible OrgDb object through the `orgdb` argument.
 
 library(org.Custom.eg.db)
 
-results <- run_deggo(
+results_custom <- run_deggo(
   counts = counts,
   metadata = metadata,
   organism = "custom",
@@ -421,8 +472,8 @@ results <- run_deggo(
 
 ## Platform compatibility and HPC support
 
-DEGgo is implemented entirely in R and is compatible with Linux, macOS,
-and Windows. It can be used on local computers, HPC clusters, and
+DEGgo is implemented entirely in R and is compatible with Linux, macOS
+and Windows. It can be used on local computers, HPC clusters and
 containerized environments such as Docker or Apptainer/Singularity.
 
 ## Citation
