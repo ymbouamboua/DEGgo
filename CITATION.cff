@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+
+title: DEGgo
+
+message: “If you use DEGgo, please cite it as follows.”
+
+type: software
+
+authors:
+
+* family-names: Mbouamboua
+    given-names: Yvon
+
+version: 0.1.1
+
+date-released: 2026-06-21
+
+doi: 10.5281/zenodo.20785178
+
+repository-code: https://github.com/ymbouamboua/DEGgo
+
+license: MIT
+
+abstract: >
+DEGgo is an R package for automated bulk RNA-seq differential
+expression analysis, Gene Ontology enrichment, visualization,
+and reproducible HTML/PDF reporting. DEGgo supports DESeq2,
+edgeR and limma workflows and provides a scalable framework
+for transcriptomic analysis across model and non-model organisms
+through custom OrgDb support.
