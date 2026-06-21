@@ -1,0 +1,25 @@
+parameter	value
+deggo_version	0.1.0
+date	2026-06-21
+organism	human
+method	DESeq2
+analysis_mode	single
+ontology	BP
+padj_cutoff	0.05
+logfc_cutoff	0.25
+filter_method	count
+min_count	5
+min_samples	2
+min_total	10
+top_n_heatmap	50
+top_n_labels	10
+prepare_input	TRUE
+gene_col	gene_id
+feature_col	gene_name, SYMBOL, symbol, gene_symbol, external_gene_name
+sample_col	Run
+design_formula	~cell + condition
+pairwise_group_cols	NA
+pairwise_contrast_col	comparison_group
+pairwise_mode	all
+output_dir	/Users/yvon.mbouamboua/projects/tools/DEGgo/tests/testthat/DEGgo_results/DEGgo_2026_06_21_DESeq2_single
+reproducibility_dir	/Users/yvon.mbouamboua/projects/tools/DEGgo/tests/testthat/DEGgo_results/DEGgo_2026_06_21_DESeq2_single/reproducibility

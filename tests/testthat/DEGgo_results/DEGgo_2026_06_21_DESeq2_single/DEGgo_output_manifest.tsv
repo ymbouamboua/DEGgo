@@ -1,0 +1,10 @@
+Folder	Content
+single_results	Full differential expression results
+single_significant	Significant DEGs only
+single_GO	GO enrichment tables and GO plots
+single_heatmaps	DEG heatmaps
+single_PCA	Sample-level PCA plots
+single_QC	Sample correlation and hierarchical clustering
+single_summary.tsv	Summary of differential expression results
+sessionInfo.txt	Reproducibility and software versions
+reproducibility	Run parameters and cleaned input files

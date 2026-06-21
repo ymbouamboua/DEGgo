@@ -5,6 +5,7 @@ DEGgo
 - [Workflow](#workflow)
 - [Installation](#installation)
 - [Quick start](#quick-start)
+  - [Example dataset: airway](#example-dataset-airway)
 - [Main functions](#main-functions)
 - [Supported organisms](#supported-organisms)
 - [Documentation](#documentation)
@@ -52,7 +53,6 @@ bioinformaticians and experimental biologists.
 ## Installation
 
 ``` r
-
 install.packages("remotes")
 remotes::install_github("ymbouamboua/DEGgo")
 ```
@@ -63,19 +63,44 @@ library(DEGgo)
 
 ## Quick start
 
+### Example dataset: airway
+
+DEGgo provides a small DEGgo-ready example dataset derived from the
+Bioconductor `airway` package. This dataset contains human RNA-seq count
+data from airway smooth muscle cells treated with dexamethasone.
+
 ``` r
+counts <- read.delim(
+  system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
+  check.names = FALSE
+)
+
+metadata <- read.delim(
+  system.file("extdata", "airway_metadata.tsv", package = "DEGgo"),
+  check.names = FALSE
+)
 
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  organism = "mouse",
+  gene_col = "gene_id",
+  organism = "human",
+  sample_col = "SampleName",
   method = "DESeq2",
   analysis_mode = "single",
-  contrast = c("condition", "treated", "control")
+  design_formula = ~ cell + dex,
+  contrast = c("dex", "trt", "untrt"),
+  output_dir = "DEGgo_airway",
+  generate_report = TRUE,
+  report_formats = "html"
 )
 
 results$summary
 ```
+
+The analysis generates differential expression results, significant DEG
+tables, volcano plots, PCA plots, heatmaps, Gene Ontology enrichment
+results, and an HTML report in the DEGgo_airway directory.
 
 ## Main functions
 
@@ -115,7 +140,6 @@ The complete DEGgo tutorial and advanced workflows are available in the
 package vignette:
 
 ``` r
-
 browseVignettes("DEGgo")
 ```
 

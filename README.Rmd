@@ -6,7 +6,7 @@ output:
     toc_depth: 3
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, eval=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -52,34 +52,60 @@ DEGgo supports DESeq2, edgeR, and limma and is designed for both bioinformaticia
 
 ## Installation
 
-```{r installation}
+```{r installation, eval=FALSE}
 
 install.packages("remotes")
 remotes::install_github("ymbouamboua/DEGgo")
 
 ```
 
-```{r load-package}
+```{r load-package, eval=FALSE}
 library(DEGgo)
 ```
 
 ## Quick start
 
-```{r}
+### Example dataset: airway
+
+DEGgo provides a small DEGgo-ready example dataset derived from the Bioconductor
+`airway` package. This dataset contains human RNA-seq count data from airway
+smooth muscle cells treated with dexamethasone.
+
+```{r eval=FALSE}
+
+counts <- read.delim(
+  system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
+  check.names = FALSE
+)
+
+metadata <- read.delim(
+  system.file("extdata", "airway_metadata.tsv", package = "DEGgo"),
+  check.names = FALSE
+)
 
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  organism = "mouse",
+  gene_col = "gene_id",
+  organism = "human",
+  sample_col = "SampleName",
   method = "DESeq2",
   analysis_mode = "single",
-  contrast = c("condition", "treated", "control")
+  design_formula = ~ cell + dex,
+  contrast = c("dex", "trt", "untrt"),
+  output_dir = "DEGgo_airway",
+  generate_report = TRUE,
+  report_formats = "html"
 )
 
 results$summary
 
 ```
 
+
+The analysis generates differential expression results, significant DEG tables,
+volcano plots, PCA plots, heatmaps, Gene Ontology enrichment results, and an
+HTML report in the DEGgo_airway directory.
 
 ## Main functions
 
@@ -118,7 +144,7 @@ Custom organisms are supported through user-supplied Bioconductor OrgDb annotati
 
 The complete DEGgo tutorial and advanced workflows are available in the package vignette:
 
-```{r}
+```{r eval=FALSE}
 
 browseVignettes("DEGgo")
 
