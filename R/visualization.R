@@ -629,7 +629,7 @@ plot_volcano <- function(
     txtsize = 12
 ) {
 
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   log("Generating volcano plot...", type = "info")
 
   res_df <- as.data.frame(res_df, stringsAsFactors = FALSE)
@@ -934,7 +934,7 @@ plot_pca <- function(
     dpi = 300
 ) {
 
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   log("Generating PCA plot...", type = "info")
 
   if (!requireNamespace("DESeq2", quietly = TRUE)) {
@@ -1159,7 +1159,7 @@ plot_heatmap <- function(
     height = 10
 ) {
 
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   log("Generating heatmap...", type = "info")
 
   if (!requireNamespace("pheatmap", quietly = TRUE)) {

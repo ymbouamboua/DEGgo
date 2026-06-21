@@ -106,7 +106,7 @@
 #'
 #' @keywords internal
 #' @noRd
-.msg <- function(
+.deggo_msg <- function(
     verbose = TRUE,
     prefix = "INFO"
 ) {

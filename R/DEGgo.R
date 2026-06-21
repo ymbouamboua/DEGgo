@@ -95,7 +95,7 @@ run_deggo <- function(
   pairwise_mode <- match.arg(pairwise_mode)
   ontology <- match.arg(ontology)
 
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   t_start <- Sys.time()
 
   log("==== STARTING DEGgo ANALYSIS ====", type = "header")

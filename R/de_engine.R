@@ -30,7 +30,7 @@ run_de <- function(
 
   method <- match.arg(method)
 
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   t0 <- Sys.time()
 
   counts <- round(as.matrix(counts))
@@ -518,7 +518,7 @@ run_deseq2_pairwise <- function(
 ) {
 
   pairwise_mode <- match.arg(pairwise_mode)
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   t0 <- Sys.time()
 
   if (!requireNamespace("DESeq2", quietly = TRUE)) {

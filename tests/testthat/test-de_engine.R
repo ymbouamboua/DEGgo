@@ -1,7 +1,4 @@
-test_that("edgeR and limma engines run on minimal data", {
-  skip_if_not_installed("edgeR")
-  skip_if_not_installed("limma")
-
+test_that("minimal DE engine input objects are valid", {
   set.seed(1)
 
   counts <- matrix(
@@ -21,34 +18,5 @@ test_that("edgeR and limma engines run on minimal data", {
 
   expect_true(is.matrix(counts))
   expect_equal(ncol(counts), nrow(metadata))
+  expect_equal(colnames(counts), metadata$sample)
 })
-
-
-# test_that("edgeR engine runs", {
-#
-#   expect_error(
-#     run_deggo(
-#       counts = counts,
-#       metadata = metadata,
-#       method = "edgeR",
-#       filter_method = "none"
-#     ),
-#     NA
-#   )
-#
-# })
-#
-#
-# test_that("edgeR engine runs", {
-#
-#   expect_error(
-#     run_deggo(
-#       counts = counts,
-#       metadata = metadata,
-#       method = "limma",
-#       filter_method = "none"
-#     ),
-#     NA
-#   )
-#
-# })

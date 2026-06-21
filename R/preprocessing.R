@@ -518,7 +518,7 @@ validate_inputs <- function(
 #' @noRd
 clean_ensembl_ids <- function(counts) {
 
-  log <- .msg(verbose = TRUE)
+  log <- .deggo_msg(verbose = TRUE)
 
   log("Cleaning ENSEMBL IDs...")
 
@@ -604,7 +604,7 @@ preprocess_counts <- function(
     min_total = 10
 ) {
 
-  log <- .msg(verbose = TRUE)
+  log <- .deggo_msg(verbose = TRUE)
 
   log("Preprocessing counts...")
 

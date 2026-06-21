@@ -46,3 +46,22 @@ test_that("deggo_extract_go_keywords handles nested GO results", {
 
 
 
+test_that("deggo_extract_deg_genes empty genes", {
+
+  res <- list(
+    results = data.frame(
+      SYMBOL = c("Amh","Lep")
+    )
+  )
+
+  out <- deggo_extract_deg_genes(
+    res,
+    genes = "XYZ"
+  )
+
+  expect_equal(nrow(out), 0)
+})
+
+
+
+

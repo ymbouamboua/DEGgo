@@ -8,7 +8,7 @@ export_deg_results <- function(
     output_dir = "DEGgo_out"
 ) {
 
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   log("Exporting DEG results...", type = "info")
 
   cols <- c(

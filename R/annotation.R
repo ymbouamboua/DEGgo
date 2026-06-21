@@ -183,7 +183,7 @@ map_ensembl_to_feature <- function(
     mart = NULL
 ) {
 
-  log <- .msg(verbose = TRUE)
+  log <- .deggo_msg(verbose = TRUE)
 
   ens_clean <- sub("\\..*$", "", ensembl_vec)
   mapping <- NULL
@@ -288,7 +288,7 @@ map_entrez_ids <- function(
     orgdb
 ) {
 
-  log <- .msg(verbose = TRUE)
+  log <- .deggo_msg(verbose = TRUE)
 
   log("Mapping ENTREZ IDs...")
 

@@ -47,7 +47,7 @@ run_go_enrichment <- function(
 ) {
 
   ontology <- match.arg(ontology)
-  log <- .msg(verbose = TRUE, prefix = "DEGgo")
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
 
   if (!requireNamespace("clusterProfiler", quietly = TRUE)) {
     stop("Package 'clusterProfiler' is required.", call. = FALSE)
