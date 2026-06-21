@@ -1,7 +1,18 @@
 ---
 title: "DEGgo RNA-seq Report"
-author: "DEGgo"
+author: |
+  DEGgo
+  <br>
+  <a href="https://github.com/ymbouamboua/DEGgo" target="_blank">
+    <img src="https://img.shields.io/badge/GitHub-ymbouamboua%2FDEGgo-181717?logo=github"
+         alt="GitHub repository">
+  </a>
+  <a href="https://doi.org/10.5281/zenodo.20785178" target="_blank">
+    <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg"
+         alt="DOI badge">
+  </a>
 date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+subtitle: "Automated bulk RNA-seq differential expression, visualization and enrichment analysis"
 output:
   html_document:
     toc: true
@@ -18,6 +29,7 @@ params:
   output_dir: NULL
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,
@@ -28,6 +40,23 @@ knitr::opts_chunk$set(
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 res <- params$results
+
+
+deggo_version <- tryCatch(
+  as.character(utils::packageVersion("DEGgo")),
+  error = function(e) res$version %||% "development"
+)
+
+deggo_github <- "https://github.com/ymbouamboua/DEGgo"
+deggo_doi <- "https://doi.org/10.5281/zenodo.20785178"
+deggo_doi_badge <- "https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg"
+
+deggo_citation <- paste0(
+  "Yvon Mbouamboua. DEGgo: an automated R package for bulk RNA-seq ",
+  "differential expression, visualization and enrichment analysis. ",
+  "Zenodo. https://doi.org/10.5281/zenodo.20785178"
+)
+
 results <- res
 
 outdir <- params$output_dir %||% res$output_dir
@@ -735,11 +764,13 @@ cat('<div class="metric-grid">')
 html_card("Analysis mode", analysis_mode)
 html_card("Method", res$run_params$method %||% "NA")
 html_card("Organism", res$run_params$organism %||% "NA")
-html_card("DEGgo version", res$version %||% "development")
+html_card("DEGgo version", deggo_version)
 cat('</div>')
 
-cat("<p><strong>Output directory:</strong><br>")
-cat("<code>", html_escape(outdir), "</code></p>")
+# cat("<p>")
+# cat('<strong>Output directory:</strong><br>')
+# cat('<code>', html_escape(outdir), '</code><br><br>')
+
 ```
 
 
@@ -1349,8 +1380,7 @@ run_params <- file.path(repro_dir, "run_parameters.tsv")
 if (file.exists(run_params)) {
   cat("## Run parameters\n\n")
    knitr::kable(
-    read.delim(run_params, stringsAsFactors = FALSE), n = Inf,
-    output_table,
+    read.delim(run_params, stringsAsFactors = FALSE), 
     format = "html",
     row.names = FALSE,
     align = c("l", "l"),
@@ -1368,3 +1398,32 @@ if (file.exists(session_file)) {
   cat("</pre></details>")
 }
 ```
+
+
+
+# Citation
+
+```{r citation, results='asis'}
+section_note(
+  "How to cite DEGgo",
+  "Please cite DEGgo when using this package to generate RNA-seq differential expression, visualization, Gene Ontology enrichment or HTML reports."
+)
+
+cat(
+  '<div class="section-note">',
+  '<div class="section-note-title">Recommended citation</div>',
+  '<div class="section-note-text">',
+  '<strong>DEGgo version:</strong> ', html_escape(deggo_version), '<br><br>',
+  '<code>', html_escape(deggo_citation), '</code><br><br>',
+  '<strong>GitHub:</strong> ',
+  '<a href="', deggo_github, '" target="_blank">', deggo_github, '</a><br>',
+  '<strong>DOI:</strong> ',
+  '<a href="', deggo_doi, '" target="_blank">', deggo_doi, '</a><br><br>',
+  '<a href="', deggo_doi, '" target="_blank">',
+  '</a>',
+  '</div>',
+  '</div>'
+)
+
+```
+
