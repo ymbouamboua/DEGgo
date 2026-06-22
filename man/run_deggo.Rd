@@ -35,6 +35,8 @@ run_deggo(
   generate_report = TRUE,
   report_formats = "html",
   report_template = NULL,
+  generate_pptx = FALSE,
+  pptx_file = NULL,
   save_reproducibility = TRUE,
   save_clean_inputs = TRUE,
   seed = 123
@@ -100,6 +102,10 @@ run_deggo(
 \item{report_formats}{Character vector. Report formats: html and/or pdf.}
 
 \item{report_template}{Optional path to report R Markdown template.}
+
+\item{generate_pptx}{Logical. Generate PowerPoint report.}
+
+\item{pptx_file}{Optional PPTX output file.}
 
 \item{save_reproducibility}{Logical. Save run parameters and reproducibility files.}
 

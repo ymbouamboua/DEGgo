@@ -17,7 +17,8 @@ explore_bulk_rnaseq(
   output_dir = "DEGgo_QC",
   width = 8,
   height = 6,
-  dpi = 300
+  dpi = 300,
+  style = "classic"
 )
 }
 \arguments{
@@ -48,6 +49,8 @@ If \code{NULL}, DEGgo tries tissue, condition, treatment, then sex.}
 \item{height}{Plot height in inches.}
 
 \item{dpi}{Plot resolution.}
+
+\item{style}{Theme style passed to \code{.deggo_theme()}.}
 }
 \value{
 Invisibly returns a list containing QC table, plots, correlation

@@ -103,3 +103,320 @@ generate_deggo_report <- function(
 
   invisible(out_files)
 }
+
+
+
+#' Generate a PowerPoint report from DEGgo results
+#'
+#' @param results DEGgo result object returned by run_deggo().
+#' @param output_file Output PPTX file.
+#' @param title Report title.
+#' @param subtitle Report subtitle.
+#' @return Path to the generated PPTX file.
+#' @export
+#'
+generate_deggo_pptx <- function(
+    results,
+    output_file = "DEGgo_Report.pptx",
+    title = "DEGgo RNA-seq report",
+    subtitle = "Differential expression, visualization and Gene Ontology summary"
+) {
+
+  `%||%` <- function(x, y) {
+    if (is.null(x)) y else x
+  }
+
+  if (!requireNamespace("officer", quietly = TRUE)) {
+    stop("Package 'officer' is required.")
+  }
+  if (!requireNamespace("flextable", quietly = TRUE)) {
+    stop("Package 'flextable' is required.")
+  }
+  if (!requireNamespace("png", quietly = TRUE)) {
+    stop("Package 'png' is required.")
+  }
+
+  COL_TITLE <- "#1F4E79"
+  COL_GREY  <- "#F2F2F2"
+  COL_DARK  <- "#222222"
+  COL_WHITE <- "#FFFFFF"
+
+  slide_w <- 10
+  slide_h <- 7.5
+
+  output_dir <- results$output_dir %||% dirname(output_file)
+
+  clean_title <- function(x) {
+    x <- tools::file_path_sans_ext(basename(x))
+    x <- gsub("_", " ", x)
+    x <- gsub(" heatmap", "", x, ignore.case = TRUE)
+    x <- gsub(" volcano", "", x, ignore.case = TRUE)
+    x
+  }
+
+  add_slide_number <- function(ppt) {
+    officer::ph_with(
+      ppt,
+      officer::fpar(
+        officer::ftext(
+          as.character(length(ppt)),
+          officer::fp_text(font.size = 8, color = "#666666")
+        )
+      ),
+      location = officer::ph_location(
+        left = 9.3,
+        top = 7.0,
+        width = 0.4,
+        height = 0.2
+      )
+    )
+  }
+
+  add_slide_title <- function(ppt, slide_title) {
+    officer::ph_with(
+      ppt,
+      officer::fpar(
+        officer::ftext(
+          slide_title,
+          officer::fp_text(font.size = 19, bold = TRUE, color = COL_TITLE)
+        )
+      ),
+      location = officer::ph_location(
+        left = 0.4,
+        top = 0.25,
+        width = 9.2,
+        height = 0.45
+      )
+    )
+  }
+
+  add_title_slide <- function(ppt) {
+    ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
+
+    ppt <- officer::ph_with(
+      ppt,
+      officer::fpar(
+        officer::ftext(
+          title,
+          officer::fp_text(font.size = 30, bold = TRUE, color = COL_TITLE)
+        ),
+        fp_p = officer::fp_par(text.align = "center")
+      ),
+      location = officer::ph_location(
+        left = 0.8,
+        top = 2.35,
+        width = 8.4,
+        height = 0.8
+      )
+    )
+
+    ppt <- officer::ph_with(
+      ppt,
+      officer::fpar(
+        officer::ftext(
+          subtitle,
+          officer::fp_text(font.size = 15, color = COL_DARK)
+        ),
+        fp_p = officer::fp_par(text.align = "center")
+      ),
+      location = officer::ph_location(
+        left = 0.9,
+        top = 3.25,
+        width = 8.2,
+        height = 0.5
+      )
+    )
+
+    add_slide_number(ppt)
+  }
+
+  add_img_slide <- function(ppt, slide_title, img, note = NULL) {
+
+    info <- png::readPNG(img, info = TRUE)
+    dim  <- attr(info, "dim")
+    ratio <- dim[2] / dim[1]
+
+    plot_top <- 1.05
+    max_w <- 9
+    max_h <- 5.75
+
+    if (max_w / max_h > ratio) {
+      h <- max_h
+      w <- h * ratio
+    } else {
+      w <- max_w
+      h <- w / ratio
+    }
+
+    left <- (slide_w - w) / 2
+
+    ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
+    ppt <- add_slide_title(ppt, slide_title)
+
+    ppt <- officer::ph_with(
+      ppt,
+      officer::external_img(img),
+      location = officer::ph_location(
+        left = left,
+        top = plot_top,
+        width = w,
+        height = h
+      )
+    )
+
+    if (!is.null(note)) {
+      ppt <- officer::ph_with(
+        ppt,
+        officer::fpar(
+          officer::ftext(
+            note,
+            officer::fp_text(font.size = 9, italic = TRUE, color = COL_DARK)
+          )
+        ),
+        location = officer::ph_location(
+          left = 0.6,
+          top = 6.9,
+          width = 8.8,
+          height = 0.3
+        )
+      )
+    }
+
+    add_slide_number(ppt)
+  }
+
+  add_text_slide <- function(ppt, slide_title, bullets, fontsize = 16) {
+
+    ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
+    ppt <- add_slide_title(ppt, slide_title)
+
+    txt <- paste(paste0("• ", bullets), collapse = "\n\n")
+
+    ppt <- officer::ph_with(
+      ppt,
+      officer::fpar(
+        officer::ftext(
+          txt,
+          officer::fp_text(font.size = fontsize, color = COL_DARK)
+        )
+      ),
+      location = officer::ph_location(
+        left = 0.8,
+        top = 1.25,
+        width = 8.6,
+        height = 5.7
+      )
+    )
+
+    add_slide_number(ppt)
+  }
+
+  add_summary_table_slide <- function(ppt, summary_df) {
+
+    df <- as.data.frame(summary_df)
+    colnames(df) <- gsub("_", " ", colnames(df))
+
+    ft <- flextable::flextable(df)
+    ft <- flextable::theme_vanilla(ft)
+    ft <- flextable::fontsize(ft, size = 7.5, part = "all")
+    ft <- flextable::fontsize(ft, size = 8.2, part = "header")
+    ft <- flextable::bold(ft, part = "header")
+    ft <- flextable::align(ft, align = "center", part = "all")
+    ft <- flextable::valign(ft, valign = "center", part = "all")
+    ft <- flextable::bg(ft, bg = COL_TITLE, part = "header")
+    ft <- flextable::color(ft, color = COL_WHITE, part = "header")
+    ft <- flextable::bg(ft, bg = COL_GREY, part = "body")
+    ft <- flextable::border_outer(
+      ft,
+      border = officer::fp_border(color = COL_TITLE, width = 0.8)
+    )
+    ft <- flextable::border_inner_h(
+      ft,
+      border = officer::fp_border(color = "grey70", width = 0.3)
+    )
+    ft <- flextable::border_inner_v(
+      ft,
+      border = officer::fp_border(color = "grey70", width = 0.3)
+    )
+    ft <- flextable::autofit(ft)
+
+    ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
+    ppt <- add_slide_title(ppt, "Differential expression summary")
+
+    ppt <- officer::ph_with(
+      ppt,
+      ft,
+      location = officer::ph_location(
+        left = 0.45,
+        top = 1.15,
+        width = 9.1,
+        height = 5.9
+      )
+    )
+
+    add_slide_number(ppt)
+  }
+
+  find_pngs <- function(dir, pattern = "\\.png$") {
+    if (!dir.exists(dir)) {
+      return(character(0))
+    }
+
+    list.files(
+      dir,
+      pattern = pattern,
+      full.names = TRUE,
+      recursive = FALSE
+    )
+  }
+
+  ppt <- officer::read_pptx()
+  ppt <- add_title_slide(ppt)
+
+  if (!is.null(results$summary)) {
+    ppt <- add_summary_table_slide(ppt, results$summary)
+  }
+
+  plot_dirs <- c(
+    file.path(output_dir, "sample_QC"),
+    file.path(output_dir, "pairwise_PCA"),
+    file.path(output_dir, "pairwise_heatmaps"),
+    file.path(output_dir, "pairwise_volcano"),
+    file.path(output_dir, "pairwise_GO_plots"),
+    file.path(output_dir, "pairwise_GO"),
+    file.path(output_dir, "PCA"),
+    file.path(output_dir, "heatmaps"),
+    file.path(output_dir, "volcano"),
+    file.path(output_dir, "GO_plots"),
+    file.path(output_dir, "GO")
+  )
+
+  plot_files <- unique(unlist(lapply(plot_dirs, find_pngs)))
+
+  if (length(plot_files) > 0) {
+    for (img in plot_files) {
+      ppt <- add_img_slide(
+        ppt,
+        slide_title = clean_title(img),
+        img = img
+      )
+    }
+  }
+
+  ppt <- add_text_slide(
+    ppt,
+    "Key findings",
+    c(
+      "DEGgo generated a structured bulk RNA-seq downstream analysis report.",
+      "Differential expression results were summarized across available contrasts.",
+      "PCA, heatmap, volcano and GO plots were compiled into a PowerPoint report.",
+      "The output is designed for collaborator-friendly biological interpretation."
+    ),
+    fontsize = 17
+  )
+
+  print(ppt, target = output_file)
+
+  invisible(output_file)
+}
+

@@ -12,7 +12,9 @@ marker_score_check(
   group_col = "tissue",
   feature_col = "gene_name",
   log_transform = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  style = "'classic",
+  txtsize = 12
 )
 }
 \arguments{
@@ -38,6 +40,10 @@ Default is \code{"gene_name"}.}
 
 \item{plot}{Logical; if \code{TRUE}, returns a barplot of marker scores.
 Default is \code{TRUE}.}
+
+\item{style}{Theme style passed to \code{.deggo_theme()}.}
+
+\item{txtsize}{Texte size passed to \code{.deggo_theme()}}
 }
 \value{
 A list containing:

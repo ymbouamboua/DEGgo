@@ -41,6 +41,8 @@
 #' @param generate_report Logical. Generate DEGgo report.
 #' @param report_formats Character vector. Report formats: html and/or pdf.
 #' @param report_template Optional path to report R Markdown template.
+#' @param generate_pptx Logical. Generate PowerPoint report.
+#' @param pptx_file Optional PPTX output file.
 #' @param save_reproducibility Logical. Save run parameters and reproducibility files.
 #' @param save_clean_inputs Logical. Save cleaned counts and matched metadata.
 #' @param seed Random seed.
@@ -79,6 +81,8 @@ run_deggo <- function(
     generate_report = TRUE,
     report_formats = "html",
     report_template = NULL,
+    generate_pptx = FALSE,
+    pptx_file = NULL,
     save_reproducibility = TRUE,
     save_clean_inputs = TRUE,
     seed = 123
@@ -537,6 +541,20 @@ run_deggo <- function(
     )
 
 
+    de_results$pptx_file <- NULL
+
+    if (isTRUE(generate_pptx)) {
+
+      if (is.null(pptx_file)) {
+        pptx_file <- file.path(output_dir, "DEGgo_Report.pptx")
+      }
+
+      de_results$pptx_file <- generate_deggo_pptx(
+        results = de_results,
+        output_file = pptx_file
+      )
+    }
+
     log(
       "==== DEGgo PAIRWISE ANALYSIS COMPLETE ====",
       type = "done",
@@ -762,6 +780,22 @@ run_deggo <- function(
     report_formats = report_formats,
     report_template = report_template
   )
+
+
+  de_results$pptx_file <- NULL
+
+  if (isTRUE(generate_pptx)) {
+
+    if (is.null(pptx_file)) {
+      pptx_file <- file.path(output_dir, "DEGgo_Report.pptx")
+    }
+
+    de_results$pptx_file <- generate_deggo_pptx(
+      results = de_results,
+      output_file = pptx_file
+    )
+  }
+
 
   log(
     "==== DEGgo SINGLE ANALYSIS COMPLETE ====",

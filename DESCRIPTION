@@ -1,10 +1,15 @@
 Package: DEGgo
 Title: Differential Expression and Gene Ontology enrichment analysis for bulk RNA-seq data
 Version: 0.1.1
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: Integrated framework for differential expression, enrichment
-    and visualization.
+Authors@R:
+    person(
+      given = "Yvon",
+      family = "Mbouamboua",
+      email = "yvon.mbouamboua@gmail.com",
+      role = c("aut", "cre"),
+      comment = c(ORCID = "0000-0002-7764-829X")
+    )
+Description: Automated bulk RNA-seq differential expression analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:

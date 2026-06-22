@@ -20,6 +20,7 @@ plot_gene_expression(
   width = 6,
   height = 5,
   dpi = 300,
+  style = "classic",
   txtsize = 12,
   x_ang = 45,
   ncol = NULL
@@ -58,6 +59,8 @@ or \code{"barplot"}.}
 \item{height}{Plot height.}
 
 \item{dpi}{Plot resolution.}
+
+\item{style}{Theme style passed to \code{.deggo_theme()}.}
 
 \item{txtsize}{Base font size.}
 

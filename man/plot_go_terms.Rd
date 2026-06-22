@@ -14,7 +14,7 @@ plot_go_terms(
   size_range = c(2, 6),
   style = "bw",
   x_angle = 0,
-  font_size = 12
+  txtsize = 12
 )
 }
 \arguments{
@@ -36,7 +36,7 @@ plot_go_terms(
 
 \item{x_angle}{X-axis text angle.}
 
-\item{font_size}{Base font size.}
+\item{txtsize}{Base font size.}
 }
 \value{
 A ggplot object.
