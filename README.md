@@ -41,7 +41,7 @@ metadata to:
 - differential expression analysis;
 - Gene Ontology enrichment;
 - publication-ready visualizations;
-- automated HTML/PDF reporting.
+- automated HTML/PDF/PPTX reporting.
 
 DEGgo supports DESeq2, edgeR, and limma and is designed for both
 bioinformaticians and experimental biologists.
@@ -99,7 +99,8 @@ results <- run_deggo(
   design_formula = ~ cell + dex,
   contrast = c("dex", "trt", "untrt"),
   output_dir = "DEGgo_airway",
-  generate_report = TRUE,
+  generate_report = TRUE, 
+  generate_pptx = FALSE,
   report_formats = "html"
 )
 
@@ -129,6 +130,7 @@ results, and an HTML report in the DEGgo_airway directory.
 | `plot_pca()` | Principal component analysis of RNA-seq samples |
 | `plot_volcano()` | Volcano plot visualization of differential expression results |
 | `generate_deggo_report()` | Generate HTML/PDF DEGgo reports |
+| `generate_deggo_pptx()` | Generate PPTX DEGgo reports |
 | `deggo_extract_deg_genes()` | Extract genes of interest from DEG results |
 | `deggo_extract_go_genes()` | Extract genes associated with enriched GO terms |
 | `deggo_extract_go_genes_pairwise()` | Extract GO-associated genes across pairwise comparisons |
