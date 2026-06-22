@@ -156,11 +156,9 @@ browseVignettes("DEGgo")
 
 If you use DEGgo, please cite:
 
-Yvon Mbouamboua. (2026).  
-DEGgo: automated bulk RNA-seq differential expression analysis and Gene
-Ontology enrichment.  
-Zenodo.  
-<https://doi.org/10.5281/zenodo.20785178>
+Yvon Mbouamboua, Vicent Prevot and Paolo Giacobini. (2026). DEGgo:
+automated bulk RNA-seq differential expression analysis and Gene
+Ontology enrichment. Zenodo. <https://doi.org/10.5281/zenodo.20785178>
 
 # License
 
