@@ -31,6 +31,7 @@ Install DEGgo from GitHub:
 
 ``` r
 
+
 install.packages("remotes", repos = "https://cloud.r-project.org")
 remotes::install_github("ymbouamboua/DEGgo")
 ```
@@ -38,6 +39,7 @@ remotes::install_github("ymbouamboua/DEGgo")
 Load the package:
 
 ``` r
+
 
 library(DEGgo)
 ```
@@ -103,6 +105,7 @@ The example data are stored in `inst/extdata` and can be accessed with
 
 ``` r
 
+
 counts <- read.delim(
   system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
   check.names = FALSE
@@ -122,6 +125,9 @@ head(metadata)
 
 ``` r
 
+
+metadata$condition <- metadata$dex
+
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
@@ -130,8 +136,8 @@ results <- run_deggo(
   sample_col = "SampleName",
   method = "DESeq2",
   analysis_mode = "single",
-  design_formula = ~ cell + dex,
-  contrast = c("dex", "trt", "untrt"),
+  design_formula = ~ cell + condition,
+  contrast = c("condition", "trt", "untrt"),
   filter_method = "count",
   min_count = 5,
   min_samples = 2,
@@ -163,6 +169,7 @@ The main report is available at:
 
 ``` r
 
+
 file.path("DEGgo_airway", "DEGgo_Report.html")
 ```
 
@@ -192,6 +199,7 @@ detected genes, sample correlation, clustering and marker expression.
 
 ``` r
 
+
 qc <- explore_bulk_rnaseq(
   counts = counts,
   metadata = metadata,
@@ -205,6 +213,7 @@ qc$qc
 Flagged samples can be removed before re-running the analysis.
 
 ``` r
+
 
 cleaned <- remove_flagged_samples(
   counts = counts,
@@ -226,6 +235,7 @@ Use `analysis_mode = "single"` when the experiment contains one main
 contrast, such as treated vs control.
 
 ``` r
+
 
 results_single <- run_deggo(
   counts = counts,
@@ -260,6 +270,7 @@ treatment, sex and tissue metadata columns.
 
 ``` r
 
+
 pairwise_contrasts <- list(
   WAT_Female_PAMH_vs_PBS = c("comparison_group", "PAMH_Female_WAT", "PBS_Female_WAT"),
   WAT_Male_PAMH_vs_PBS = c("comparison_group", "PAMH_Male_WAT", "PBS_Male_WAT"),
@@ -267,10 +278,12 @@ pairwise_contrasts <- list(
   BAT_Male_PAMH_vs_PBS = c("comparison_group", "PAMH_Male_BAT", "PBS_Male_BAT"),
   Ovary_PAMH_vs_PBS = c("comparison_group", "PAMH_Female_OVARY", "PBS_Female_OVARY"),
   Testis_PAMH_vs_PBS = c("comparison_group", "PAMH_Male_TESTIS", "PBS_Male_TESTIS")
+  
 )
 ```
 
 ``` r
+
 
 results_pairwise <- run_deggo(
   counts = counts_mouse,
@@ -302,6 +315,7 @@ result object.
 
 ``` r
 
+
 report_files <- generate_deggo_report(
   results = results,
   output_dir = results$output_dir,
@@ -315,6 +329,7 @@ PDF generation requires a LaTeX installation, for example TinyTeX.
 
 ``` r
 
+
 install.packages("tinytex", repos = "https://cloud.r-project.org")
 tinytex::install_tinytex()
 ```
@@ -325,6 +340,7 @@ Expression values can be extracted from the fitted object and plotted
 for selected genes.
 
 ``` r
+
 
 expr_df <- extract_expression(
   dds = results$dds,
@@ -338,6 +354,7 @@ head(expr_df)
 ```
 
 ``` r
+
 
 plot_gene_expression(
   expr_df,
@@ -357,6 +374,7 @@ when significant genes are detected. It can also be run manually.
 
 ``` r
 
+
 go <- run_go_enrichment(
   sig_deg = results$sig_deg,
   comparison = "dex_trt_vs_untrt",
@@ -371,6 +389,7 @@ go$go_plot
 
 ``` r
 
+
 plot_go_terms(
   go_df = go$go_results,
   comparison = "Dexamethasone treated vs untreated",
@@ -382,6 +401,7 @@ plot_go_terms(
 
 ``` r
 
+
 genes_interest <- c(
   "FKBP5", "DUSP1", "KLF15", "PER1",
   "TSC22D3", "ZBTB16", "TSPAN6", "DPM1"
@@ -390,11 +410,13 @@ genes_interest <- c(
 
 ``` r
 
+
 gene_summary <- deggo_extract_deg_genes(results, genes_interest)
 gene_summary
 ```
 
 ``` r
+
 
 go_keywords <- c(
   "glucocorticoid", "steroid", "inflammation",
@@ -459,6 +481,7 @@ Users can analyze additional organisms by supplying a
 Bioconductor-compatible OrgDb object through the `orgdb` argument.
 
 ``` r
+
 
 library(org.Custom.eg.db)
 

@@ -52,7 +52,7 @@ deggo_doi <- "https://doi.org/10.5281/zenodo.20785178"
 deggo_doi_badge <- "https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg"
 
 deggo_citation <- paste0(
-  "Yvon Mbouamboua. DEGgo: an automated R package for bulk RNA-seq ",
+  "Yvon Mbouamboua, Vincent Prevot and Paolo Giacobini. DEGgo: an automated R package for bulk RNA-seq ",
   "differential expression, visualization and enrichment analysis. ",
   "Zenodo. https://doi.org/10.5281/zenodo.20785178"
 )
@@ -1403,24 +1403,13 @@ if (file.exists(session_file)) {
 
 # Citation
 
-```{r citation, results='asis'}
-section_note(
-  "How to cite DEGgo",
-  "Please cite DEGgo when using this package to generate RNA-seq differential expression, visualization, Gene Ontology enrichment or HTML reports."
-)
+```{r deggo-bibliography, results='asis'}
 
 cat(
   '<div class="section-note">',
-  '<div class="section-note-title">Recommended citation</div>',
+  '<div class="section-note-title">Please cite DEGgo if it contributed to your analysis.</div>',
   '<div class="section-note-text">',
-  '<strong>DEGgo version:</strong> ', html_escape(deggo_version), '<br><br>',
-  '<code>', html_escape(deggo_citation), '</code><br><br>',
-  '<strong>GitHub:</strong> ',
-  '<a href="', deggo_github, '" target="_blank">', deggo_github, '</a><br>',
-  '<strong>DOI:</strong> ',
-  '<a href="', deggo_doi, '" target="_blank">', deggo_doi, '</a><br><br>',
-  '<a href="', deggo_doi, '" target="_blank">',
-  '</a>',
+  html_escape(deggo_citation),
   '</div>',
   '</div>'
 )

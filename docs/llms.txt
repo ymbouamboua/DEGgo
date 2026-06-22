@@ -11,7 +11,9 @@
 - [Citation](#citation)
 - [License](#license)
 
-![](https://img.shields.io/badge/R-%3E%3D4.3-blue)![](https://img.shields.io/badge/license-MIT-green)![](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
+![](https://img.shields.io/badge/R-%3E%3D4.3-blue)![](https://img.shields.io/badge/license-MIT-green)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg)](https://doi.org/10.5281/zenodo.20785178)
+![](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
 
 ![DEGgo package logo showing an integrated workflow for bulk RNA-seq
 analysis](reference/figures/DEGgo_logo.png)
@@ -41,11 +43,13 @@ bioinformaticians and experimental biologists.
 
 ``` r
 
+
 install.packages("remotes")
 remotes::install_github("ymbouamboua/DEGgo")
 ```
 
 ``` r
+
 
 library(DEGgo)
 ```
@@ -60,6 +64,7 @@ data from airway smooth muscle cells treated with dexamethasone.
 
 ``` r
 
+
 counts <- read.delim(
   system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
   check.names = FALSE
@@ -70,12 +75,14 @@ metadata <- read.delim(
   check.names = FALSE
 )
 
+metadata$condition <- metadata$dex
+
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
   gene_col = "gene_id",
   organism = "human",
-  sample_col = "SampleName",
+  sample_col = "Run",
   method = "DESeq2",
   analysis_mode = "single",
   design_formula = ~ cell + dex,
@@ -131,16 +138,19 @@ package vignette:
 
 ``` r
 
+
 browseVignettes("DEGgo")
 ```
 
-# Citation
+## Citation
 
-If you use DEGgo in your work, please cite:
+If you use DEGgo, please cite:
 
-> Yvon MBOUAMBOUA, Vincent Prevot and Paolo Giacobini. DEGgo: an
-> integrated framework for bulk RNA-seq differential expression analysis
-> and functional enrichment.
+Yvon Mbouamboua. (2026).  
+DEGgo: automated bulk RNA-seq differential expression analysis and Gene
+Ontology enrichment.  
+Zenodo.  
+<https://doi.org/10.5281/zenodo.20785178>
 
 # License
 
