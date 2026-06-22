@@ -23,6 +23,7 @@ plot_gene_expression(
   width = 6,
   height = 5,
   dpi = 300,
+  style = "classic",
   txtsize = 12,
   x_ang = 45,
   ncol = NULL
@@ -91,6 +92,10 @@ plot_gene_expression(
 - dpi:
 
   Plot resolution.
+
+- style:
+
+  Theme style passed to `.deggo_theme()`.
 
 - txtsize:
 

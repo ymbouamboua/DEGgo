@@ -15,7 +15,7 @@ plot_go_terms(
   size_range = c(2, 6),
   style = "bw",
   x_angle = 0,
-  font_size = 12
+  txtsize = 12
 )
 ```
 
@@ -58,7 +58,7 @@ plot_go_terms(
 
   X-axis text angle.
 
-- font_size:
+- txtsize:
 
   Base font size.
 

@@ -22,7 +22,8 @@ explore_bulk_rnaseq(
   output_dir = "DEGgo_QC",
   width = 8,
   height = 6,
-  dpi = 300
+  dpi = 300,
+  style = "classic"
 )
 ```
 
@@ -81,6 +82,10 @@ explore_bulk_rnaseq(
 - dpi:
 
   Plot resolution.
+
+- style:
+
+  Theme style passed to `.deggo_theme()`.
 
 ## Value
 

@@ -39,6 +39,8 @@ run_deggo(
   generate_report = TRUE,
   report_formats = "html",
   report_template = NULL,
+  generate_pptx = FALSE,
+  pptx_file = NULL,
   save_reproducibility = TRUE,
   save_clean_inputs = TRUE,
   seed = 123
@@ -166,6 +168,14 @@ run_deggo(
 - report_template:
 
   Optional path to report R Markdown template.
+
+- generate_pptx:
+
+  Logical. Generate PowerPoint report.
+
+- pptx_file:
+
+  Optional PPTX output file.
 
 - save_reproducibility:
 

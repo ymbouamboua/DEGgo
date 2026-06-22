@@ -15,7 +15,9 @@ marker_score_check(
   group_col = "tissue",
   feature_col = "gene_name",
   log_transform = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  style = "'classic",
+  txtsize = 12
 )
 ```
 
@@ -59,6 +61,14 @@ marker_score_check(
 
   Logical; if `TRUE`, returns a barplot of marker scores. Default is
   `TRUE`.
+
+- style:
+
+  Theme style passed to `.deggo_theme()`.
+
+- txtsize:
+
+  Texte size passed to `.deggo_theme()`
 
 ## Value
 

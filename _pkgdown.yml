@@ -26,6 +26,7 @@ reference:
     - run_deggo
     - run_go_enrichment
     - generate_deggo_report
+    - generate_deggo_pptx
 
 - title: Quality control
   contents:

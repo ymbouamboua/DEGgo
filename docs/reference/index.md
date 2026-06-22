@@ -8,6 +8,8 @@
   : Run Gene Ontology enrichment analysis
 - [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md)
   : Generate DEGgo HTML/PDF Report
+- [`generate_deggo_pptx()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_pptx.md)
+  : Generate a PowerPoint report from DEGgo results
 
 ## Quality control
 

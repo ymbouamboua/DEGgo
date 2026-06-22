@@ -85,7 +85,7 @@
 <li>differential expression analysis;</li>
 <li>Gene Ontology enrichment;</li>
 <li>publication-ready visualizations;</li>
-<li>automated HTML/PDF reporting.</li>
+<li>automated HTML/PDF/PPTX reporting.</li>
 </ul>
 <p>DEGgo supports DESeq2, edgeR, and limma and is designed for both bioinformaticians and experimental biologists.</p>
 </div>
@@ -138,7 +138,8 @@
 <span>  design_formula <span class="op">=</span> <span class="op">~</span> <span class="va">cell</span> <span class="op">+</span> <span class="va">dex</span>,</span>
 <span>  contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dex"</span>, <span class="st">"trt"</span>, <span class="st">"untrt"</span><span class="op">)</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="st">"DEGgo_airway"</span>,</span>
-<span>  generate_report <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  generate_report <span class="op">=</span> <span class="cn">TRUE</span>, </span>
+<span>  generate_pptx <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  report_formats <span class="op">=</span> <span class="st">"html"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -218,6 +219,10 @@
 <tr>
 <td align="left"><code><a href="reference/generate_deggo_report.html">generate_deggo_report()</a></code></td>
 <td align="left">Generate HTML/PDF DEGgo reports</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/generate_deggo_pptx.html">generate_deggo_pptx()</a></code></td>
+<td align="left">Generate PPTX DEGgo reports</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/deggo_extract_deg_genes.html">deggo_extract_deg_genes()</a></code></td>

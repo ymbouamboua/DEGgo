@@ -16,7 +16,8 @@ plot_pca(
   title = "PCA Plot",
   width = 8,
   height = 6,
-  dpi = 300
+  dpi = 300,
+  style = "classic"
 )
 ```
 
@@ -65,6 +66,10 @@ plot_pca(
 - dpi:
 
   Plot resolution.
+
+- style:
+
+  Plot style passed to `.deggo_theme()`.
 
 ## Value
 
