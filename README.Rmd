@@ -118,22 +118,27 @@ HTML report in the DEGgo_airway directory.
 ## Main functions
 
 | Function | Description |
-|---|---|
+|:----------|:------------|
+| `check_raw_counts()` | Validate raw count matrices and sample identifiers before analysis |
 | `explore_bulk_rnaseq()` | Raw and cleaned RNA-seq quality control |
 | `remove_flagged_samples()` | Remove failed or low-quality samples |
 | `marker_score_check()` | Tissue marker scoring and sample swap detection |
 | `plot_gene_heatmap()` | Marker or selected-gene heatmap |
 | `run_deggo()` | Main DEGgo differential expression workflow |
 | `run_go_enrichment()` | Gene Ontology enrichment for DEG results |
-| `plot_go_terms()` | Publication-ready GO plot |
+| `plot_go_terms()` | Publication-ready GO enrichment plots |
 | `plot_all_go_terms()` | Plot GO terms across multiple comparisons |
 | `extract_expression()` | Extract raw, normalized, log2-normalized or VST expression values |
-| `plot_gene_expression()` | Plot normalized gene expression for selected genes |
-| `generate_deggo_report()` | Generate HTML/PDF DEGgo report |
+| `plot_gene_expression()` | Plot gene expression for selected genes |
+| `plot_heatmap()` | Generate DEG heatmaps from differential expression results |
+| `plot_pca()` | Principal component analysis of RNA-seq samples |
+| `plot_volcano()` | Volcano plot visualization of differential expression results |
+| `generate_deggo_report()` | Generate HTML/PDF DEGgo reports |
 | `deggo_extract_deg_genes()` | Extract genes of interest from DEG results |
-| `deggo_extract_go_genes_pairwise()` | Extract GO terms containing selected genes |
+| `deggo_extract_go_genes()` | Extract genes associated with enriched GO terms |
+| `deggo_extract_go_genes_pairwise()` | Extract GO-associated genes across pairwise comparisons |
 | `deggo_extract_go_keywords()` | Extract GO terms matching biological keywords |
-
+| `run_sample_qc()` | Automated sample-level quality control metrics and diagnostics |
 
 ## Supported organisms
 

@@ -102,21 +102,27 @@ results, and an HTML report in the DEGgo_airway directory.
 ## Main functions
 
 | Function | Description |
-|----|----|
+|:---|:---|
+| [`check_raw_counts()`](https://ymbouamboua.github.io/DEGgo/reference/check_raw_counts.md) | Validate raw count matrices and sample identifiers before analysis |
 | [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md) | Raw and cleaned RNA-seq quality control |
 | [`remove_flagged_samples()`](https://ymbouamboua.github.io/DEGgo/reference/remove_flagged_samples.md) | Remove failed or low-quality samples |
 | [`marker_score_check()`](https://ymbouamboua.github.io/DEGgo/reference/marker_score_check.md) | Tissue marker scoring and sample swap detection |
 | [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md) | Marker or selected-gene heatmap |
 | [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md) | Main DEGgo differential expression workflow |
 | [`run_go_enrichment()`](https://ymbouamboua.github.io/DEGgo/reference/run_go_enrichment.md) | Gene Ontology enrichment for DEG results |
-| [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md) | Publication-ready GO plot |
+| [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md) | Publication-ready GO enrichment plots |
 | [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md) | Plot GO terms across multiple comparisons |
 | [`extract_expression()`](https://ymbouamboua.github.io/DEGgo/reference/extract_expression.md) | Extract raw, normalized, log2-normalized or VST expression values |
-| [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md) | Plot normalized gene expression for selected genes |
-| [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md) | Generate HTML/PDF DEGgo report |
+| [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md) | Plot gene expression for selected genes |
+| [`plot_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_heatmap.md) | Generate DEG heatmaps from differential expression results |
+| [`plot_pca()`](https://ymbouamboua.github.io/DEGgo/reference/plot_pca.md) | Principal component analysis of RNA-seq samples |
+| [`plot_volcano()`](https://ymbouamboua.github.io/DEGgo/reference/plot_volcano.md) | Volcano plot visualization of differential expression results |
+| [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md) | Generate HTML/PDF DEGgo reports |
 | [`deggo_extract_deg_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_deg_genes.md) | Extract genes of interest from DEG results |
-| [`deggo_extract_go_genes_pairwise()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes_pairwise.md) | Extract GO terms containing selected genes |
+| [`deggo_extract_go_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes.md) | Extract genes associated with enriched GO terms |
+| [`deggo_extract_go_genes_pairwise()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes_pairwise.md) | Extract GO-associated genes across pairwise comparisons |
 | [`deggo_extract_go_keywords()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_keywords.md) | Extract GO terms matching biological keywords |
+| [`run_sample_qc()`](https://ymbouamboua.github.io/DEGgo/reference/run_sample_qc.md) | Automated sample-level quality control metrics and diagnostics |
 
 ## Supported organisms
 
@@ -146,11 +152,9 @@ browseVignettes("DEGgo")
 
 If you use DEGgo, please cite:
 
-Yvon Mbouamboua. (2026).  
-DEGgo: automated bulk RNA-seq differential expression analysis and Gene
-Ontology enrichment.  
-Zenodo.  
-<https://doi.org/10.5281/zenodo.20785178>
+Yvon Mbouamboua, Vicent Prevot and Paolo Giacobini. (2026). DEGgo:
+automated bulk RNA-seq differential expression analysis and Gene
+Ontology enrichment. Zenodo. <https://doi.org/10.5281/zenodo.20785178>
 
 # License
 

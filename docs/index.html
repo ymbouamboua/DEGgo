@@ -155,65 +155,89 @@
 <col width="50%">
 </colgroup>
 <thead><tr>
-<th>Function</th>
-<th>Description</th>
+<th align="left">Function</th>
+<th align="left">Description</th>
 </tr></thead>
 <tbody>
 <tr>
-<td><code><a href="reference/explore_bulk_rnaseq.html">explore_bulk_rnaseq()</a></code></td>
-<td>Raw and cleaned RNA-seq quality control</td>
+<td align="left"><code><a href="reference/check_raw_counts.html">check_raw_counts()</a></code></td>
+<td align="left">Validate raw count matrices and sample identifiers before analysis</td>
 </tr>
 <tr>
-<td><code><a href="reference/remove_flagged_samples.html">remove_flagged_samples()</a></code></td>
-<td>Remove failed or low-quality samples</td>
+<td align="left"><code><a href="reference/explore_bulk_rnaseq.html">explore_bulk_rnaseq()</a></code></td>
+<td align="left">Raw and cleaned RNA-seq quality control</td>
 </tr>
 <tr>
-<td><code><a href="reference/marker_score_check.html">marker_score_check()</a></code></td>
-<td>Tissue marker scoring and sample swap detection</td>
+<td align="left"><code><a href="reference/remove_flagged_samples.html">remove_flagged_samples()</a></code></td>
+<td align="left">Remove failed or low-quality samples</td>
 </tr>
 <tr>
-<td><code><a href="reference/plot_gene_heatmap.html">plot_gene_heatmap()</a></code></td>
-<td>Marker or selected-gene heatmap</td>
+<td align="left"><code><a href="reference/marker_score_check.html">marker_score_check()</a></code></td>
+<td align="left">Tissue marker scoring and sample swap detection</td>
 </tr>
 <tr>
-<td><code><a href="reference/run_deggo.html">run_deggo()</a></code></td>
-<td>Main DEGgo differential expression workflow</td>
+<td align="left"><code><a href="reference/plot_gene_heatmap.html">plot_gene_heatmap()</a></code></td>
+<td align="left">Marker or selected-gene heatmap</td>
 </tr>
 <tr>
-<td><code><a href="reference/run_go_enrichment.html">run_go_enrichment()</a></code></td>
-<td>Gene Ontology enrichment for DEG results</td>
+<td align="left"><code><a href="reference/run_deggo.html">run_deggo()</a></code></td>
+<td align="left">Main DEGgo differential expression workflow</td>
 </tr>
 <tr>
-<td><code><a href="reference/plot_go_terms.html">plot_go_terms()</a></code></td>
-<td>Publication-ready GO plot</td>
+<td align="left"><code><a href="reference/run_go_enrichment.html">run_go_enrichment()</a></code></td>
+<td align="left">Gene Ontology enrichment for DEG results</td>
 </tr>
 <tr>
-<td><code><a href="reference/plot_all_go_terms.html">plot_all_go_terms()</a></code></td>
-<td>Plot GO terms across multiple comparisons</td>
+<td align="left"><code><a href="reference/plot_go_terms.html">plot_go_terms()</a></code></td>
+<td align="left">Publication-ready GO enrichment plots</td>
 </tr>
 <tr>
-<td><code><a href="reference/extract_expression.html">extract_expression()</a></code></td>
-<td>Extract raw, normalized, log2-normalized or VST expression values</td>
+<td align="left"><code><a href="reference/plot_all_go_terms.html">plot_all_go_terms()</a></code></td>
+<td align="left">Plot GO terms across multiple comparisons</td>
 </tr>
 <tr>
-<td><code><a href="reference/plot_gene_expression.html">plot_gene_expression()</a></code></td>
-<td>Plot normalized gene expression for selected genes</td>
+<td align="left"><code><a href="reference/extract_expression.html">extract_expression()</a></code></td>
+<td align="left">Extract raw, normalized, log2-normalized or VST expression values</td>
 </tr>
 <tr>
-<td><code><a href="reference/generate_deggo_report.html">generate_deggo_report()</a></code></td>
-<td>Generate HTML/PDF DEGgo report</td>
+<td align="left"><code><a href="reference/plot_gene_expression.html">plot_gene_expression()</a></code></td>
+<td align="left">Plot gene expression for selected genes</td>
 </tr>
 <tr>
-<td><code><a href="reference/deggo_extract_deg_genes.html">deggo_extract_deg_genes()</a></code></td>
-<td>Extract genes of interest from DEG results</td>
+<td align="left"><code><a href="reference/plot_heatmap.html">plot_heatmap()</a></code></td>
+<td align="left">Generate DEG heatmaps from differential expression results</td>
 </tr>
 <tr>
-<td><code><a href="reference/deggo_extract_go_genes_pairwise.html">deggo_extract_go_genes_pairwise()</a></code></td>
-<td>Extract GO terms containing selected genes</td>
+<td align="left"><code><a href="reference/plot_pca.html">plot_pca()</a></code></td>
+<td align="left">Principal component analysis of RNA-seq samples</td>
 </tr>
 <tr>
-<td><code><a href="reference/deggo_extract_go_keywords.html">deggo_extract_go_keywords()</a></code></td>
-<td>Extract GO terms matching biological keywords</td>
+<td align="left"><code><a href="reference/plot_volcano.html">plot_volcano()</a></code></td>
+<td align="left">Volcano plot visualization of differential expression results</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/generate_deggo_report.html">generate_deggo_report()</a></code></td>
+<td align="left">Generate HTML/PDF DEGgo reports</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/deggo_extract_deg_genes.html">deggo_extract_deg_genes()</a></code></td>
+<td align="left">Extract genes of interest from DEG results</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/deggo_extract_go_genes.html">deggo_extract_go_genes()</a></code></td>
+<td align="left">Extract genes associated with enriched GO terms</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/deggo_extract_go_genes_pairwise.html">deggo_extract_go_genes_pairwise()</a></code></td>
+<td align="left">Extract GO-associated genes across pairwise comparisons</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/deggo_extract_go_keywords.html">deggo_extract_go_keywords()</a></code></td>
+<td align="left">Extract GO terms matching biological keywords</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/run_sample_qc.html">run_sample_qc()</a></code></td>
+<td align="left">Automated sample-level quality control metrics and diagnostics</td>
 </tr>
 </tbody>
 </table>
@@ -260,9 +284,7 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>If you use DEGgo, please cite:</p>
-<p>Yvon Mbouamboua. (2026).<br>
-DEGgo: automated bulk RNA-seq differential expression analysis and Gene Ontology enrichment.<br>
-Zenodo.<br><a href="https://doi.org/10.5281/zenodo.20785178" class="external-link uri">https://doi.org/10.5281/zenodo.20785178</a></p>
+<p>Yvon Mbouamboua, Vicent Prevot and Paolo Giacobini. (2026). DEGgo: automated bulk RNA-seq differential expression analysis and Gene Ontology enrichment. Zenodo. <a href="https://doi.org/10.5281/zenodo.20785178" class="external-link uri">https://doi.org/10.5281/zenodo.20785178</a></p>
 </div>
 </div>
 <div class="section level1">
