@@ -9,7 +9,9 @@ run_sample_qc(
   metadata,
   output_dir,
   annotation_cols = c("condition", "treatment", "sex", "tissue"),
-  dpi = 300
+  dpi = 300,
+  style = "bw",
+  txtsize = 12
 )
 }
 \arguments{

@@ -45,6 +45,7 @@
 #' @param pptx_file Optional PPTX output file.
 #' @param save_reproducibility Logical. Save run parameters and reproducibility files.
 #' @param save_clean_inputs Logical. Save cleaned counts and matched metadata.
+#' @param txtsize Base text size.
 #' @param seed Random seed.
 #'
 #' @return A list containing DEG results, plots, GO results, reports, and output paths.
@@ -85,6 +86,7 @@ run_deggo <- function(
     pptx_file = NULL,
     save_reproducibility = TRUE,
     save_clean_inputs = TRUE,
+    txtsize = 12,
     seed = 123
 ) {
 
@@ -284,6 +286,7 @@ run_deggo <- function(
   sample_qc <- run_sample_qc(
     counts = counts,
     metadata = metadata,
+    txtsize = txtsize,
     output_dir = dirs$qc,
     annotation_cols = intersect(
       c("condition", "treatment", "sex", "tissue"),
@@ -315,7 +318,8 @@ run_deggo <- function(
     de_results$pca <- .make_pca_list(
       dds = de_results$dds,
       md = de_results$metadata,
-      pca_dir = dirs$pca
+      pca_dir = dirs$pca,
+      txtsize = txtsize
     )
 
     log("[9/11] Annotating DE tables", type = "step")
@@ -373,6 +377,7 @@ run_deggo <- function(
       de_results$volcano_plots[[nm]] <- plot_volcano(
         res_df = res_df_i,
         top_n_labels = top_n_labels,
+        txtsize = txtsize,
         output_dir = dirs$volcano,
         filename = paste0(nm, "_Volcano_Plot"),
         title = nm,
@@ -397,7 +402,9 @@ run_deggo <- function(
         order_by = intersect(
           c("condition", "tissue", "sex", "treatment"),
           colnames(de_results$metadata)
-        )
+        ),
+        fontsize_row = txtsize,
+        fontsize_col = max(5, txtsize - 1)
       )
 
       de_results$go_results[[nm]] <- run_go_enrichment(
@@ -416,7 +423,8 @@ run_deggo <- function(
           go_df = go_df_i,
           comparison = paste0(nm, " GO enrichment"),
           top_n = 10,
-          style = "bw"
+          style = "bw",
+          txtsize = txtsize
         )
 
         ggplot2::ggsave(
@@ -508,6 +516,7 @@ run_deggo <- function(
       min_total = min_total,
       top_n_heatmap = top_n_heatmap,
       top_n_labels = top_n_labels,
+      txtsize = txtsize,
       prepare_input = prepare_input,
       gene_col = gene_col,
       feature_col = feature_col,
@@ -611,6 +620,7 @@ run_deggo <- function(
   volcano_plot <- plot_volcano(
     res_df = res_df,
     top_n_labels = top_n_labels,
+    txtsize = txtsize,
     output_dir = dirs$volcano,
     filename = "Volcano_Plot",
     logfc_cutoff = logfc_cutoff,
@@ -648,7 +658,9 @@ run_deggo <- function(
       order_by = intersect(
         c("condition", "tissue", "sex", "treatment"),
         colnames(metadata)
-      )
+      ),
+      fontsize_row = txtsize,
+      fontsize_col = max(5, txtsize - 1)
     )
   }
 
@@ -671,7 +683,8 @@ run_deggo <- function(
       go_df = go_df_i,
       comparison = "single_comparison GO enrichment",
       top_n = 10,
-      style = "bw"
+      style = "bw",
+      txtsize = txtsize
     )
 
     ggplot2::ggsave(
@@ -748,6 +761,7 @@ run_deggo <- function(
     min_total = min_total,
     top_n_heatmap = top_n_heatmap,
     top_n_labels = top_n_labels,
+    txtsize = txtsize,
     prepare_input = prepare_input,
     gene_col = gene_col,
     feature_col = feature_col,

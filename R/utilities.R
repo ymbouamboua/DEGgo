@@ -493,6 +493,7 @@ extract_expression <- function(
     min_total,
     top_n_heatmap,
     top_n_labels,
+    txtsize,
     prepare_input,
     gene_col,
     feature_col,
@@ -521,6 +522,7 @@ extract_expression <- function(
     min_total = min_total,
     top_n_heatmap = top_n_heatmap,
     top_n_labels = top_n_labels,
+    txtsize = txtsize,
     prepare_input = prepare_input,
     gene_col = paste(gene_col, collapse = ", "),
     feature_col = paste(feature_col, collapse = ", "),
@@ -669,7 +671,8 @@ extract_expression <- function(
     output_dir = pca_dir,
     filename = "PCA_by_sample",
     color_by = "sample",
-    title = "PCA by sample"
+    title = "PCA by sample",
+    txtsize = txtsize
   )
 
   for (col in intersect(c("tissue", "treatment", "sex", "condition"), colnames(md))) {
@@ -679,7 +682,8 @@ extract_expression <- function(
       output_dir = pca_dir,
       filename = paste0("PCA_by_", col),
       color_by = col,
-      title = paste("PCA by", col)
+      title = paste("PCA by", col),
+      txtsize = txtsize
     )
   }
 
@@ -691,7 +695,8 @@ extract_expression <- function(
       filename = "PCA_tissue_treatment",
       color_by = "tissue",
       shape_by = "treatment",
-      title = "PCA tissue + treatment"
+      title = "PCA tissue + treatment",
+      txtsize = txtsize
     )
   }
 

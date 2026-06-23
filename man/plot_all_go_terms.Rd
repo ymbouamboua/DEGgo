@@ -7,7 +7,8 @@
 plot_all_go_terms(
   results,
   top_n = 10,
-  font_size = 8,
+  txtsize = 8,
+  style = "bw",
   output_dir = NULL,
   width = 8,
   height = 6,
@@ -20,8 +21,6 @@ plot_all_go_terms(
 \item{top_n}{Number of GO terms to display per regulation class
 (Up and Down). Default is \code{10}.}
 
-\item{font_size}{Base font size used in plots. Default is \code{8}.}
-
 \item{output_dir}{Optional output directory for exported figures.
 If \code{NULL}, plots are returned but not saved.}
 
@@ -30,6 +29,8 @@ If \code{NULL}, plots are returned but not saved.}
 \item{height}{Plot height in inches. Default is \code{6}.}
 
 \item{dpi}{Plot resolution. Default is \code{300}.}
+
+\item{font_size}{Base font size used in plots. Default is \code{8}.}
 }
 \value{
 A named list of ggplot objects, one per comparison.

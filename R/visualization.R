@@ -33,255 +33,138 @@
 #' @keywords internal
 #' @noRd
 .deggo_theme <- function(
-    style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
+    style = c("classic", "minimal", "bw", "void"),
     txtsize = 12,
-    xy.val = TRUE,
+    font_family = "Helvetica",
     x.ang = 0,
     hjust = NULL,
     vjust = NULL,
-    xlab = TRUE,
-    ylab = TRUE,
-    xy.lab = TRUE,
-    facet.face = "bold",
-    ttl.face = "bold",
-    txt.face = c("plain", "italic", "bold"),
     ttl.pos = c("center", "left", "right"),
-    x.ttl = TRUE,
-    y.ttl = TRUE,
-    ticks = NULL,
-    line = NULL,
-    border = NULL,
-    grid.major = NULL,
-    grid.minor = NULL,
-    panel.fill = "white",
-    facet.bg = TRUE,
     mode = c("light", "dark"),
     leg.pos = "right",
-    leg.dir = "vertical",
-    leg.size = 10,
-    leg.ttl = 10,
-    leg.ttl.size = 10,
-    leg.just = "center",
-    leg.ttl.text = NULL,
+    grid.major = FALSE,
+    grid.minor = FALSE,
+    border = FALSE,
+    ticks = TRUE,
     ...
 ) {
-
   style <- match.arg(style)
   ttl.pos <- match.arg(ttl.pos)
-  txt.face <- match.arg(txt.face)
   mode <- match.arg(mode)
 
   lw <- 0.3
 
-  if (is.null(line)) {
-    line <- identical(style, "classic")
-  }
-
-  if (mode == "light") {
-    col.txt <- "#1A1A1A"
-    col.grid <- "#D9D9D9"
-    col.panel <- panel.fill
-    col.strip <- "#EFEFEF"
-  } else {
-    col.txt <- "#DDDDDD"
-    col.grid <- "#444444"
-    col.panel <- "#1E1E1E"
-    col.strip <- "#383838"
-  }
+  col_txt <- if (mode == "light") "#111111" else "#EAEAEA"
+  col_bg <- if (mode == "light") "white" else "#1E1E1E"
+  col_grid <- if (mode == "light") "#D9D9D9" else "#444444"
 
   if (is.null(hjust) || is.null(vjust)) {
     if (x.ang == 0) {
-      hjust <- 0.5
-      vjust <- 0.5
+      hjust <- 0.5; vjust <- 0.5
     } else if (x.ang == 45) {
-      hjust <- 1
-      vjust <- 1
+      hjust <- 1; vjust <- 1
     } else if (x.ang == 90) {
-      hjust <- 1
-      vjust <- 0.5
-    } else if (x.ang == 270) {
-      hjust <- 0
-      vjust <- 0.5
+      hjust <- 1; vjust <- 0.5
     } else {
-      hjust <- 1
-      vjust <- 1
+      hjust <- 1; vjust <- 1
     }
   }
 
-  ttl.hjust <- switch(
-    ttl.pos,
-    left = 0,
-    center = 0.5,
-    right = 1
-  )
+  ttl_hjust <- switch(ttl.pos, left = 0, center = 0.5, right = 1)
 
-  base <- ggplot2::theme(
-    text = ggplot2::element_text(
-      color = col.txt,
-      size = txtsize,
-      family = "Helvetica",
-      face = txt.face
-    ),
-    axis.text.x = ggplot2::element_text(color = col.txt, size = txtsize),
-    axis.text.y = ggplot2::element_text(color = col.txt, size = txtsize),
-    axis.title = ggplot2::element_text(size = txtsize),
-    plot.title = ggplot2::element_text(
-      hjust = ttl.hjust,
-      face = ttl.face,
-      size = txtsize + 2,
-      color = col.txt
-    ),
-    strip.text = ggplot2::element_text(face = facet.face, color = col.txt),
-    strip.background = ggplot2::element_rect(fill = col.strip, color = NA),
-    panel.background = ggplot2::element_rect(fill = col.panel, color = NA),
-    legend.title = ggplot2::element_text(size = leg.ttl.size, face = "bold"),
-    legend.text = ggplot2::element_text(size = leg.size),
-    legend.position = leg.pos,
-    legend.direction = leg.dir,
-    legend.justification = leg.just,
-    legend.key.height = grid::unit(0.4, "cm"),
-    legend.key.width = grid::unit(0.4, "cm"),
-    legend.background = ggplot2::element_blank(),
-    legend.box.background = ggplot2::element_blank(),
-    legend.key = ggplot2::element_blank(),
-    legend.spacing.y = grid::unit(0.05, "cm"),
-    legend.margin = ggplot2::margin(1, 1, 1, 1),
-    ...
-  )
-
-  preset <- switch(
+  base <- switch(
     style,
-    minimal = ggplot2::theme_minimal(base_size = txtsize),
-    classic = ggplot2::theme_classic(base_size = txtsize),
-    bw = ggplot2::theme_bw(base_size = txtsize),
-    test = ggplot2::theme_test(base_size = txtsize),
-    void = ggplot2::theme_void(base_size = txtsize),
-    dirty = ggplot2::theme_minimal(base_size = txtsize) +
-      ggplot2::theme(
-        panel.grid = ggplot2::element_blank(),
-        panel.border = ggplot2::element_blank(),
-        axis.ticks = ggplot2::element_blank()
-      ),
-    gray = ggplot2::theme_gray(base_size = txtsize) +
-      ggplot2::theme(
-        panel.background = ggplot2::element_rect(fill = "#EDEDED", color = NA),
-        panel.grid.major = ggplot2::element_line(color = "#CCCCCC", linewidth = lw),
-        panel.grid.minor = ggplot2::element_line(color = "#DDDDDD", linewidth = lw / 2)
-      )
+    classic = ggplot2::theme_classic(base_size = txtsize, base_family = font_family),
+    minimal = ggplot2::theme_minimal(base_size = txtsize, base_family = font_family),
+    bw = ggplot2::theme_bw(base_size = txtsize, base_family = font_family),
+    void = ggplot2::theme_void(base_size = txtsize, base_family = font_family)
   )
 
-  th <- preset + base
-
-  if (style %in% c("bw", "test", "gray")) {
-    th <- th + ggplot2::theme(
-      panel.border = ggplot2::element_rect(
-        linewidth = lw,
-        color = col.txt,
-        fill = NA
+  base +
+    ggplot2::theme(
+      text = ggplot2::element_text(color = col_txt, family = font_family),
+      plot.title = ggplot2::element_text(
+        size = txtsize + 1,
+        face = "bold",
+        hjust = ttl_hjust,
+        color = col_txt
       ),
-      axis.line = ggplot2::element_blank()
-    )
-  }
-
-  if (line && identical(style, "classic")) {
-    th <- th + ggplot2::theme(
-      axis.line.x = ggplot2::element_line(color = col.txt, linewidth = lw),
-      axis.line.y = ggplot2::element_line(color = col.txt, linewidth = lw)
-    )
-  } else {
-    th <- th + ggplot2::theme(axis.line = ggplot2::element_blank())
-  }
-
-  if (xy.val && xlab) {
-    th <- th + ggplot2::theme(
+      axis.title = ggplot2::element_text(size = txtsize, face = "bold"),
+      axis.text = ggplot2::element_text(size = txtsize - 1, color = col_txt),
       axis.text.x = ggplot2::element_text(
         angle = x.ang,
         hjust = hjust,
         vjust = vjust
-      )
+      ),
+      axis.line = ggplot2::element_line(color = col_txt, linewidth = lw),
+      axis.ticks = if (ticks) {
+        ggplot2::element_line(color = col_txt, linewidth = lw)
+      } else {
+        ggplot2::element_blank()
+      },
+      panel.background = ggplot2::element_rect(fill = col_bg, color = NA),
+      plot.background = ggplot2::element_rect(fill = col_bg, color = NA),
+      panel.grid.major = if (grid.major) {
+        ggplot2::element_line(color = col_grid, linewidth = lw)
+      } else {
+        ggplot2::element_blank()
+      },
+      panel.grid.minor = if (grid.minor) {
+        ggplot2::element_line(color = col_grid, linewidth = lw / 2)
+      } else {
+        ggplot2::element_blank()
+      },
+      panel.border = if (border) {
+        ggplot2::element_rect(color = col_txt, fill = NA, linewidth = lw)
+      } else {
+        ggplot2::element_blank()
+      },
+      strip.text = ggplot2::element_text(size = txtsize, face = "bold"),
+      strip.background = ggplot2::element_rect(fill = "#F2F2F2", color = NA),
+      legend.position = leg.pos,
+      legend.title = ggplot2::element_text(size = txtsize, face = "bold"),
+      legend.text = ggplot2::element_text(size = txtsize - 1),
+      legend.key = ggplot2::element_blank(),
+      legend.background = ggplot2::element_blank(),
+      plot.margin = ggplot2::margin(5, 5, 5, 5),
+      ...
     )
-  }
+}
 
-  if (!xy.lab) {
-    th <- th + ggplot2::theme(
-      axis.text = ggplot2::element_blank(),
-      axis.ticks = ggplot2::element_blank()
-    )
-  }
 
-  if (!xlab) {
-    th <- th + ggplot2::theme(
-      axis.text.x = ggplot2::element_blank(),
-      axis.ticks.x = ggplot2::element_blank()
-    )
-  }
+# ========================================================= #
+# PUBLICATION DEFAULTS
+# ========================================================= #
 
-  if (!ylab) {
-    th <- th + ggplot2::theme(
-      axis.text.y = ggplot2::element_blank(),
-      axis.ticks.y = ggplot2::element_blank()
-    )
-  }
+.deggo_plot_defaults <- function(
+    context = c("single", "multi", "heatmap", "report")
+) {
+  context <- match.arg(context)
 
-  if (!x.ttl) th <- th + ggplot2::theme(axis.title.x = ggplot2::element_blank())
-  if (!y.ttl) th <- th + ggplot2::theme(axis.title.y = ggplot2::element_blank())
+  switch(
+    context,
+    single = list(width = 6.5, height = 5.0, dpi = 300, txtsize = 8),
+    multi  = list(width = 8.0, height = 6.0, dpi = 300, txtsize = 8),
+    heatmap = list(width = 7.0, height = 8.0, dpi = 300, txtsize = 7),
+    report = list(width = 9.0, height = 6.5, dpi = 300, txtsize = 8)
+  )
+}
 
-  if (!is.null(ticks)) {
-    th <- th + if (ticks) {
-      ggplot2::theme(axis.ticks = ggplot2::element_line(color = col.txt, linewidth = lw))
-    } else {
-      ggplot2::theme(axis.ticks = ggplot2::element_blank())
-    }
-  }
 
-  if (!is.null(border)) {
-    th <- th + if (border) {
-      ggplot2::theme(panel.border = ggplot2::element_rect(color = col.grid, fill = NA, linewidth = lw))
-    } else {
-      ggplot2::theme(panel.border = ggplot2::element_blank())
-    }
-  }
+.deggo_heatmap_size <- function(
+    n_genes,
+    n_samples,
+    min_width = 5,
+    max_width = 14,
+    min_height = 4,
+    max_height = 18,
+    gene_unit = 0.18,
+    sample_unit = 0.22
+) {
+  width <- min(max_width, max(min_width, 3 + n_samples * sample_unit))
+  height <- min(max_height, max(min_height, 2.5 + n_genes * gene_unit))
 
-  if (!is.null(grid.major)) {
-    th <- th + if (grid.major) {
-      ggplot2::theme(panel.grid.major = ggplot2::element_line(color = col.grid, linewidth = lw))
-    } else {
-      ggplot2::theme(panel.grid.major = ggplot2::element_blank())
-    }
-  }
-
-  if (!is.null(grid.minor)) {
-    th <- th + if (grid.minor) {
-      ggplot2::theme(panel.grid.minor = ggplot2::element_line(color = col.grid, linewidth = lw / 2))
-    } else {
-      ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
-    }
-  }
-
-  if (!facet.bg) {
-    th <- th + ggplot2::theme(strip.background = ggplot2::element_blank())
-  }
-
-  if (!is.null(leg.ttl.text)) {
-    th <- th + ggplot2::labs(color = leg.ttl.text, fill = leg.ttl.text)
-  }
-
-  if (identical(style, "void")) {
-    th <- th + ggplot2::theme(
-      axis.text.x = ggplot2::element_blank(),
-      axis.text.y = ggplot2::element_blank(),
-      axis.ticks = ggplot2::element_blank(),
-      axis.title.x = ggplot2::element_blank(),
-      axis.title.y = ggplot2::element_blank(),
-      axis.line = ggplot2::element_blank(),
-      panel.grid = ggplot2::element_blank(),
-      panel.border = ggplot2::element_blank(),
-      strip.text = ggplot2::element_blank(),
-      strip.background = ggplot2::element_blank()
-    )
-  }
-
-  th
+  list(width = width, height = height)
 }
 
 
@@ -929,6 +812,7 @@ plot_volcano <- function(
 #' @param height Plot height in inches.
 #' @param dpi Plot resolution.
 #' @param style Plot style passed to \code{.deggo_theme()}.
+#' @param txtsize Base text size.
 #'
 #' @return A list containing the VST object, PCA data, and plot.
 #' @export
@@ -944,7 +828,8 @@ plot_pca <- function(
     width = 8,
     height = 6,
     dpi = 300,
-    style = "classic"
+    style = "classic",
+    txtsize = 12
 ) {
 
   log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
@@ -1042,7 +927,7 @@ plot_pca <- function(
 
   pca_plot <- pca_plot +
     ggplot2::scale_color_manual(values = pca_colors) +
-    .deggo_theme(style = style, txtsize = 10) +
+    .deggo_theme(style = style, txtsize = txtsize) +
     ggplot2::labs(
       title = title,
       x = paste0("PC1: ", percent_var[1], "% variance"),
@@ -1166,8 +1051,8 @@ plot_heatmap <- function(
     scale_rows = TRUE,
     cluster_rows = TRUE,
     cluster_cols = FALSE,
-    fontsize_row = 8,
-    fontsize_col = 7,
+    fontsize_row = 12,
+    fontsize_col = 10,
     width = 8,
     height = 10
 ) {
@@ -1299,26 +1184,36 @@ plot_heatmap <- function(
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
+
+  hm_size <- .deggo_heatmap_size(
+    n_genes = nrow(mat_use),
+    n_samples = ncol(mat_use)
+  )
+
+  if (is.null(width)) width <- hm_size$width
+  if (is.null(height)) height <- hm_size$height
+
+  fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
+  fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+
   pheatmap::pheatmap(
     mat_use,
     annotation_col = annotation_col,
     annotation_colors = annotation_colors,
-    cluster_rows = cluster_rows,
-    cluster_cols = cluster_cols,
+    fontsize_row = fontsize_row_use,
+    fontsize_col = fontsize_col_use,
+    fontsize = 7,
+    border_color = NA,
     show_rownames = TRUE,
     show_colnames = TRUE,
-    fontsize_row = fontsize_row,
-    fontsize_col = fontsize_col,
     treeheight_row = 0,
     treeheight_col = 0,
     angle_col = 90,
     main = main,
-    border_color = "#9C9391",
     color = grDevices::colorRampPalette(
-      c("#6497b1", "#F7F7F7", "#740001")
+      c("#6497B1", "#F7F7F7", "#740001")
     )(100),
     breaks = seq(-2, 2, length.out = 101),
-    #color = grDevices::colorRampPalette(c("purple", "black", "yellow"))(100),
     filename = file.path(output_dir, paste0(filename, ".png")),
     width = width,
     height = height
@@ -1326,6 +1221,8 @@ plot_heatmap <- function(
 
   invisible(mat_use)
 }
+
+
 
 
 # ========================================================= #
@@ -1378,12 +1275,11 @@ plot_gene_heatmap <- function(
     main = "Selected gene expression heatmap",
     color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
     breaks = seq(-2, 2, length.out = 101),
-    border_color = "#9C9391",
     scale_rows = TRUE,
     cluster_rows = TRUE,
     cluster_cols = FALSE,
-    fontsize_row = 8,
-    fontsize_col = 7,
+    fontsize_row = 12,
+    fontsize_col = 10,
     width = 10,
     height = 7
 ) {
@@ -1460,23 +1356,33 @@ plot_gene_heatmap <- function(
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
+  hm_size <- .deggo_heatmap_size(
+    n_genes = nrow(mat_use),
+    n_samples = ncol(mat_use)
+  )
+
+  if (is.null(width)) width <- hm_size$width
+  if (is.null(height)) height <- hm_size$height
+
+  fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
+  fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+
   pheatmap::pheatmap(
     mat_use,
     annotation_col = annotation_col,
     annotation_colors = annotation_colors,
-    cluster_rows = cluster_rows,
-    cluster_cols = cluster_cols,
+    fontsize = 7,
+    fontsize_row = fontsize_row_use,
+    fontsize_col = fontsize_col_use,
+    border_color = NA,
     show_rownames = TRUE,
     show_colnames = TRUE,
-    fontsize_row = fontsize_row,
-    fontsize_col = fontsize_col,
     treeheight_row = 0,
     treeheight_col = 0,
     angle_col = 90,
     main = main,
     color = color,
     breaks = breaks,
-    border_color = border_color,
     filename = file.path(output_dir, paste0(filename, ".png")),
     width = width,
     height = height
@@ -1637,16 +1543,30 @@ explore_bulk_rnaseq <- function(
 
   cor_mat <- stats::cor(logmat, method = "spearman")
 
+
+  hm_size <- .deggo_heatmap_size(
+    n_genes = nrow(mat_use),
+    n_samples = ncol(mat_use)
+  )
+
+  if (is.null(width)) width <- hm_size$width
+  if (is.null(height)) height <- hm_size$height
+
+  fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
+  fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+
   pheatmap::pheatmap(
     cor_mat,
     annotation_col = annotation_col,
     annotation_colors = ann_colors,
+    fontsize_row = fontsize_row_use,
+    fontsize_col = fontsize_col_use,
     filename = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
     main = "Sample Correlation",
     color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
-    fontsize = 8,
-    width = 12,
-    height = 10
+    fontsize = 7,
+    width = width,
+    height = height
   )
 
   grDevices::png(file.path(output_dir, "Hierarchical_Clustering.png"), width = 12, height = 6, units = "in", res = dpi)
@@ -1749,11 +1669,24 @@ explore_bulk_rnaseq <- function(
     top_mat <- t(scale(t(top_mat)))
     top_mat <- top_mat[stats::complete.cases(top_mat), , drop = FALSE]
 
+    hm_size <- .deggo_heatmap_size(
+      n_genes = nrow(mat_use),
+      n_samples = ncol(mat_use)
+    )
+
+    if (is.null(width)) width <- hm_size$width
+    if (is.null(height)) height <- hm_size$height
+
+    fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
+    fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+
     if (nrow(top_mat) >= 2) {
       pheatmap::pheatmap(
         top_mat,
         annotation_col = annotation_col,
         annotation_colors = ann_colors,
+        fontsize_row = fontsize_row_use,
+        fontsize_col = fontsize_col_use,
         show_rownames = FALSE,
         show_colnames = FALSE,
         cluster_rows = TRUE,
@@ -1764,8 +1697,8 @@ explore_bulk_rnaseq <- function(
         )(100),
         breaks = seq(-2, 2, length.out = 101),
         filename = file.path(output_dir, "TopVariableGenes_Heatmap.png"),
-        width = 9,
-        height = 10
+        width = width,
+        height = height
       )
     }
   }
@@ -1937,7 +1870,7 @@ marker_score_check <- function(
     feature_col = "gene_name",
     log_transform = TRUE,
     plot = TRUE,
-    style = "'classic",
+    style = "classic",
     txtsize = 12
 ) {
 
@@ -2258,10 +2191,12 @@ plot_go_terms <- function(
 #' }
 #'
 #' @export
+#'
 plot_all_go_terms <- function(
     results,
     top_n = 10,
-    font_size = 8,
+    txtsize = 8,
+    style = "bw",
     output_dir = NULL,
     width = 8,
     height = 6,
@@ -2285,32 +2220,23 @@ plot_all_go_terms <- function(
     )
 
     if (!is.null(output_dir)) {
-
-      dir.create(
-        output_dir,
-        recursive = TRUE,
-        showWarnings = FALSE
-      )
+      dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
       ggplot2::ggsave(
-        filename = file.path(
-          output_dir,
-          paste0(comp, "_GO_terms.png")
-        ),
+        filename = file.path(output_dir, paste0(comp, "_GO_terms.png")),
         plot = p,
         width = width,
         height = height,
-        dpi = dpi
+        dpi = dpi,
+        bg = "white"
       )
 
       ggplot2::ggsave(
-        filename = file.path(
-          output_dir,
-          paste0(comp, "_GO_terms.pdf")
-        ),
+        filename = file.path(output_dir, paste0(comp, "_GO_terms.pdf")),
         plot = p,
         width = width,
-        height = height
+        height = height,
+        bg = "white"
       )
     }
 

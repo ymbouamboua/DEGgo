@@ -803,7 +803,9 @@ run_sample_qc <- function(
     metadata,
     output_dir,
     annotation_cols = c("condition", "treatment", "sex", "tissue"),
-    dpi = 300
+    dpi = 300,
+    style = "bw",
+    txtsize = 12
 ) {
   `%||%` <- function(x, y) if (is.null(x) || length(x) == 0 || is.na(x)) y else x
 
@@ -906,7 +908,7 @@ run_sample_qc <- function(
       y = "Detected genes",
       color = color_col
     ) +
-    .deggo_theme(style = "bw", txtsize = 10)
+    .deggo_theme(style = style, txtsize = txtsize)
 
   ggplot2::ggsave(
     filename = file.path(output_dir, "Detected_Genes_vs_Library_Size.png"),

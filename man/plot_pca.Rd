@@ -16,7 +16,8 @@ plot_pca(
   width = 8,
   height = 6,
   dpi = 300,
-  style = "classic"
+  style = "classic",
+  txtsize = 12
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ plot_pca(
 \item{dpi}{Plot resolution.}
 
 \item{style}{Plot style passed to \code{.deggo_theme()}.}
+
+\item{txtsize}{Base text size.}
 }
 \value{
 A list containing the VST object, PCA data, and plot.

@@ -39,6 +39,7 @@ run_deggo(
   pptx_file = NULL,
   save_reproducibility = TRUE,
   save_clean_inputs = TRUE,
+  txtsize = 12,
   seed = 123
 )
 }
@@ -110,6 +111,8 @@ run_deggo(
 \item{save_reproducibility}{Logical. Save run parameters and reproducibility files.}
 
 \item{save_clean_inputs}{Logical. Save cleaned counts and matched metadata.}
+
+\item{txtsize}{Base text size.}
 
 \item{seed}{Random seed.}
 }
