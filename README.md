@@ -50,7 +50,7 @@ bioinformaticians and experimental biologists.
 
 <p align="center">
 
-<img src="man/figures/DEGgo_workflow.png" width="500">
+<img src="man/figures/DEGgo_workflow.png" width="300">
 </p>
 
 ## Installation

@@ -50,7 +50,7 @@ DEGgo supports DESeq2, edgeR, and limma and is designed for both bioinformaticia
 ## Workflow
 
 <p align="center">
-  <img src="man/figures/DEGgo_workflow.png" width="500">
+  <img src="man/figures/DEGgo_workflow.png" width="300">
 </p>
 
 
