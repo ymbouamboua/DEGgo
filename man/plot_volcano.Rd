@@ -26,8 +26,16 @@ plot_volcano(
   width = 10,
   height = 8,
   dpi = 300,
-  style = "classic",
-  txtsize = 12
+  style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
+  txtsize = 12,
+  label_size = 3,
+  highlight_label_size = 3.5,
+  label_bg = "grey95",
+  label_bg_r = 0.12,
+  label_force = 1.2,
+  label_force_pull = 0.4,
+  label_max_overlaps = Inf,
+  seed = 42
 )
 }
 \arguments{

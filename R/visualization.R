@@ -33,102 +33,328 @@
 #' @keywords internal
 #' @noRd
 .deggo_theme <- function(
-    style = c("classic", "minimal", "bw", "void"),
+    style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
     txtsize = 12,
-    font_family = "Helvetica",
+    xy.val = TRUE,
     x.ang = 0,
     hjust = NULL,
     vjust = NULL,
+    xlab = TRUE,
+    ylab = TRUE,
+    xy.lab = TRUE,
+    facet.face = "bold",
+    ttl.face = "bold",
+    txt.face = c("plain", "italic", "bold"),
     ttl.pos = c("center", "left", "right"),
+    x.ttl = TRUE,
+    y.ttl = TRUE,
+    ticks = NULL,
+    line = NULL,
+    border = NULL,
+    grid.major = NULL,
+    grid.minor = NULL,
+    panel.fill = "white",
+    facet.bg = TRUE,
     mode = c("light", "dark"),
     leg.pos = "right",
-    grid.major = FALSE,
-    grid.minor = FALSE,
-    border = FALSE,
-    ticks = TRUE,
+    leg.dir = "vertical",
+    leg.size = 10,
+    leg.ttl = 10,
+    leg.ttl.size = 10,
+    leg.just = "center",
+    leg.ttl.text = NULL,
     ...
 ) {
+
   style <- match.arg(style)
   ttl.pos <- match.arg(ttl.pos)
+  txt.face <- match.arg(txt.face)
   mode <- match.arg(mode)
 
   lw <- 0.3
 
-  col_txt <- if (mode == "light") "#111111" else "#EAEAEA"
-  col_bg <- if (mode == "light") "white" else "#1E1E1E"
-  col_grid <- if (mode == "light") "#D9D9D9" else "#444444"
+  if (is.null(line)) {
+    line <- style == "classic"
+  }
+
+  if (mode == "light") {
+    col.txt <- "#1A1A1A"
+    col.grid <- "#D9D9D9"
+    col.panel <- panel.fill
+    col.strip <- "#EFEFEF"
+  } else {
+    col.txt <- "#DDDDDD"
+    col.grid <- "#444444"
+    col.panel <- "#1E1E1E"
+    col.strip <- "#383838"
+  }
 
   if (is.null(hjust) || is.null(vjust)) {
     if (x.ang == 0) {
-      hjust <- 0.5; vjust <- 0.5
+      hjust <- 0.5
+      vjust <- 0.5
     } else if (x.ang == 45) {
-      hjust <- 1; vjust <- 1
+      hjust <- 1
+      vjust <- 1
     } else if (x.ang == 90) {
-      hjust <- 1; vjust <- 0.5
+      hjust <- 1
+      vjust <- 0.5
+    } else if (x.ang == 270) {
+      hjust <- 0
+      vjust <- 0.5
     } else {
-      hjust <- 1; vjust <- 1
+      hjust <- 1
+      vjust <- 1
     }
   }
 
-  ttl_hjust <- switch(ttl.pos, left = 0, center = 0.5, right = 1)
-
-  base <- switch(
-    style,
-    classic = ggplot2::theme_classic(base_size = txtsize, base_family = font_family),
-    minimal = ggplot2::theme_minimal(base_size = txtsize, base_family = font_family),
-    bw = ggplot2::theme_bw(base_size = txtsize, base_family = font_family),
-    void = ggplot2::theme_void(base_size = txtsize, base_family = font_family)
+  ttl.pos <- switch(
+    ttl.pos,
+    left = 0,
+    center = 0.5,
+    right = 1
   )
 
-  base +
-    ggplot2::theme(
-      text = ggplot2::element_text(color = col_txt, family = font_family),
-      plot.title = ggplot2::element_text(
-        size = txtsize + 1,
-        face = "bold",
-        hjust = ttl_hjust,
-        color = col_txt
+  base <- ggplot2::theme(
+    text = ggplot2::element_text(
+      color = col.txt,
+      size = txtsize,
+      family = "Helvetica"
+    ),
+    axis.text.x = ggplot2::element_text(
+      color = col.txt,
+      size = txtsize
+    ),
+    axis.text.y = ggplot2::element_text(
+      color = col.txt,
+      size = txtsize
+    ),
+    axis.title = ggplot2::element_text(
+      size = txtsize
+    ),
+    plot.title = ggplot2::element_text(
+      hjust = ttl.pos,
+      face = ttl.face,
+      size = txtsize + 2,
+      color = col.txt
+    ),
+    strip.text = ggplot2::element_text(
+      face = facet.face,
+      color = col.txt
+    ),
+    legend.title = ggplot2::element_text(
+      size = leg.ttl.size + 2,
+      face = "bold"
+    ),
+    legend.text = ggplot2::element_text(
+      size = leg.size
+    ),
+    legend.position = leg.pos,
+    legend.direction = leg.dir,
+    legend.justification = leg.just,
+    legend.key.height = grid::unit(0.4, "cm"),
+    legend.key.width = grid::unit(0.4, "cm"),
+    legend.background = ggplot2::element_blank(),
+    legend.box.background = ggplot2::element_blank(),
+    legend.key = ggplot2::element_blank(),
+    legend.box = "vertical",
+    legend.spacing.y = grid::unit(0.05, "cm"),
+    legend.margin = ggplot2::margin(1, 1, 1, 1),
+    ...
+  )
+
+  preset <- switch(
+    style,
+    minimal = ggplot2::theme_minimal(base_size = txtsize),
+    classic = ggplot2::theme_classic(base_size = txtsize),
+    bw = ggplot2::theme_bw(base_size = txtsize),
+    test = ggplot2::theme_test(base_size = txtsize),
+    void = ggplot2::theme_void(base_size = txtsize),
+    dirty = ggplot2::theme_minimal(base_size = txtsize) +
+      ggplot2::theme(
+        panel.grid = ggplot2::element_blank(),
+        panel.border = ggplot2::element_blank(),
+        axis.ticks = ggplot2::element_blank()
       ),
-      axis.title = ggplot2::element_text(size = txtsize, face = "bold"),
-      axis.text = ggplot2::element_text(size = txtsize - 1, color = col_txt),
+    gray = ggplot2::theme_gray(base_size = txtsize) +
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(
+          fill = "#EDEDED",
+          color = NA
+        ),
+        panel.grid.major = ggplot2::element_line(
+          color = "#CCCCCC",
+          linewidth = lw
+        ),
+        panel.grid.minor = ggplot2::element_line(
+          color = "#DDDDDD",
+          linewidth = lw / 2
+        )
+      )
+  )
+
+  th <- preset + base
+
+  if (style %in% c("bw", "test", "gray")) {
+    th <- th + ggplot2::theme(
+      panel.border = ggplot2::element_rect(
+        linewidth = lw,
+        color = col.txt,
+        fill = NA
+      ),
+      axis.line = ggplot2::element_blank()
+    )
+  }
+
+  if (line && style == "classic") {
+    th <- th + ggplot2::theme(
+      axis.line.x = ggplot2::element_line(
+        color = col.txt,
+        linewidth = lw
+      ),
+      axis.line.y = ggplot2::element_line(
+        color = col.txt,
+        linewidth = lw
+      )
+    )
+  } else {
+    th <- th + ggplot2::theme(
+      axis.line = ggplot2::element_blank()
+    )
+  }
+
+  if (xy.val && xlab) {
+    th <- th + ggplot2::theme(
       axis.text.x = ggplot2::element_text(
         angle = x.ang,
         hjust = hjust,
         vjust = vjust
-      ),
-      axis.line = ggplot2::element_line(color = col_txt, linewidth = lw),
-      axis.ticks = if (ticks) {
-        ggplot2::element_line(color = col_txt, linewidth = lw)
-      } else {
-        ggplot2::element_blank()
-      },
-      panel.background = ggplot2::element_rect(fill = col_bg, color = NA),
-      plot.background = ggplot2::element_rect(fill = col_bg, color = NA),
-      panel.grid.major = if (grid.major) {
-        ggplot2::element_line(color = col_grid, linewidth = lw)
-      } else {
-        ggplot2::element_blank()
-      },
-      panel.grid.minor = if (grid.minor) {
-        ggplot2::element_line(color = col_grid, linewidth = lw / 2)
-      } else {
-        ggplot2::element_blank()
-      },
-      panel.border = if (border) {
-        ggplot2::element_rect(color = col_txt, fill = NA, linewidth = lw)
-      } else {
-        ggplot2::element_blank()
-      },
-      strip.text = ggplot2::element_text(size = txtsize, face = "bold"),
-      strip.background = ggplot2::element_rect(fill = "#F2F2F2", color = NA),
-      legend.position = leg.pos,
-      legend.title = ggplot2::element_text(size = txtsize, face = "bold"),
-      legend.text = ggplot2::element_text(size = txtsize - 1),
-      legend.key = ggplot2::element_blank(),
-      legend.background = ggplot2::element_blank(),
-      plot.margin = ggplot2::margin(5, 5, 5, 5),
-      ...
+      )
     )
+  }
+
+  if (!xy.lab) {
+    th <- th + ggplot2::theme(
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank()
+    )
+  }
+
+  if (!xlab) {
+    th <- th + ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      axis.ticks.x = ggplot2::element_blank()
+    )
+  }
+
+  if (!ylab) {
+    th <- th + ggplot2::theme(
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank()
+    )
+  }
+
+  if (!x.ttl) {
+    th <- th + ggplot2::theme(
+      axis.title.x = ggplot2::element_blank()
+    )
+  }
+
+  if (!y.ttl) {
+    th <- th + ggplot2::theme(
+      axis.title.y = ggplot2::element_blank()
+    )
+  }
+
+  if (!is.null(ticks)) {
+    th <- th + if (isTRUE(ticks)) {
+      ggplot2::theme(
+        axis.ticks = ggplot2::element_line(
+          color = col.txt,
+          linewidth = lw
+        )
+      )
+    } else {
+      ggplot2::theme(axis.ticks = ggplot2::element_blank())
+    }
+  }
+
+  if (!is.null(border)) {
+    th <- th + if (isTRUE(border)) {
+      ggplot2::theme(
+        panel.border = ggplot2::element_rect(
+          color = col.grid,
+          fill = NA,
+          linewidth = lw
+        )
+      )
+    } else {
+      ggplot2::theme(panel.border = ggplot2::element_blank())
+    }
+  }
+
+  if (!is.null(grid.major)) {
+    th <- th + if (isTRUE(grid.major)) {
+      ggplot2::theme(
+        panel.grid.major = ggplot2::element_line(
+          color = col.grid,
+          linewidth = lw
+        )
+      )
+    } else {
+      ggplot2::theme(panel.grid.major = ggplot2::element_blank())
+    }
+  }
+
+  if (!is.null(grid.minor)) {
+    th <- th + if (isTRUE(grid.minor)) {
+      ggplot2::theme(
+        panel.grid.minor = ggplot2::element_line(
+          color = col.grid,
+          linewidth = lw / 2
+        )
+      )
+    } else {
+      ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+    }
+  }
+
+  if (!facet.bg) {
+    th <- th + ggplot2::theme(
+      strip.background = ggplot2::element_blank()
+    )
+  }
+
+  if (!is.null(leg.ttl.text)) {
+    th <- th + ggplot2::labs(color = leg.ttl.text)
+  }
+
+  if (style == "void") {
+    th <- th + ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      axis.title.x = ggplot2::element_blank(),
+      axis.title.y = ggplot2::element_blank(),
+      axis.line = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      panel.border = ggplot2::element_blank(),
+      strip.text = ggplot2::element_blank(),
+      strip.background = ggplot2::element_blank()
+    )
+  }
+
+  if (style == "dirty") {
+    th <- th + ggplot2::theme(
+      axis.ticks = ggplot2::element_blank(),
+      panel.border = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      strip.background = ggplot2::element_blank()
+    )
+  }
+
+  th
 }
 
 
@@ -510,14 +736,22 @@ plot_volcano <- function(
     width = 10,
     height = 8,
     dpi = 300,
-    style = "classic",
-    txtsize = 12
+    style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
+    txtsize = 12,
+    label_size = 3,
+    highlight_label_size = 3.5,
+    label_bg = "grey95",
+    label_bg_r = 0.12,
+    label_force = 1.2,
+    label_force_pull = 0.4,
+    label_max_overlaps = Inf,
+    seed = 42
 ) {
+
+  style <- match.arg(style)
 
   log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   log("Generating volcano plot...", type = "info")
-
-  res_df <- as.data.frame(res_df, stringsAsFactors = FALSE)
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required.", call. = FALSE)
@@ -537,10 +771,7 @@ plot_volcano <- function(
     } else if ("ENSEMBL" %in% colnames(res_df)) {
       "ENSEMBL"
     } else {
-      stop(
-        "No gene label column found. Provide 'gene_col'.",
-        call. = FALSE
-      )
+      stop("No gene label column found. Provide 'gene_col'.", call. = FALSE)
     }
   }
 
@@ -557,13 +788,8 @@ plot_volcano <- function(
     )
   }
 
-  res_df[[lfc_col]] <- suppressWarnings(
-    as.numeric(res_df[[lfc_col]])
-  )
-
-  res_df[[p_col]] <- suppressWarnings(
-    as.numeric(res_df[[p_col]])
-  )
+  res_df[[lfc_col]] <- suppressWarnings(as.numeric(res_df[[lfc_col]]))
+  res_df[[p_col]] <- suppressWarnings(as.numeric(res_df[[p_col]]))
 
   res_df <- res_df[
     !is.na(res_df[[lfc_col]]) &
@@ -591,11 +817,7 @@ plot_volcano <- function(
 
   res_df$volcano_status <- factor(
     res_df$volcano_status,
-    levels = c(
-      "Up",
-      "Down",
-      "Ns"
-    )
+    levels = c("Up", "Down", "Ns")
   )
 
   res_df$neg_log10_p <- -log10(res_df[[p_col]])
@@ -603,21 +825,9 @@ plot_volcano <- function(
   counts <- table(res_df$volcano_status)
 
   legend_labels <- c(
-    "Up" = paste0(
-      "Up (",
-      counts[["Up"]],
-      ")"
-    ),
-    "Down" = paste0(
-      "Down (",
-      counts[["Down"]],
-      ")"
-    ),
-    "Ns" = paste0(
-      "Ns (",
-      counts[["Ns"]],
-      ")"
-    )
+    "Up" = paste0("Up (", counts[["Up"]], ")"),
+    "Down" = paste0("Down (", counts[["Down"]], ")"),
+    "Ns" = paste0("Ns (", counts[["Ns"]], ")")
   )
 
   max_abs <- max(
@@ -635,18 +845,27 @@ plot_volcano <- function(
   ]
 
   if (nrow(top_genes) > 0 && top_n_labels > 0) {
+    top_genes$label_score <-
+      abs(top_genes[[lfc_col]]) *
+      top_genes$neg_log10_p
+
     top_genes <- top_genes[
-      order(top_genes[[p_col]]),
+      order(top_genes$label_score, decreasing = TRUE),
       ,
       drop = FALSE
     ]
 
-    top_genes <- utils::head(
-      top_genes,
-      top_n_labels
-    )
+    top_genes <- utils::head(top_genes, top_n_labels)
   } else {
     top_genes <- top_genes[0, , drop = FALSE]
+  }
+
+  if (!is.null(genes_highlight) && nrow(top_genes) > 0) {
+    top_genes <- top_genes[
+      !(top_genes[[gene_col]] %in% genes_highlight),
+      ,
+      drop = FALSE
+    ]
   }
 
   p <- ggplot2::ggplot(
@@ -657,9 +876,7 @@ plot_volcano <- function(
     )
   ) +
     ggplot2::geom_point(
-      ggplot2::aes(
-        color = .data[["volcano_status"]]
-      ),
+      ggplot2::aes(color = .data[["volcano_status"]]),
       size = point_size,
       alpha = alpha
     ) +
@@ -676,16 +893,14 @@ plot_volcano <- function(
       linewidth = 0.4
     ) +
     ggplot2::geom_vline(
-      xintercept = c(
-        -logfc_cutoff,
-        logfc_cutoff
-      ),
+      xintercept = c(-logfc_cutoff, logfc_cutoff),
       linetype = "dashed",
       color = "gray40",
       linewidth = 0.4
     ) +
     ggplot2::coord_cartesian(
-      xlim = c(-max_abs, max_abs)
+      xlim = c(-max_abs, max_abs),
+      clip = "off"
     ) +
     ggplot2::labs(
       title = title,
@@ -695,29 +910,31 @@ plot_volcano <- function(
       } else {
         expression(-log[10]~italic(P))
       }
-    ) + .deggo_theme(style = style,txtsize = txtsize)
-
-
-  if (!is.null(genes_highlight) && nrow(top_genes) > 0) {
-    top_genes <- top_genes[
-      !(top_genes[[gene_col]] %in% genes_highlight),
-      ,
-      drop = FALSE
-    ]
-  }
+    ) +
+    .deggo_theme(
+      style = style,
+      txtsize = txtsize
+    )
 
   if (nrow(top_genes) > 0) {
     p <- p +
       ggrepel::geom_text_repel(
         data = top_genes,
-        ggplot2::aes(
-          label = .data[[gene_col]]
-        ),
-        size = 3,
-        box.padding = 0.4,
-        point.padding = 0.3,
-        max.overlaps = 30,
-        segment.color = "gray50"
+        ggplot2::aes(label = .data[[gene_col]]),
+        color = "black",
+        size = label_size,
+        fontface = "plain",
+        bg.color = label_bg,
+        bg.r = label_bg_r,
+        box.padding = 0.45,
+        point.padding = 0.25,
+        min.segment.length = 0,
+        segment.color = "grey55",
+        segment.linewidth = 0.15,
+        max.overlaps = label_max_overlaps,
+        force = label_force,
+        force_pull = label_force_pull,
+        seed = seed
       )
   }
 
@@ -732,44 +949,51 @@ plot_volcano <- function(
       p <- p +
         ggplot2::geom_point(
           data = highlight_df,
+          ggplot2::aes(
+            fill = .data[["volcano_status"]]
+          ),
           shape = 21,
-          size = point_size + 1.2,
+          size = point_size + 0.5,
           color = "black",
-          stroke = 0.8
+          stroke = 0.2
+        ) +
+        ggplot2::scale_fill_manual(
+          values = colors,
+          guide = "none",
+          drop = FALSE
         ) +
         ggrepel::geom_text_repel(
           data = highlight_df,
-          ggplot2::aes(
-            label = .data[[gene_col]]
-          ),
+          ggplot2::aes(label = .data[[gene_col]]),
+          color = "black",
+          size = highlight_label_size,
           fontface = "bold",
-          size = 3.5,
-          box.padding = 0.5,
-          max.overlaps = Inf
+          bg.color = label_bg,
+          bg.r = label_bg_r,
+          box.padding = 0.65,
+          point.padding = 0.35,
+          min.segment.length = 0,
+          segment.color = "grey35",
+          segment.linewidth = 0.15,
+          max.overlaps = Inf,
+          force = label_force + 0.8,
+          force_pull = label_force_pull,
+          seed = seed
         )
     }
   }
 
   if (!isTRUE(legend)) {
-    p <- p + ggplot2::theme(
-      legend.position = "none"
-    )
+    p <- p + ggplot2::theme(legend.position = "none")
   }
 
   if (!is.null(output_dir)) {
     if (!dir.exists(output_dir)) {
-      dir.create(
-        output_dir,
-        recursive = TRUE,
-        showWarnings = FALSE
-      )
+      dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     }
 
     ggplot2::ggsave(
-      filename = file.path(
-        output_dir,
-        paste0(filename, ".png")
-      ),
+      filename = file.path(output_dir, paste0(filename, ".png")),
       plot = p,
       width = width,
       height = height,
@@ -779,10 +1003,7 @@ plot_volcano <- function(
 
     if (isTRUE(save_pdf)) {
       ggplot2::ggsave(
-        filename = file.path(
-          output_dir,
-          paste0(filename, ".pdf")
-        ),
+        filename = file.path(output_dir, paste0(filename, ".pdf")),
         plot = p,
         width = width,
         height = height,
@@ -793,6 +1014,7 @@ plot_volcano <- function(
 
   p
 }
+
 
 
 # ========================================================= #
