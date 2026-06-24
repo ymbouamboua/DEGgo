@@ -713,6 +713,11 @@ run_deggo <- function(
 
   de_results$dds <- dds
   de_results$res_df <- res_df
+
+  de_results$results <- list(
+    single_comparison = res_df
+  )
+
   de_results$sig_deg <- sig_deg
   de_results$volcano_plot <- volcano_plot
   de_results$pca_plot <- pca_plot
