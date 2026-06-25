@@ -77,7 +77,7 @@ DEGgo provides a small DEGgo-ready example dataset derived from the Bioconductor
 `airway` package. This dataset contains human RNA-seq count data from airway
 smooth muscle cells treated with dexamethasone.
 
-```{r eval=FALSE}
+```{r airway-data}
 
 counts <- read.delim(
   system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
@@ -89,22 +89,23 @@ metadata <- read.delim(
   check.names = FALSE
 )
 
-metadata$condition <- metadata$dex
+```
+
+
+## Single differential expression analysis
+
+```{r de-single-mode}
 
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  gene_col = "gene_id",
-  organism = "human",
-  sample_col = "Run",
+  organism = "mouse",
   method = "DESeq2",
   analysis_mode = "single",
-  design_formula = ~ cell + dex,
-  contrast = c("dex", "trt", "untrt"),
-  output_dir = "DEGgo_airway",
-  generate_report = TRUE, 
-  generate_pptx = FALSE,
-  report_formats = "html"
+  sample_col = "sample",
+  design_formula = ~ treatment,
+  contrast = c("treatment", "PAMH", "PBS"),
+  output_dir = "DEGgo_results"
 )
 
 results$summary
@@ -112,35 +113,73 @@ results$summary
 ```
 
 
+## Pairwise differential expression analysis
+
+```{r de-pairwise-mode}
+
+pairwise_contrasts <- list(
+  TreatmentA_vs_Control_Male = c(
+    "comparison_group",
+    "TreatmentA_Male",
+    "Control_Male"
+  ),
+  TreatmentA_vs_Control_Female = c(
+    "comparison_group",
+    "TreatmentA_Female",
+    "Control_Female"
+  ),
+  Male_vs_Female_Control = c(
+    "comparison_group",
+    "Control_Male",
+    "Control_Female"
+  )
+)
+
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "mouse",
+  analysis_mode = "pairwise",
+  sample_col = "sample",
+  pairwise_group_cols = c("condition", "sex"),
+  pairwise_contrasts = pairwise_contrasts,
+  output_dir = "DEGgo_results"
+)
+
+```
+
+
 The analysis generates differential expression results, significant DEG tables,
 volcano plots, PCA plots, heatmaps, Gene Ontology enrichment results, and an
-HTML report in the DEGgo_airway directory.
+HTML/PDF/PPTX report in the DEGgo_results directory.
 
 ## Main functions
 
+## Available Functions
+
 | Function | Description |
-|:----------|:------------|
+|:---------|:------------|
 | `check_raw_counts()` | Validate raw count matrices and sample identifiers before analysis |
-| `explore_bulk_rnaseq()` | Raw and cleaned RNA-seq quality control |
-| `remove_flagged_samples()` | Remove failed or low-quality samples |
-| `marker_score_check()` | Tissue marker scoring and sample swap detection |
-| `plot_gene_heatmap()` | Marker or selected-gene heatmap |
-| `run_deggo()` | Main DEGgo differential expression workflow |
-| `run_go_enrichment()` | Gene Ontology enrichment for DEG results |
-| `plot_go_terms()` | Publication-ready GO enrichment plots |
-| `plot_all_go_terms()` | Plot GO terms across multiple comparisons |
-| `extract_expression()` | Extract raw, normalized, log2-normalized or VST expression values |
-| `plot_gene_expression()` | Plot gene expression for selected genes |
-| `plot_heatmap()` | Generate DEG heatmaps from differential expression results |
-| `plot_pca()` | Principal component analysis of RNA-seq samples |
-| `plot_volcano()` | Volcano plot visualization of differential expression results |
-| `generate_deggo_report()` | Generate HTML/PDF DEGgo reports |
-| `generate_deggo_pptx()` | Generate PPTX DEGgo reports |
-| `deggo_extract_deg_genes()` | Extract genes of interest from DEG results |
-| `deggo_extract_go_genes()` | Extract genes associated with enriched GO terms |
+| `explore_bulk_rnaseq()` | Perform exploratory quality control on raw RNA-seq data |
+| `remove_flagged_samples()` | Remove low-quality samples identified during quality control |
+| `marker_score_check()` | Assess marker gene expression for biological sample validation |
+| `plot_gene_heatmap()` | Visualize marker or selected genes as a heatmap |
+| `run_deggo()` | Run the complete bulk RNA-seq differential expression workflow |
+| `run_sample_qc()` | Perform post-filtering sample quality control and diagnostics |
+| `run_go_enrichment()` | Perform Gene Ontology enrichment analysis |
+| `plot_go_terms()` | Generate publication-ready Gene Ontology enrichment plots |
+| `plot_all_go_terms()` | Compare Gene Ontology enrichment across multiple analyses |
+| `extract_expression()` | Extract raw, normalized, log2-normalized, or VST expression values |
+| `plot_gene_expression()` | Visualize expression of selected genes across samples |
+| `plot_heatmap()` | Generate heatmaps of differentially expressed genes |
+| `plot_pca()` | Perform principal component analysis (PCA) |
+| `plot_volcano()` | Generate publication-ready volcano plots |
+| `generate_deggo_report()` | Generate an automated HTML or PDF analysis report |
+| `generate_deggo_pptx()` | Generate a PowerPoint summary report |
+| `deggo_extract_deg_genes()` | Extract selected genes from differential expression results |
+| `deggo_extract_go_genes()` | Extract genes associated with enriched Gene Ontology terms |
 | `deggo_extract_go_genes_pairwise()` | Extract GO-associated genes across pairwise comparisons |
-| `deggo_extract_go_keywords()` | Extract GO terms matching biological keywords |
-| `run_sample_qc()` | Automated sample-level quality control metrics and diagnostics |
+| `deggo_extract_go_keywords()` | Search enriched Gene Ontology terms using biological keywords |
 
 ## Supported organisms
 

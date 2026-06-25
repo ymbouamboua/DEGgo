@@ -16,7 +16,7 @@ marker_score_check(
   feature_col = "gene_name",
   log_transform = TRUE,
   plot = TRUE,
-  style = "'classic",
+  style = "classic",
   txtsize = 12
 )
 ```

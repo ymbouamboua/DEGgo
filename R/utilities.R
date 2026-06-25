@@ -662,7 +662,7 @@ extract_expression <- function(
 #'
 #' @keywords internal
 #' @noRd
-.make_pca_list <- function(dds, md, pca_dir) {
+.make_pca_list <- function(dds, md, pca_dir, txtsize = 12) {
   pca_list <- list()
 
   pca_list$sample <- plot_pca(
@@ -702,5 +702,4 @@ extract_expression <- function(
 
   pca_list
 }
-
 

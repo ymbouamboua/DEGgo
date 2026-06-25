@@ -71,8 +71,16 @@ or Ns based on log2 fold-change and p-value thresholds.</p>
 <span>  width <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  height <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>  dpi <span class="op">=</span> <span class="fl">300</span>,</span>
-<span>  style <span class="op">=</span> <span class="st">"classic"</span>,</span>
-<span>  txtsize <span class="op">=</span> <span class="fl">12</span></span>
+<span>  style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"classic"</span>, <span class="st">"minimal"</span>, <span class="st">"bw"</span>, <span class="st">"test"</span>, <span class="st">"void"</span>, <span class="st">"dirty"</span>, <span class="st">"gray"</span><span class="op">)</span>,</span>
+<span>  txtsize <span class="op">=</span> <span class="fl">12</span>,</span>
+<span>  label_size <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  highlight_label_size <span class="op">=</span> <span class="fl">3.5</span>,</span>
+<span>  label_bg <span class="op">=</span> <span class="st">"grey95"</span>,</span>
+<span>  label_bg_r <span class="op">=</span> <span class="fl">0.12</span>,</span>
+<span>  label_force <span class="op">=</span> <span class="fl">1.2</span>,</span>
+<span>  label_force_pull <span class="op">=</span> <span class="fl">0.4</span>,</span>
+<span>  label_max_overlaps <span class="op">=</span> <span class="cn">Inf</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -173,6 +181,38 @@ automatically tries <code>"SYMBOL"</code>, <code>"gene"</code>, then <code>"ENSE
 
 <dt id="arg-txtsize">txtsize<a class="anchor" aria-label="anchor" href="#arg-txtsize"></a></dt>
 <dd><p>Base text size.</p></dd>
+
+
+<dt id="arg-label-size">label_size<a class="anchor" aria-label="anchor" href="#arg-label-size"></a></dt>
+<dd><p>Size of standard gene labels.</p></dd>
+
+
+<dt id="arg-highlight-label-size">highlight_label_size<a class="anchor" aria-label="anchor" href="#arg-highlight-label-size"></a></dt>
+<dd><p>Size of highlighted gene labels.</p></dd>
+
+
+<dt id="arg-label-bg">label_bg<a class="anchor" aria-label="anchor" href="#arg-label-bg"></a></dt>
+<dd><p>Fill color for label backgrounds.</p></dd>
+
+
+<dt id="arg-label-bg-r">label_bg_r<a class="anchor" aria-label="anchor" href="#arg-label-bg-r"></a></dt>
+<dd><p>Radius of label background boxes.</p></dd>
+
+
+<dt id="arg-label-force">label_force<a class="anchor" aria-label="anchor" href="#arg-label-force"></a></dt>
+<dd><p>Force parameter passed to ggrepel.</p></dd>
+
+
+<dt id="arg-label-force-pull">label_force_pull<a class="anchor" aria-label="anchor" href="#arg-label-force-pull"></a></dt>
+<dd><p>Pull force parameter passed to ggrepel.</p></dd>
+
+
+<dt id="arg-label-max-overlaps">label_max_overlaps<a class="anchor" aria-label="anchor" href="#arg-label-max-overlaps"></a></dt>
+<dd><p>Maximum number of overlapping labels.</p></dd>
+
+
+<dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
+<dd><p>Random seed for reproducible label placement.</p></dd>
 
 </dl></div>
     <div class="section level2">

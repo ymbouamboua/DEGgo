@@ -400,83 +400,113 @@ prepare_counts_metadata <- function(
 #' @return Invisibly returns TRUE.
 #' @keywords internal
 #' @noRd
-validate_inputs <- function(
-    counts,
-    metadata,
-    condition_col = "condition"
-) {
+# validate_inputs <- function(
+#     counts,
+#     metadata,
+#     condition_col = "condition"
+# ) {
+#
+#   if (!is.matrix(counts) && !is.data.frame(counts)) {
+#     stop("'counts' must be a matrix or data.frame.", call. = FALSE)
+#   }
+#
+#   counts <- as.matrix(counts)
+#
+#   if (!is.numeric(counts) && !is.integer(counts)) {
+#     stop("'counts' must contain numeric or integer values.", call. = FALSE)
+#   }
+#
+#   if (anyNA(counts)) {
+#     stop("'counts' contains missing values.", call. = FALSE)
+#   }
+#
+#   if (any(counts < 0)) {
+#     stop("'counts' contains negative values.", call. = FALSE)
+#   }
+#
+#   if (is.null(rownames(counts))) {
+#     stop("'counts' must have gene IDs as rownames.", call. = FALSE)
+#   }
+#
+#   if (is.null(colnames(counts))) {
+#     stop("'counts' must have sample names as colnames.", call. = FALSE)
+#   }
+#
+#   if (!is.data.frame(metadata)) {
+#     metadata <- as.data.frame(metadata)
+#   }
+#
+#   if (is.null(rownames(metadata))) {
+#     stop("'metadata' must have sample names as rownames.", call. = FALSE)
+#   }
+#
+#   if (!condition_col %in% colnames(metadata)) {
+#     stop(
+#       "Metadata must contain column: ",
+#       condition_col,
+#       call. = FALSE
+#     )
+#   }
+#
+#   if (!all(colnames(counts) %in% rownames(metadata))) {
+#     missing <- setdiff(colnames(counts), rownames(metadata))
+#     stop(
+#       "Samples missing in metadata: ",
+#       paste(missing, collapse = ", "),
+#       call. = FALSE
+#     )
+#   }
+#
+#   if (!all(colnames(counts) == rownames(metadata))) {
+#     stop(
+#       "Sample order mismatch between counts columns and metadata rownames. ",
+#       "Run prepare_counts_metadata() first.",
+#       call. = FALSE
+#     )
+#   }
+#
+#   if (length(unique(metadata[[condition_col]])) < 2) {
+#     stop(
+#       "Metadata column '",
+#       condition_col,
+#       "' must contain at least two groups.",
+#       call. = FALSE
+#     )
+#   }
+#
+#   invisible(TRUE)
+# }
 
-  if (!is.matrix(counts) && !is.data.frame(counts)) {
-    stop("'counts' must be a matrix or data.frame.", call. = FALSE)
-  }
-
-  counts <- as.matrix(counts)
-
-  if (!is.numeric(counts) && !is.integer(counts)) {
-    stop("'counts' must contain numeric or integer values.", call. = FALSE)
-  }
-
-  if (anyNA(counts)) {
-    stop("'counts' contains missing values.", call. = FALSE)
-  }
-
-  if (any(counts < 0)) {
-    stop("'counts' contains negative values.", call. = FALSE)
-  }
-
-  if (is.null(rownames(counts))) {
-    stop("'counts' must have gene IDs as rownames.", call. = FALSE)
-  }
-
-  if (is.null(colnames(counts))) {
-    stop("'counts' must have sample names as colnames.", call. = FALSE)
-  }
+validate_inputs <- function(counts, metadata, design_formula = NULL, contrast = NULL) {
 
   if (!is.data.frame(metadata)) {
-    metadata <- as.data.frame(metadata)
+    stop("metadata must be a data.frame.")
   }
 
-  if (is.null(rownames(metadata))) {
-    stop("'metadata' must have sample names as rownames.", call. = FALSE)
+  design_vars <- character(0)
+
+  if (!is.null(design_formula)) {
+    design_vars <- all.vars(design_formula)
   }
 
-  if (!condition_col %in% colnames(metadata)) {
+  contrast_var <- NULL
+  if (!is.null(contrast)) {
+    contrast_var <- contrast[1]
+  }
+
+  required_cols <- unique(c(design_vars, contrast_var))
+
+  missing_cols <- setdiff(required_cols, colnames(metadata))
+
+  if (length(missing_cols) > 0) {
     stop(
-      "Metadata must contain column: ",
-      condition_col,
-      call. = FALSE
+      "Metadata is missing required column(s): ",
+      paste(missing_cols, collapse = ", ")
     )
   }
 
-  if (!all(colnames(counts) %in% rownames(metadata))) {
-    missing <- setdiff(colnames(counts), rownames(metadata))
-    stop(
-      "Samples missing in metadata: ",
-      paste(missing, collapse = ", "),
-      call. = FALSE
-    )
-  }
-
-  if (!all(colnames(counts) == rownames(metadata))) {
-    stop(
-      "Sample order mismatch between counts columns and metadata rownames. ",
-      "Run prepare_counts_metadata() first.",
-      call. = FALSE
-    )
-  }
-
-  if (length(unique(metadata[[condition_col]])) < 2) {
-    stop(
-      "Metadata column '",
-      condition_col,
-      "' must contain at least two groups.",
-      call. = FALSE
-    )
-  }
-
-  invisible(TRUE)
+  TRUE
 }
-
 
 # ========================================================= #
 # CLEAN ENSEMBL IDS
@@ -779,6 +809,8 @@ remove_flagged_samples <- function(
 #' @param annotation_cols Character vector of metadata columns used as heatmap
 #'   annotations.
 #' @param dpi Resolution used for the hierarchical clustering PNG.
+#' @param style Plot theme style.
+#' @param txtsize Base text size.
 #'
 #' @return Invisibly returns a list containing the sample correlation matrix,
 #'   output directory, and paths to generated files.

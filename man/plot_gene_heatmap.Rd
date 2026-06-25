@@ -73,8 +73,6 @@ plot_gene_heatmap(
 \item{width}{Plot width.}
 
 \item{height}{Plot height.}
-
-\item{border_color}{Border color for heatmap cells.}
 }
 \value{
 Expression matrix used for plotting.

@@ -29,40 +29,28 @@ params:
   output_dir: NULL
 ---
 
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo = FALSE,
-  warning = FALSE,
-  message = FALSE
-)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 res <- params$results
-
+results <- res
 
 deggo_version <- tryCatch(
   as.character(utils::packageVersion("DEGgo")),
   error = function(e) res$version %||% "development"
 )
 
-deggo_github <- "https://github.com/ymbouamboua/DEGgo"
-deggo_doi <- "https://doi.org/10.5281/zenodo.20785178"
-deggo_doi_badge <- "https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg"
-
 deggo_citation <- paste0(
-  "Yvon Mbouamboua, Vincent Prevot and Paolo Giacobini. DEGgo: an automated R package for bulk RNA-seq ",
-  "differential expression, visualization and enrichment analysis. ",
-  "Zenodo. https://doi.org/10.5281/zenodo.20785178"
+  "Yvon Mbouamboua, Vincent Prevot and Paolo Giacobini. ",
+  "DEGgo: an automated R package for bulk RNA-seq differential expression, ",
+  "visualization and enrichment analysis. Zenodo. ",
+  "https://doi.org/10.5281/zenodo.20785178"
 )
 
-results <- res
-
 outdir <- params$output_dir %||% res$output_dir
-if (is.null(outdir) || is.na(outdir)) {
-  outdir <- getwd()
-}
+if (is.null(outdir) || is.na(outdir)) outdir <- getwd()
 outdir <- normalizePath(outdir, winslash = "/", mustWork = FALSE)
 
 md <- params$metadata %||% res$metadata
@@ -79,6 +67,41 @@ html_escape <- function(x) {
   x
 }
 
+html_box <- function(title, text = NULL, type = "info") {
+  if (is.null(text)) {
+    text <- title
+    title <- switch(
+      type,
+      section = "About this section",
+      expected = "Expected pattern",
+      success = "Interpretation",
+      warning = "Warning",
+      info = "Information",
+      "Information"
+    )
+  }
+
+  cat(
+    '<div class="', type, '-box">',
+    '<div class="', type, '-title">', html_escape(title), '</div>',
+    '<div class="', type, '-text">', text, '</div>',
+    '</div>'
+  )
+}
+
+section_note <- function(title, text = NULL) html_box(title, text, "section")
+info_box <- function(title, text) html_box(title, text, "info")
+success_box <- function(title, text) html_box(title, text, "success")
+warning_box <- function(title, text) html_box(title, text, "warning")
+
+expected_box <- function(items, title = "Expected pattern") {
+  html_box(
+    title,
+    paste0("<ul>", paste0("<li>", items, "</li>", collapse = ""), "</ul>"),
+    "expected"
+  )
+}
+
 html_card <- function(title, value, subtitle = NULL) {
   cat(
     '<div class="metric-card">',
@@ -93,18 +116,10 @@ html_card <- function(title, value, subtitle = NULL) {
   )
 }
 
-section_note <- function(title, text = NULL) {
-  if (is.null(text)) {
-    text <- title
-    title <- "About this section"
-  }
-
-  cat(
-    '<div class="section-note">',
-    '<div class="section-note-title">', html_escape(title), '</div>',
-    '<div class="section-note-text">', text, '</div>',
-    '</div>'
-  )
+metric_grid <- function(cards) {
+  cat('<div class="metric-grid">')
+  for (x in cards) html_card(x$title, x$value, x$subtitle %||% NULL)
+  cat('</div>')
 }
 
 show_table <- function(x, n = 20, caption = NULL) {
@@ -115,9 +130,7 @@ show_table <- function(x, n = 20, caption = NULL) {
     return(invisible(NULL))
   }
 
-  if (is.finite(n)) {
-    x <- utils::head(x, n)
-  }
+  if (is.finite(n)) x <- utils::head(x, n)
 
   print(
     knitr::kable(
@@ -126,7 +139,7 @@ show_table <- function(x, n = 20, caption = NULL) {
       row.names = FALSE,
       escape = FALSE,
       caption = caption,
-      table.attr = "class='table table-striped table-hover table-condensed'"
+      table.attr = "class='table table-striped table-hover table-condensed output-table'"
     )
   )
 
@@ -147,23 +160,13 @@ safe_list_png <- function(path, pattern = "\\.png$", full.names = TRUE, recursiv
 }
 
 find_png <- function(path) {
-  safe_list_png(
-    path = path,
-    pattern = "\\.png$",
-    full.names = TRUE,
-    recursive = TRUE
-  )
+  safe_list_png(path, pattern = "\\.png$", full.names = TRUE, recursive = TRUE)
 }
 
 find_first_dir <- function(paths) {
   paths <- paths[!is.na(paths)]
   paths <- paths[dir.exists(paths)]
-
-  if (!length(paths)) {
-    return(NA_character_)
-  }
-
-  paths[1]
+  if (!length(paths)) NA_character_ else paths[1]
 }
 
 get_output_dir <- function(key, candidates) {
@@ -196,12 +199,7 @@ figure_badge <- function(f) {
 html_img_src <- function(f) {
   f <- normalizePath(f, winslash = "/", mustWork = TRUE)
   out_abs <- normalizePath(outdir, winslash = "/", mustWork = TRUE)
-
-  sub(
-    paste0("^", out_abs, "/?"),
-    "",
-    f
-  )
+  sub(paste0("^", out_abs, "/?"), "", f)
 }
 
 plot_gallery <- function(files, badge = NULL, empty = "No figures found.") {
@@ -224,15 +222,12 @@ plot_gallery <- function(files, badge = NULL, empty = "No figures found.") {
     cat('<span class="figure-badge">', html_escape(badge_i), '</span>')
     cat('<h3>', html_escape(title), '</h3>')
     cat('</div>')
-
     cat('<a href="', img_src, '" target="_blank">')
     cat('<img class="figure-img" src="', img_src, '" alt="', html_escape(title), '" title="Click to open full-size figure">')
     cat('</a>')
-
     cat('<div class="figure-footer">')
     cat('<a href="', img_src, '" target="_blank">Open full figure</a>')
     cat('</div>')
-
     cat('</div>')
   }
 
@@ -257,253 +252,74 @@ describe_output <- function(x) {
 
   out
 }
+
+interpretation_block <- function(section) {
+  blocks <- list(
+    qc = list(
+      title = "QC interpretation",
+      text = paste(
+        "Samples should display comparable library sizes and numbers of detected genes.",
+        "No strong outlier should dominate sample correlations or clustering.",
+        "If obvious outliers are detected, they should be investigated before",
+        "interpreting differential expression results."
+      )
+    ),
+    pca = list(
+      title = "PCA interpretation",
+      text = paste(
+        "Principal components should ideally separate samples according to the",
+        "main biological variables of interest. Tight clustering of biological",
+        "replicates supports the consistency of the dataset."
+      )
+    ),
+    de = list(
+      title = "Differential expression interpretation",
+      text = paste(
+        "Significant genes represent transcripts whose expression differs",
+        "between the tested conditions according to the selected thresholds.",
+        "Genes with large absolute log2 fold changes and low adjusted p-values",
+        "are strong candidates for downstream validation."
+      )
+    ),
+    volcano = list(
+      title = "Volcano plot interpretation",
+      text = paste(
+        "Genes located in the upper-right region are significantly upregulated,",
+        "whereas genes located in the upper-left region are significantly downregulated.",
+        "Highlighted genes correspond to markers or genes of biological interest."
+      )
+    ),
+    heatmap = list(
+      title = "Heatmap interpretation",
+      text = paste(
+        "Samples sharing similar expression profiles should cluster together.",
+        "Distinct expression patterns between experimental groups support",
+        "the biological relevance of the detected differential expression."
+      )
+    ),
+    go = list(
+      title = "Gene Ontology interpretation",
+      text = paste(
+        "Enriched GO terms summarize biological processes overrepresented",
+        "among differentially expressed genes. Related GO terms should be",
+        "interpreted as broader biological themes rather than independent findings."
+      )
+    ),
+    reproducibility = list(
+      title = "Reproducibility",
+      text = paste(
+        "All analysis parameters, software versions and session information",
+        "have been recorded to facilitate reproducibility and future re-analysis."
+      )
+    )
+  )
+
+  x <- blocks[[section]]
+  if (!is.null(x)) success_box(x$title, x$text)
+}
+
 ```
 
-<!-- <style> -->
-<!-- :root { -->
-<!--   --deggo-green: #00876C; -->
-<!--   --deggo-green-dark: #005F4B; -->
-<!--   --deggo-bg: #F7FAF9; -->
-<!--   --deggo-card: #FFFFFF; -->
-<!--   --deggo-text: #1F2933; -->
-<!--   --deggo-muted: #6B7280; -->
-<!--   --deggo-border: #E5E7EB; -->
-<!--   --deggo-red: #740001; -->
-<!--   --deggo-blue: #6497B1; -->
-<!-- } -->
-
-<!-- :root { -->
-<!--   --deggo-navy: #002B5C; -->
-<!--   --deggo-navy-dark: #001A38; -->
-<!--   --deggo-blue: #0057B8; -->
-<!--   --deggo-red: #D90000; -->
-<!--   --deggo-red-dark: #740001; -->
-<!--   --deggo-light: #F8FAFC; -->
-<!--   --deggo-card: #FFFFFF; -->
-<!--   --deggo-text: #0B1F3A; -->
-<!--   --deggo-muted: #5B677A; -->
-<!--   --deggo-border: #DCE3EC; -->
-
-<!--   --deggo-bg: #F8FAFC; -->
-<!--   --deggo-green: #0057B8; -->
-<!--   --deggo-green-dark: #002B5C; -->
-<!-- } -->
-
-<!-- body { -->
-<!--   font-size: 14px; -->
-<!--   background: var(--deggo-bg); -->
-<!--   color: var(--deggo-text); -->
-<!--   line-height: 1.6; -->
-<!-- } -->
-
-<!-- h1, h2, h3 { -->
-<!--   font-weight: 750; -->
-<!--   color: #111827; -->
-<!-- } -->
-
-<!-- h1 { -->
-<!--   margin-top: 42px; -->
-<!--   border-bottom: 4px solid var(--deggo-green); -->
-<!--   padding-bottom: 10px; -->
-<!-- } -->
-
-<!-- h2 { -->
-<!--   margin-top: 34px; -->
-<!--   color: var(--deggo-green-dark); -->
-<!-- } -->
-
-<!-- h3 { -->
-<!--   margin-top: 22px; -->
-<!-- } -->
-
-<!-- a { -->
-<!--   color: var(--deggo-green); -->
-<!-- } -->
-
-<!-- .section-note { -->
-<!--   background: #EEF8F5; -->
-<!--   border-left: 5px solid var(--deggo-green); -->
-<!--   border-radius: 12px; -->
-<!--   padding: 14px 18px; -->
-<!--   margin: 14px 0 22px 0; -->
-<!--   box-shadow: 0 4px 14px rgba(0,0,0,0.04); -->
-<!-- } -->
-
-<!-- .section-note-title { -->
-<!--   font-weight: 800; -->
-<!--   color: var(--deggo-green-dark); -->
-<!--   text-transform: uppercase; -->
-<!--   font-size: 12px; -->
-<!--   letter-spacing: 0.04em; -->
-<!--   margin-bottom: 4px; -->
-<!-- } -->
-
-<!-- .section-note-text { -->
-<!--   color: #374151; -->
-<!--   font-size: 14px; -->
-<!-- } -->
-
-<!-- .metric-grid { -->
-<!--   display: grid; -->
-<!--   grid-template-columns: repeat(4, 1fr); -->
-<!--   gap: 14px; -->
-<!--   margin: 20px 0; -->
-<!-- } -->
-
-<!-- .metric-card { -->
-<!--   background: var(--deggo-card); -->
-<!--   padding: 18px; -->
-<!--   border-radius: 16px; -->
-<!--   border: 1px solid var(--deggo-border); -->
-<!--   box-shadow: 0 8px 26px rgba(0,0,0,0.055); -->
-<!-- } -->
-
-<!-- .metric-title { -->
-<!--   color: var(--deggo-muted); -->
-<!--   font-size: 12px; -->
-<!--   font-weight: 800; -->
-<!--   text-transform: uppercase; -->
-<!--   letter-spacing: 0.04em; -->
-<!-- } -->
-
-<!-- .metric-value { -->
-<!--   font-size: 26px; -->
-<!--   font-weight: 850; -->
-<!--   margin-top: 8px; -->
-<!--   color: #111827; -->
-<!-- } -->
-
-<!-- .metric-subtitle { -->
-<!--   color: var(--deggo-muted); -->
-<!--   margin-top: 6px; -->
-<!--   font-size: 12px; -->
-<!-- } -->
-
-<!-- .figure-grid { -->
-<!--   display: grid; -->
-<!--   grid-template-columns: repeat(2, minmax(360px, 1fr)); -->
-<!--   gap: 24px; -->
-<!--   margin-top: 20px; -->
-<!-- } -->
-
-<!-- .figure-card { -->
-<!--   background: var(--deggo-card); -->
-<!--   border: 1px solid var(--deggo-border); -->
-<!--   border-radius: 18px; -->
-<!--   padding: 16px; -->
-<!--   box-shadow: 0 8px 28px rgba(0,0,0,0.065); -->
-<!-- } -->
-
-<!-- .figure-card:hover { -->
-<!--   transform: translateY(-2px); -->
-<!--   transition: 0.2s ease; -->
-<!--   box-shadow: 0 12px 34px rgba(0,0,0,0.10); -->
-<!-- } -->
-
-<!-- .figure-header h3 { -->
-<!--   font-size: 16px; -->
-<!--   margin: 8px 0 0 0; -->
-<!--   line-height: 1.25; -->
-<!-- } -->
-
-<!-- .figure-badge { -->
-<!--   display: inline-block; -->
-<!--   padding: 4px 11px; -->
-<!--   border-radius: 999px; -->
-<!--   background: var(--deggo-green); -->
-<!--   color: white; -->
-<!--   font-size: 12px; -->
-<!--   font-weight: 800; -->
-<!-- } -->
-
-<!-- .figure-img { -->
-<!--   width: 100%; -->
-<!--   max-height: 650px; -->
-<!--   object-fit: contain; -->
-<!--   border-radius: 12px; -->
-<!--   border: 1px solid #EEF0F2; -->
-<!--   background: white; -->
-<!--   cursor: zoom-in; -->
-<!-- } -->
-
-<!-- .figure-footer { -->
-<!--   margin-top: 10px; -->
-<!--   font-size: 13px; -->
-<!-- } -->
-
-<!-- .figure-footer a { -->
-<!--   color: var(--deggo-green); -->
-<!--   font-weight: 800; -->
-<!-- } -->
-
-<!-- .table, -->
-<!-- .dataTable { -->
-<!--   background: white; -->
-<!--   border-radius: 12px; -->
-<!--   overflow: hidden; -->
-<!--   box-shadow: 0 5px 20px rgba(0,0,0,0.045); -->
-<!-- } -->
-
-<!-- table.dataTable thead th { -->
-<!--   background: var(--deggo-green) !important; -->
-<!--   color: white !important; -->
-<!--   border-bottom: none !important; -->
-<!-- } -->
-
-<!-- table.dataTable tbody td { -->
-<!--   vertical-align: middle; -->
-<!-- } -->
-
-<!-- .output-table { -->
-<!--   width: 100%; -->
-<!--   border-collapse: collapse; -->
-<!--   margin-top: 15px; -->
-<!--   background: white; -->
-<!--   border-radius: 12px; -->
-<!--   overflow: hidden; -->
-<!--   box-shadow: 0 4px 18px rgba(0,0,0,0.05); -->
-<!-- } -->
-
-<!-- .output-table th { -->
-<!--   background: var(--deggo-green); -->
-<!--   color: white; -->
-<!--   text-align: left; -->
-<!--   padding: 12px; -->
-<!-- } -->
-
-<!-- .output-table td { -->
-<!--   padding: 12px; -->
-<!--   border-bottom: 1px solid #ececec; -->
-<!-- } -->
-
-<!-- pre { -->
-<!--   background: #F4FBF8; -->
-<!--   color: #111827; -->
-<!--   border-left: 5px solid var(--deggo-green); -->
-<!--   padding: 16px; -->
-<!--   border-radius: 12px; -->
-<!--   max-height: 500px; -->
-<!--   overflow-y: auto; -->
-<!--   font-size: 13px; -->
-<!--   line-height: 1.45; -->
-<!--   font-family: Menlo, Monaco, Consolas, "Courier New", monospace; -->
-<!-- } -->
-
-<!-- code { -->
-<!--   color: var(--deggo-green-dark); -->
-<!--   font-weight: 600; -->
-<!-- } -->
-
-<!-- @media (max-width: 1100px) { -->
-<!--   .figure-grid { -->
-<!--     grid-template-columns: 1fr; -->
-<!--   } -->
-
-<!--   .metric-grid { -->
-<!--     grid-template-columns: repeat(2, 1fr); -->
-<!--   } -->
-<!-- } -->
-<!-- </style> -->
 
 
 <style>
@@ -513,7 +329,6 @@ describe_output <- function(x) {
   --deggo-blue: #0057B8;
   --deggo-red: #D90000;
   --deggo-red-dark: #740001;
-
   --deggo-bg: #F8FAFC;
   --deggo-card: #FFFFFF;
   --deggo-text: #0B1F3A;
@@ -544,35 +359,8 @@ h2 {
   color: var(--deggo-navy);
 }
 
-h3 {
-  margin-top: 22px;
-}
-
 a {
   color: var(--deggo-blue);
-}
-
-.section-note {
-  background: #EEF4FB;
-  border-left: 5px solid var(--deggo-blue);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin: 14px 0 22px 0;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
-}
-
-.section-note-title {
-  font-weight: 800;
-  color: var(--deggo-navy);
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  margin-bottom: 4px;
-}
-
-.section-note-text {
-  color: #374151;
-  font-size: 14px;
 }
 
 .metric-grid {
@@ -669,38 +457,27 @@ a {
 }
 
 .table,
-.dataTable {
+.dataTable,
+.output-table {
   background: white;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 5px 20px rgba(0,0,0,0.045);
 }
 
-table.dataTable thead th {
-  background: var(--deggo-navy) !important;
-  color: white !important;
-  border-bottom: none !important;
-}
-
-table.dataTable tbody td {
-  vertical-align: middle;
-}
-
 .output-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 15px;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.05);
 }
 
-.output-table th {
-  background: var(--deggo-navy);
-  color: white;
+.output-table th,
+table.dataTable thead th {
+  background: var(--deggo-navy) !important;
+  color: white !important;
   text-align: left;
   padding: 12px;
+  border-bottom: none !important;
 }
 
 .output-table td {
@@ -726,6 +503,80 @@ code {
   font-weight: 600;
 }
 
+.section-box,
+.info-box,
+.expected-box,
+.warning-box,
+.success-box {
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin: 16px 0 22px 0;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+}
+
+.section-title,
+.info-title,
+.expected-title,
+.warning-title,
+.success-title {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+
+.section-text,
+.info-text,
+.expected-text,
+.warning-text,
+.success-text {
+  color: #374151;
+  font-size: 14px;
+}
+
+.section-box,
+.info-box {
+  background: #F3F7FC;
+  border-left: 5px solid var(--deggo-blue);
+}
+
+.section-title,
+.info-title {
+  color: var(--deggo-navy);
+}
+
+.expected-box {
+  background: #FFF7ED;
+  border-left: 5px solid #F97316;
+}
+
+.expected-title {
+  color: #9A3412;
+}
+
+.warning-box {
+  background: #FEF2F2;
+  border-left: 5px solid #DC2626;
+}
+
+.warning-title {
+  color: #991B1B;
+}
+
+.success-box {
+  background: #ECFDF5;
+  border-left: 5px solid #059669;
+}
+
+.success-title {
+  color: #065F46;
+}
+
+.expected-box ul {
+  margin-bottom: 0;
+}
+
 @media (max-width: 1100px) {
   .figure-grid {
     grid-template-columns: 1fr;
@@ -737,9 +588,12 @@ code {
 }
 </style>
 
+
+
 # Overview
 
 ```{r overview, results='asis'}
+
 section_note(
   "Report overview",
   "This section summarizes the DEGgo analysis configuration, including the analysis mode, statistical method, organism, package version, and output directory."
@@ -760,26 +614,42 @@ cat(
   )
 )
 
-cat('<div class="metric-grid">')
-html_card("Analysis mode", analysis_mode)
-html_card("Method", res$run_params$method %||% "NA")
-html_card("Organism", res$run_params$organism %||% "NA")
-html_card("DEGgo version", deggo_version)
-cat('</div>')
+metric_grid(list(
+  list(title = "Analysis mode", value = analysis_mode),
+  list(title = "Method", value = res$run_params$method %||% "NA"),
+  list(title = "Organism", value = res$run_params$organism %||% "NA"),
+  list(title = "DEGgo version", value = deggo_version)
+))
+```
 
-# cat("<p>")
-# cat('<strong>Output directory:</strong><br>')
-# cat('<code>', html_escape(outdir), '</code><br><br>')
+
+# Analysis interpretation guide
+
+```{r interpretation-guide, results='asis'}
+
+section_note(
+  "How to read this report",
+  "DEGgo reports are organized from quality control to biological interpretation."
+)
+
+info_box(
+  "Recommended reading order",
+  paste(
+    "First inspect sample metadata and QC plots, then PCA and clustering.",
+    "Only after confirming acceptable sample structure should differential expression,",
+    "volcano plots, heatmaps and GO enrichment be interpreted."
+  )
+)
 
 ```
 
 
 # Sample metadata
 
+
 ```{r sample-metadata, results='asis'}
 
 section_note(
-  "Sample metadata",
   "This section reports the matched sample metadata used for the analysis. Informative metadata variables are automatically summarized."
 )
 
@@ -969,22 +839,74 @@ if (!is.null(md2) && nrow(md2) > 0 && ncol(md2) > 0) {
 ```
 
 
+
+# Preprocessing and normalization
+
+```{r preprocessing-note, results='asis'}
+
+section_note(
+  "Preprocessing and normalization",
+  "This section summarizes low-count filtering and normalization before differential expression analysis."
+)
+
+info_box(
+  "Low-count filtering",
+  paste(
+    "Genes with very low read counts provide limited statistical power",
+    "and may increase noise in differential expression testing.",
+    "DEGgo removes low-expression genes according to the selected filtering parameters."
+  )
+)
+
+expected_box(c(
+  "A substantial number of low-count genes may be removed.",
+  "Enough genes should remain for PCA, heatmaps and DE analysis.",
+  "Filtering thresholds should be reported for reproducibility."
+))
+
+metric_grid(list(
+  list(title = "Filter method", value = res$run_params$filter_method %||% "NA"),
+  list(title = "Minimum count", value = res$run_params$min_count %||% "NA"),
+  list(title = "Minimum samples", value = res$run_params$min_samples %||% "NA"),
+  list(title = "Minimum total", value = res$run_params$min_total %||% "NA")
+))
+
+```
+
+
 # Quality control
 
 ```{r qc-note, results='asis'}
+
 section_note(
   "Quality control",
-  "This section summarizes sample-level quality control, including library size, detected genes, sample correlation, and clustering. These plots help identify outlier samples before interpreting differential expression."
+  "This section summarizes sample-level quality control, including library size, detected genes, sample correlation, and clustering."
 )
+
+info_box(
+  "Sample distance and clustering",
+  paste(
+    "Sample correlation, distance heatmaps and hierarchical clustering help detect",
+    "outlier samples and assess whether biological groups are globally consistent."
+  )
+)
+
+expected_box(c(
+  "Samples from the same biological condition should generally cluster together.",
+  "No individual sample should be extremely distant from samples of the same condition.",
+  "Strong batch or outlier effects should be investigated before interpreting DE results."
+))
+
+interpretation_block("qc")
+
 ```
+
 
 ## Sample quality assessment
 
 ```{r qc-gallery, results='asis'}
-qc_dir <- get_output_dir(
-  "qc",
-  c("pairwise_QC", "single_QC", "sample_QC")
-)
+
+qc_dir <- get_output_dir("qc", c("pairwise_QC", "single_QC", "sample_QC"))
 
 qc_files <- find_png(qc_dir)
 qc_files <- qc_files[
@@ -995,52 +917,119 @@ qc_files <- qc_files[
 ]
 
 plot_gallery(qc_files, empty = "No QC plots found.")
+
 ```
+
 
 ## Principal component analysis (PCA)
 
 ```{r pca-gallery, results='asis'}
+
 section_note(
   "Principal component analysis",
-  "Principal component analysis is used to visualize global sample structure and assess whether samples separate according to biological or technical variables."
+  "PCA summarizes the main sources of variance across all genes in a reduced-dimensional space."
 )
 
-pca_dir <- get_output_dir(
-  "pca",
-  c("pairwise_PCA", "single_PCA", "PCA", "pca")
+info_box(
+  "How to interpret PCA",
+  paste(
+    "PCA helps determine whether the strongest transcriptomic variation is associated",
+    "with the experimental design, such as treatment, tissue, sex, genotype or disease status."
+  )
 )
 
+expected_box(c(
+  "Samples should separate according to major biological variables.",
+  "Replicates from the same group should remain close to each other.",
+  "Unexpected isolated samples may indicate technical or biological outliers."
+))
+
+interpretation_block("pca")
+
+pca_dir <- get_output_dir("pca", c("pairwise_PCA", "single_PCA", "PCA", "pca"))
 pca_files <- find_png(pca_dir)
+
 plot_gallery(pca_files, badge = "PCA", empty = "No PCA plots found.")
+
 ```
+
 
 # Differential expression summary
 
 ```{r de-summary, results='asis'}
+
 section_note(
   "Differential expression summary",
-  "This section summarizes the number of differentially expressed genes for each comparison, including total tested genes, significant genes, upregulated genes, and downregulated genes."
+  "This section summarizes the number of differentially expressed genes for each comparison."
+)
+
+info_box(
+  "How to interpret log2 fold change",
+  paste(
+    "A positive log2 fold change indicates higher expression in the first condition",
+    "of the contrast. A negative log2 fold change indicates lower expression",
+    "in the first condition compared with the reference condition."
+  )
+)
+
+info_box(
+  "Multiple testing correction",
+  paste(
+    "Because thousands of genes are tested simultaneously, DEGgo reports adjusted",
+    "p-values to control the false discovery rate."
+  )
+)
+
+metric_grid(list(
+  list(title = "Adjusted p-value cutoff", value = res$run_params$padj_cutoff %||% "NA"),
+  list(title = "log2FC cutoff", value = res$run_params$logfc_cutoff %||% "NA"),
+  list(title = "Filter method", value = res$run_params$filter_method %||% "NA"),
+  list(title = "Minimum count", value = res$run_params$min_count %||% "NA")
+))
+
+warning_box(
+  "Interpretation limits",
+  paste(
+    "Differential expression results should be interpreted together with QC, PCA,",
+    "sample clustering and biological context. Genes with very low counts or",
+    "extreme outlier behavior may be filtered or assigned missing adjusted p-values."
+  )
 )
 
 if (!is.null(sumtab)) {
   s <- as.data.frame(sumtab)
 
-  cat('<div class="metric-grid">')
-  html_card("Comparisons", nrow(s))
-  html_card("Significant DEGs", format(sum(s$significant, na.rm = TRUE), big.mark = ","))
-  html_card("Upregulated", format(sum(s$up, na.rm = TRUE), big.mark = ","))
-  html_card("Downregulated", format(sum(s$down, na.rm = TRUE), big.mark = ","))
-  cat('</div>')
+  metric_grid(list(
+    list(title = "Comparisons", value = nrow(s)),
+    list(title = "Significant DEGs", value = format(sum(s$significant, na.rm = TRUE), big.mark = ",")),
+    list(title = "Upregulated", value = format(sum(s$up, na.rm = TRUE), big.mark = ",")),
+    list(title = "Downregulated", value = format(sum(s$down, na.rm = TRUE), big.mark = ","))
+  ))
 
   show_table(s, n = nrow(s))
+
+  ndeg <- sum(s$significant, na.rm = TRUE)
+
+  success_box(
+    "Key finding",
+    sprintf(
+      "DEGgo identified %s significant differentially expressed genes across all comparisons using the selected thresholds.",
+      format(ndeg, big.mark = ",")
+    )
+  )
 } else {
   cat("<p><em>No DEG summary available.</em></p>")
 }
+
+
 ```
+
 
 ## DE summary table
 
+
 ```{r analysis-summary}
+
 summary_df <- params$summary %||% results$summary
 
 if (!is.null(summary_df) && nrow(summary_df) > 0) {
@@ -1057,49 +1046,34 @@ if (!is.null(summary_df) && nrow(summary_df) > 0) {
   DT::datatable(
     summary_df,
     rownames = FALSE,
-    options = list(
-      pageLength = 10,
-      scrollX = TRUE,
-      dom = "tip"
-    )
+    options = list(pageLength = 10, scrollX = TRUE, dom = "tip")
   ) %>%
     DT::formatStyle(
       "comparison",
-      backgroundColor = DT::styleEqual(
-        levels = comp_levels,
-        values = comparison_cols
-      ),
+      backgroundColor = DT::styleEqual(comp_levels, comparison_cols),
       color = "#333333",
       fontWeight = "bold"
     ) %>%
     DT::formatStyle(
       "significant",
-      background = DT::styleColorBar(
-        summary_df$significant,
-        "#DCE3EC"
-      ),
+      background = DT::styleColorBar(summary_df$significant, "#DCE3EC"),
       backgroundSize = "98% 88%",
       backgroundRepeat = "no-repeat",
       backgroundPosition = "center"
     ) %>%
-    DT::formatStyle(
-      "up",
-      color = "#740001",
-      fontWeight = "bold"
-    ) %>%
-    DT::formatStyle(
-      "down",
-      color = "#6497B1",
-      fontWeight = "bold"
-    )
+    DT::formatStyle("up", color = "#740001", fontWeight = "bold") %>%
+    DT::formatStyle("down", color = "#6497B1", fontWeight = "bold")
 } else {
   cat("No summary table available.")
 }
+
 ```
+
 
 ## DE summary plot
 
 ```{r de-summary-plot}
+
 if (!is.null(sumtab)) {
   s <- as.data.frame(sumtab)
 
@@ -1129,40 +1103,60 @@ if (!is.null(sumtab)) {
       )
   }
 }
+
 ```
+
 
 ## Volcano plots
 
 ```{r volcano-gallery, results='asis'}
+
 section_note(
   "Volcano plots",
   "Volcano plots display the relationship between effect size and statistical significance for each gene in each comparison."
 )
 
-volcano_dir <- get_output_dir(
-  "volcano",
-  c("pairwise_volcano", "single_volcano", "volcano")
+info_box(
+  "How to interpret volcano plots",
+  paste(
+    "Each point represents one gene. The x-axis shows log2 fold change,",
+    "while the y-axis shows statistical significance. Genes on the right are upregulated;",
+    "genes on the left are downregulated."
+  )
 )
 
+expected_box(c(
+  "Strong candidate genes combine large absolute log2 fold change and low adjusted p-value.",
+  "Upregulated and downregulated genes should be interpreted together with the biological question.",
+  "Highlighted genes are user-selected markers or genes of interest."
+))
+
+interpretation_block("volcano")
+
+volcano_dir <- get_output_dir("volcano", c("pairwise_volcano", "single_volcano", "volcano"))
 volcano_files <- find_png(volcano_dir)
+
 plot_gallery(volcano_files, badge = "Volcano", empty = "No volcano plots found.")
+
 ```
+
 
 ## Heatmaps
 
 ```{r heatmap-gallery, results='asis'}
+
 section_note(
   "Heatmaps",
-  "Heatmaps show the expression patterns of selected differentially expressed genes across samples."
+  "Heatmaps show expression patterns of selected differentially expressed genes across samples."
 )
 
-heatmap_dir <- get_output_dir(
-  "heatmaps",
-  c("pairwise_heatmaps", "single_heatmaps", "heatmaps")
-)
+interpretation_block("heatmap")
 
+heatmap_dir <- get_output_dir("heatmaps", c("pairwise_heatmaps", "single_heatmaps", "heatmaps"))
 heatmap_files <- find_png(heatmap_dir)
+
 plot_gallery(heatmap_files, badge = "Heatmap", empty = "No heatmaps found.")
+
 ```
 
 
@@ -1174,6 +1168,21 @@ section_note(
   "Gene Ontology enrichment",
   "This section summarizes the number of enriched GO terms detected for each comparison and regulation direction."
 )
+
+info_box(
+  "How to interpret GO enrichment",
+  paste(
+    "GO enrichment summarizes biological processes over-represented among significant genes.",
+    "Upregulated and downregulated genes should be interpreted separately when available,",
+    "because they may reflect opposite biological programs."
+  )
+)
+
+expected_box(c(
+  "Terms with low adjusted p-values are more statistically supported.",
+  "Redundant GO terms should be interpreted as broader biological themes.",
+  "GO enrichment supports interpretation but does not prove pathway activation by itself."
+))
 
 go_summary_file <- list.files(
   path = outdir,
@@ -1192,143 +1201,104 @@ if (length(go_summary_file) > 0) {
     stringsAsFactors = FALSE
   )
 
-  cat('<div class="metric-grid">')
-
-  html_card(
-    "GO comparisons",
-    if ("comparison" %in% colnames(go_merged)) length(unique(go_merged$comparison)) else "NA"
-  )
-
-  html_card(
-    "Unique GO terms",
-    if ("ID" %in% colnames(go_merged)) length(unique(go_merged$ID)) else "NA"
-  )
-
-  html_card(
-    "Enriched rows",
-    format(nrow(go_merged), big.mark = ",")
-  )
-
-  html_card(
-    "Ontology",
-    if ("ONTOLOGY" %in% colnames(go_merged)) {
-      paste(unique(go_merged$ONTOLOGY), collapse = ", ")
-    } else {
-      "BP"
-    }
-  )
-
-  cat("</div>")
+  metric_grid(list(
+    list(
+      title = "GO comparisons",
+      value = if ("comparison" %in% colnames(go_merged)) length(unique(go_merged$comparison)) else "NA"
+    ),
+    list(
+      title = "Unique GO terms",
+      value = if ("ID" %in% colnames(go_merged)) length(unique(go_merged$ID)) else "NA"
+    ),
+    list(title = "Enriched rows", value = format(nrow(go_merged), big.mark = ",")),
+    list(
+      title = "Ontology",
+      value = if ("ONTOLOGY" %in% colnames(go_merged)) paste(unique(go_merged$ONTOLOGY), collapse = ", ") else "BP"
+    )
+  ))
 
   if (all(c("comparison", "ID") %in% colnames(go_merged))) {
 
-    if (!"Regulation" %in% colnames(go_merged)) {
-      go_merged$Regulation <- "All"
-    }
+    if (!"Regulation" %in% colnames(go_merged)) go_merged$Regulation <- "All"
 
     go_summary <- as.data.frame(
-      table(
-        comparison = go_merged$comparison,
-        Regulation = go_merged$Regulation
-      ),
+      table(comparison = go_merged$comparison, Regulation = go_merged$Regulation),
       stringsAsFactors = FALSE
     )
 
-    colnames(go_summary) <- c(
-      "comparison",
-      "Regulation",
-      "enriched_GO_terms"
-    )
-
+    colnames(go_summary) <- c("comparison", "Regulation", "enriched_GO_terms")
     go_summary <- go_summary[go_summary$enriched_GO_terms > 0, , drop = FALSE]
-
-    go_summary$comparison <- as.character(go_summary$comparison)
-    go_summary$Regulation <- as.character(go_summary$Regulation)
     go_summary$enriched_GO_terms <- as.integer(go_summary$enriched_GO_terms)
-
-    go_summary <- go_summary[
-      order(go_summary$comparison, go_summary$Regulation),
-      ,
-      drop = FALSE
-    ]
 
     cat("<h3>GO terms per comparison</h3>")
 
     if (nrow(go_summary) > 0) {
-
       comp_levels <- unique(go_summary$comparison)
-
-      comparison_cols <- grDevices::hcl.colors(
-        n = length(comp_levels),
-        palette = "Set 3"
-      )
+      comparison_cols <- grDevices::hcl.colors(length(comp_levels), palette = "Set 3")
 
       DT::datatable(
         go_summary,
         rownames = FALSE,
-        options = list(
-          pageLength = 10,
-          scrollX = TRUE,
-          dom = "tip"
-        )
+        options = list(pageLength = 10, scrollX = TRUE, dom = "tip")
       ) %>%
         DT::formatStyle(
           "comparison",
-          backgroundColor = DT::styleEqual(
-            levels = comp_levels,
-            values = comparison_cols
-          ),
+          backgroundColor = DT::styleEqual(comp_levels, comparison_cols),
           color = "#333333",
           fontWeight = "bold"
         ) %>%
         DT::formatStyle(
           "Regulation",
-          color = DT::styleEqual(
-            c("Up", "Down", "All"),
-            c("#740001", "#6497b1", "#002B5C")
-          ),
+          color = DT::styleEqual(c("Up", "Down", "All"), c("#740001", "#6497b1", "#002B5C")),
           fontWeight = "bold"
         ) %>%
         DT::formatStyle(
           "enriched_GO_terms",
-          background = DT::styleColorBar(
-            go_summary$enriched_GO_terms,
-            "#DCE3EC"
-          ),
+          background = DT::styleColorBar(go_summary$enriched_GO_terms, "#DCE3EC"),
           backgroundSize = "98% 88%",
           backgroundRepeat = "no-repeat",
           backgroundPosition = "center"
         )
-
     } else {
       cat("<p><em>No enriched GO terms found after summarization.</em></p>")
     }
-
-  } else {
-    cat("<p><em>No comparison or ID column found in merged GO table.</em></p>")
   }
+
+  ngo <- length(unique(go_merged$ID))
+
+  success_box(
+    "Key finding",
+    sprintf(
+      "%s unique Gene Ontology terms were enriched, providing functional insights into the biological processes associated with differential expression.",
+      format(ngo, big.mark = ",")
+    )
+  )
 
 } else {
   cat("<p><em>No merged GO summary file found.</em></p>")
 }
 
+interpretation_block("go")
+
 ```
+
 
 ## GO plots
 
 ```{r go-gallery, results='asis'}
-go_dir <- get_output_dir(
-  "go",
-  c("pairwise_GO", "single_GO", "GO", "go")
-)
 
+go_dir <- get_output_dir("go", c("pairwise_GO", "single_GO", "GO", "go"))
 go_files <- find_png(go_dir)
+
 plot_gallery(go_files, badge = "GO", empty = "No GO plots found.")
+
 ```
+
 
 # Output files
 
 ```{r output-files, results='asis'}
+
 section_note(
   "Output structure",
   paste(
@@ -1364,14 +1334,18 @@ if (length(output_items) > 0) {
 } else {
   cat("<p><em>No output files found.</em></p>")
 }
+
 ```
+
+
+
 
 # Reproducibility
 
 ```{r reproducibility, results='asis'}
+
 section_note(
-  "Reproducibility",
-  "This section records run parameters and session information to make the analysis traceable and reproducible."
+  "DEGgo automatically records all analysis parameters, software versions, package dependencies, and session information to ensure computational reproducibility and facilitate future re-analysis."
 )
 
 repro_dir <- file.path(outdir, "reproducibility")
@@ -1401,17 +1375,14 @@ if (file.exists(session_file)) {
 
 
 
+
 # Citation
 
 ```{r deggo-bibliography, results='asis'}
 
-cat(
-  '<div class="section-note">',
-  '<div class="section-note-title">Please cite DEGgo if it contributed to your analysis.</div>',
-  '<div class="section-note-text">',
-  html_escape(deggo_citation),
-  '</div>',
-  '</div>'
+section_note(
+  "Please cite DEGgo if it contributed to your analysis.",
+  html_escape(deggo_citation)
 )
 
 ```

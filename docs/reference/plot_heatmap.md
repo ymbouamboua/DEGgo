@@ -24,8 +24,8 @@ plot_heatmap(
   scale_rows = TRUE,
   cluster_rows = TRUE,
   cluster_cols = FALSE,
-  fontsize_row = 8,
-  fontsize_col = 7,
+  fontsize_row = 12,
+  fontsize_col = 10,
   width = 8,
   height = 10
 )

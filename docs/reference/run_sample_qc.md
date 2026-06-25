@@ -12,7 +12,9 @@ run_sample_qc(
   metadata,
   output_dir,
   annotation_cols = c("condition", "treatment", "sex", "tissue"),
-  dpi = 300
+  dpi = 300,
+  style = "bw",
+  txtsize = 12
 )
 ```
 
@@ -38,6 +40,14 @@ run_sample_qc(
 - dpi:
 
   Resolution used for the hierarchical clustering PNG.
+
+- style:
+
+  Plot theme style.
+
+- txtsize:
+
+  Base text size.
 
 ## Value
 

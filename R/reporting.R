@@ -290,7 +290,7 @@ generate_deggo_pptx <- function(
     ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
     ppt <- add_slide_title(ppt, slide_title)
 
-    txt <- paste(paste0("• ", bullets), collapse = "\n\n")
+    txt <- paste(paste0("&bull; ", bullets), collapse = "\n\n")
 
     ppt <- officer::ph_with(
       ppt,

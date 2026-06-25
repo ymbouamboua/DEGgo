@@ -706,7 +706,14 @@ plot_gene_expression <- function(
 #' @param txtsize Base text size.
 #' @param style Plot style passed to \code{.deggo_theme()}.
 #' @param dpi PNG resolution.
-#'
+#' @param label_size Size of standard gene labels.
+#' @param highlight_label_size Size of highlighted gene labels.
+#' @param label_bg Fill color for label backgrounds.
+#' @param label_bg_r Radius of label background boxes.
+#' @param label_force Force parameter passed to ggrepel.
+#' @param label_force_pull Pull force parameter passed to ggrepel.
+#' @param label_max_overlaps Maximum number of overlapping labels.
+#' @param seed Random seed for reproducible label placement.
 #' @return A \code{ggplot} object.
 #'
 #' @export
@@ -930,7 +937,6 @@ plot_volcano <- function(
         point.padding = 0.25,
         min.segment.length = 0,
         segment.color = "grey55",
-        segment.linewidth = 0.15,
         max.overlaps = label_max_overlaps,
         force = label_force,
         force_pull = label_force_pull,
@@ -974,7 +980,6 @@ plot_volcano <- function(
           point.padding = 0.35,
           min.segment.length = 0,
           segment.color = "grey35",
-          segment.linewidth = 0.15,
           max.overlaps = Inf,
           force = label_force + 0.8,
           force_pull = label_force_pull,
@@ -1476,7 +1481,6 @@ plot_heatmap <- function(
 #' @param fontsize_col Column names size.
 #' @param color Heatmap color palette.
 #' @param breaks Numeric vector of color breaks.
-#' @param border_color Border color for heatmap cells.
 #'
 #' @return Expression matrix used for plotting.
 #' @export
@@ -1658,6 +1662,7 @@ plot_gene_heatmap <- function(
 #' matrix, PCA plots, top variable genes, marker heatmap object, and output path.
 #'
 #' @export
+#'
 explore_bulk_rnaseq <- function(
     counts,
     metadata,
@@ -1683,31 +1688,27 @@ explore_bulk_rnaseq <- function(
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-  counts <- as.data.frame(counts, check.names = FALSE)
-  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+  qc_input <- .deggo_qc_prepare(
+    counts = counts,
+    metadata = metadata,
+    gene_col = gene_col,
+    feature_col = feature_col,
+    sample_col = sample_col
+  )
 
-  gene_col <- gene_col[gene_col %in% colnames(counts)][1]
-  feature_col <- feature_col[feature_col %in% colnames(counts)][1]
-  sample_col <- sample_col[sample_col %in% colnames(metadata)][1]
+  mat <- qc_input$mat
+  metadata <- qc_input$metadata
+  counts_df <- qc_input$counts_df
+  gene_col <- qc_input$gene_col
+  feature_col <- qc_input$feature_col
+  sample_col <- qc_input$sample_col
 
-  if (is.na(gene_col)) stop("No gene ID column found.", call. = FALSE)
-  if (is.na(sample_col)) stop("No sample column found.", call. = FALSE)
-
-  rownames(metadata) <- as.character(metadata[[sample_col]])
-
-  sample_cols <- intersect(colnames(counts), rownames(metadata))
-  if (!length(sample_cols)) stop("No matching samples.", call. = FALSE)
-
-  mat <- as.matrix(counts[, sample_cols, drop = FALSE])
-  rownames(mat) <- as.character(counts[[gene_col]])
-  storage.mode(mat) <- "numeric"
-
-  metadata <- metadata[sample_cols, , drop = FALSE]
   logmat <- log2(mat + 1)
 
   if (is.null(color_by)) {
     color_by <- intersect(c("tissue", "condition", "treatment", "sex"), colnames(metadata))[1]
   }
+
   color_by <- if (!is.na(color_by) && color_by %in% colnames(metadata)) color_by else NULL
 
   qc <- data.frame(
@@ -1721,16 +1722,35 @@ explore_bulk_rnaseq <- function(
 
   qc <- merge(qc, metadata, by.x = "sample", by.y = sample_col, all.x = TRUE)
 
-  fill_aes <- if (!is.null(color_by)) ggplot2::aes(fill = .data[[color_by]]) else ggplot2::aes()
-  color_aes <- if (!is.null(color_by)) ggplot2::aes(color = .data[[color_by]], group = sample) else ggplot2::aes(color = sample)
+  fill_aes <- if (!is.null(color_by)) {
+    ggplot2::aes(fill = .data[[color_by]])
+  } else {
+    ggplot2::aes()
+  }
 
-  p_lib <- ggplot2::ggplot(qc, ggplot2::aes(stats::reorder(sample, library_size), library_size / 1e6)) +
-    fill_aes + ggplot2::geom_col() + ggplot2::coord_flip() +
+  color_aes <- if (!is.null(color_by)) {
+    ggplot2::aes(color = .data[[color_by]], group = sample)
+  } else {
+    ggplot2::aes(color = sample)
+  }
+
+  p_lib <- ggplot2::ggplot(
+    qc,
+    ggplot2::aes(stats::reorder(sample, library_size), library_size / 1e6)
+  ) +
+    fill_aes +
+    ggplot2::geom_col() +
+    ggplot2::coord_flip() +
     .deggo_theme(style = style, txtsize = 8) +
     ggplot2::labs(x = NULL, y = "Library size (million reads)", title = "Library size")
 
-  p_det <- ggplot2::ggplot(qc, ggplot2::aes(stats::reorder(sample, detected_genes), detected_genes)) +
-    fill_aes + ggplot2::geom_col() + ggplot2::coord_flip() +
+  p_det <- ggplot2::ggplot(
+    qc,
+    ggplot2::aes(stats::reorder(sample, detected_genes), detected_genes)
+  ) +
+    fill_aes +
+    ggplot2::geom_col() +
+    ggplot2::coord_flip() +
     .deggo_theme(style = style, txtsize = 8) +
     ggplot2::labs(x = NULL, y = "Detected genes", title = "Detected genes")
 
@@ -1752,7 +1772,8 @@ explore_bulk_rnaseq <- function(
     ggplot2::labs(x = NULL, y = "log2(count + 1)", title = "Expression distribution")
 
   p_density <- ggplot2::ggplot(df_long, ggplot2::aes(expression)) +
-    color_aes + ggplot2::geom_density(linewidth = 0.4, alpha = 0.7) +
+    color_aes +
+    ggplot2::geom_density(linewidth = 0.4, alpha = 0.7) +
     .deggo_theme(style = style, txtsize = 8) +
     ggplot2::labs(x = "log2(count + 1)", y = "Density", title = "Expression density")
 
@@ -1760,22 +1781,27 @@ explore_bulk_rnaseq <- function(
   ggplot2::ggsave(file.path(output_dir, "Expression_Density.png"), p_density, width = width, height = height, dpi = dpi)
 
   annotation_col <- metadata[, intersect(annotation_cols, colnames(metadata)), drop = FALSE]
-  if (ncol(annotation_col)) annotation_col[] <- lapply(annotation_col, factor) else annotation_col <- NULL
+
+  if (ncol(annotation_col)) {
+    annotation_col[] <- lapply(annotation_col, factor)
+  } else {
+    annotation_col <- NULL
+  }
+
   ann_colors <- .deggo_annotation_colors(annotation_col)
 
   cor_mat <- stats::cor(logmat, method = "spearman")
 
-
   hm_size <- .deggo_heatmap_size(
-    n_genes = nrow(mat_use),
-    n_samples = ncol(mat_use)
+    n_genes = nrow(mat),
+    n_samples = ncol(mat)
   )
 
-  if (is.null(width)) width <- hm_size$width
-  if (is.null(height)) height <- hm_size$height
+  heatmap_width <- if (is.null(width)) hm_size$width else width
+  heatmap_height <- if (is.null(height)) hm_size$height else height
 
-  fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
-  fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+  fontsize_row_use <- ifelse(nrow(mat) > 80, 5, 7)
+  fontsize_col_use <- ifelse(ncol(mat) > 30, 5, 7)
 
   pheatmap::pheatmap(
     cor_mat,
@@ -1786,12 +1812,18 @@ explore_bulk_rnaseq <- function(
     filename = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
     main = "Sample Correlation",
     color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
-    fontsize = 7,
-    width = width,
-    height = height
+    border_color = NA,
+    width = heatmap_width,
+    height = heatmap_height
   )
 
-  grDevices::png(file.path(output_dir, "Hierarchical_Clustering.png"), width = 12, height = 6, units = "in", res = dpi)
+  grDevices::png(
+    file.path(output_dir, "Hierarchical_Clustering.png"),
+    width = 12,
+    height = 6,
+    units = "in",
+    res = dpi
+  )
   plot(stats::hclust(stats::dist(t(logmat))), main = "Hierarchical clustering", xlab = "", sub = "")
   grDevices::dev.off()
 
@@ -1800,7 +1832,6 @@ explore_bulk_rnaseq <- function(
 
   pca_plots <- NULL
   pca <- NULL
-  pca_df <- NULL
 
   if (length(vars) >= 2) {
 
@@ -1825,17 +1856,21 @@ explore_bulk_rnaseq <- function(
     pca_df <- pca_df[, !duplicated(colnames(pca_df)), drop = FALSE]
     percent_var <- round(100 * (pca$sdev^2 / sum(pca$sdev^2)), 1)
 
-    pca_plot <- function(color_by, shape_by = NULL, filename, title, style = "classic") {
+    pca_plot <- function(color_by, shape_by = NULL, filename, title) {
+
       if (!color_by %in% colnames(pca_df)) return(NULL)
 
       pca_df[[color_by]] <- factor(pca_df[[color_by]])
       levs <- levels(pca_df[[color_by]])
 
       base_cols <- .deggo_colors()
+
       cols <- if (color_by %in% names(base_cols)) {
         tmp <- base_cols[[color_by]]
         missing <- setdiff(levs, names(tmp))
-        if (length(missing)) tmp <- c(tmp, stats::setNames(grDevices::hcl.colors(length(missing), "Dark 3"), missing))
+        if (length(missing)) {
+          tmp <- c(tmp, stats::setNames(grDevices::hcl.colors(length(missing), "Dark 3"), missing))
+        }
         tmp[levs]
       } else {
         stats::setNames(grDevices::hcl.colors(length(levs), "Dark 3"), levs)
@@ -1884,23 +1919,15 @@ explore_bulk_rnaseq <- function(
     )
   }
 
-  top <- names(sort(vars, decreasing = TRUE))[seq_len(min(top_variable_genes, length(vars)))]
+  top <- character(0)
 
-  if (length(top) >= 2) {
+  if (length(vars) >= 2) {
+
+    top <- names(sort(vars, decreasing = TRUE))[seq_len(min(top_variable_genes, length(vars)))]
+
     top_mat <- logmat[top, , drop = FALSE]
     top_mat <- t(scale(t(top_mat)))
     top_mat <- top_mat[stats::complete.cases(top_mat), , drop = FALSE]
-
-    hm_size <- .deggo_heatmap_size(
-      n_genes = nrow(mat_use),
-      n_samples = ncol(mat_use)
-    )
-
-    if (is.null(width)) width <- hm_size$width
-    if (is.null(height)) height <- hm_size$height
-
-    fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
-    fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
 
     if (nrow(top_mat) >= 2) {
       pheatmap::pheatmap(
@@ -1913,14 +1940,11 @@ explore_bulk_rnaseq <- function(
         show_colnames = FALSE,
         cluster_rows = TRUE,
         cluster_cols = TRUE,
-        #color = grDevices::colorRampPalette(c("purple", "black", "yellow"))(100),
-        color = grDevices::colorRampPalette(
-          c("#6497b1", "#F7F7F7", "#740001")
-        )(100),
+        color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
         breaks = seq(-2, 2, length.out = 101),
         filename = file.path(output_dir, "TopVariableGenes_Heatmap.png"),
-        width = width,
-        height = height
+        width = heatmap_width,
+        height = heatmap_height
       )
     }
   }
@@ -1930,7 +1954,7 @@ explore_bulk_rnaseq <- function(
   if (!is.null(markers) && length(markers) && exists("plot_gene_heatmap")) {
     marker_heatmap <- tryCatch(
       plot_gene_heatmap(
-        counts = counts,
+        counts = counts_df,
         metadata = metadata,
         genes = markers,
         gene_col = gene_col,
@@ -1939,9 +1963,7 @@ explore_bulk_rnaseq <- function(
         annotation_cols = annotation_cols,
         annotation_colors = ann_colors,
         order_by = intersect(c("tissue", "sex", "treatment", "condition"), colnames(metadata)),
-        color = grDevices::colorRampPalette(
-          c("#6497b1", "#F7F7F7", "#740001")
-        )(100),
+        color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
         breaks = seq(-2, 2, length.out = 101),
         output_dir = output_dir,
         filename = "Marker_Heatmap",
@@ -1970,14 +1992,25 @@ explore_bulk_rnaseq <- function(
   }
 
   flag_cols <- grep("^flag_", colnames(qc), value = TRUE)
+
   qc$n_flags <- rowSums(qc[, flag_cols, drop = FALSE], na.rm = TRUE)
   qc$qc_status <- ifelse(qc$n_flags > 0, "FAIL", "PASS")
   qc$recommend_remove <- qc$n_flags >= 2
 
   utils::write.table(qc, file.path(output_dir, "QC_Flags.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
-  utils::write.table(qc[qc$recommend_remove, , drop = FALSE], file.path(output_dir, "Samples_Recommended_For_Removal.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 
-  p_qc <- ggplot2::ggplot(qc, ggplot2::aes(stats::reorder(sample, n_flags), n_flags, fill = qc_status)) +
+  utils::write.table(
+    qc[qc$recommend_remove, , drop = FALSE],
+    file.path(output_dir, "Samples_Recommended_For_Removal.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  p_qc <- ggplot2::ggplot(
+    qc,
+    ggplot2::aes(stats::reorder(sample, n_flags), n_flags, fill = qc_status)
+  ) +
     ggplot2::geom_col() +
     ggplot2::coord_flip() +
     ggplot2::scale_fill_manual(values = .deggo_colors()$qc) +
@@ -2002,7 +2035,6 @@ explore_bulk_rnaseq <- function(
     output_dir = output_dir
   ))
 }
-
 
 
 # ========================================================= #
@@ -2370,46 +2402,37 @@ plot_go_terms <- function(
 # ========================================================= #
 # PLOT ALL GO TERMS
 # ========================================================= #
-#' Plot GO enrichment terms for all pairwise comparisons
+#' Plot GO enrichment terms across all DEGgo comparisons
 #'
-#' Generates GO enrichment plots for every comparison returned by
-#' \code{run_deggo()} and optionally exports figures to disk.
+#' Generate Gene Ontology enrichment plots for all comparisons stored in a
+#' DEGgo results object. This function iterates over `results$go_results`,
+#' creates one GO plot per comparison using `plot_go_terms()`, and optionally
+#' saves each plot as PNG and PDF.
 #'
-#' @param results DEGgo results object returned by \code{run_deggo()}.
-#' @param top_n Number of GO terms to display per regulation class
-#'   (Up and Down). Default is \code{10}.
-#' @param font_size Base font size used in plots. Default is \code{8}.
-#' @param output_dir Optional output directory for exported figures.
-#'   If \code{NULL}, plots are returned but not saved.
-#' @param width Plot width in inches. Default is \code{8}.
-#' @param height Plot height in inches. Default is \code{6}.
-#' @param dpi Plot resolution. Default is \code{300}.
+#' @param results A DEGgo results object returned by `run_deggo()`. Must contain
+#'   a `go_results` list.
+#' @param top_n Integer. Number of top enriched GO terms to display per plot.
+#'   Default is `10`.
+#' @param txtsize Numeric. Base text size used in the GO plots. Default is `8`.
+#' @param style Character. Plot theme style passed to `plot_go_terms()`.
+#'   Default is `"bw"`.
+#' @param output_dir Optional character. Directory where GO plots are saved.
+#'   If `NULL`, plots are returned but not written to disk.
+#' @param width Numeric. Plot width in inches for saved files. Default is `8`.
+#' @param height Numeric. Plot height in inches for saved files. Default is `6`.
+#' @param dpi Integer. Resolution in dots per inch for saved PNG files.
+#'   Default is `300`.
 #'
-#' @return
-#' A named list of ggplot objects, one per comparison.
-#'
-#' @details
-#' This function iterates over all pairwise comparisons stored in
-#' \code{results$go_results} and calls \code{plot_go_terms()} on each
-#' GO enrichment table.
-#'
-#' If \code{output_dir} is supplied, PNG and PDF versions of all plots
-#' are automatically exported.
+#' @return A named list of `ggplot` objects, one per comparison. Comparisons
+#'   without enriched GO terms return `NULL`.
 #'
 #' @examples
 #' \dontrun{
-#'
 #' go_plots <- plot_all_go_terms(
 #'   results = results,
 #'   top_n = 10,
-#'   font_size = 8,
 #'   output_dir = "GO_plots"
 #' )
-#'
-#' names(go_plots)
-#'
-#' go_plots$WAT_Female_PAMH_vs_PBS
-#'
 #' }
 #'
 #' @export

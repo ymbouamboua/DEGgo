@@ -17,7 +17,8 @@ plot_pca(
   width = 8,
   height = 6,
   dpi = 300,
-  style = "classic"
+  style = "classic",
+  txtsize = 12
 )
 ```
 
@@ -70,6 +71,10 @@ plot_pca(
 - style:
 
   Plot style passed to `.deggo_theme()`.
+
+- txtsize:
+
+  Base text size.
 
 ## Value
 

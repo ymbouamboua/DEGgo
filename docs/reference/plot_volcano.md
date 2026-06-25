@@ -29,8 +29,16 @@ plot_volcano(
   width = 10,
   height = 8,
   dpi = 300,
-  style = "classic",
-  txtsize = 12
+  style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
+  txtsize = 12,
+  label_size = 3,
+  highlight_label_size = 3.5,
+  label_bg = "grey95",
+  label_bg_r = 0.12,
+  label_force = 1.2,
+  label_force_pull = 0.4,
+  label_max_overlaps = Inf,
+  seed = 42
 )
 ```
 
@@ -128,6 +136,38 @@ plot_volcano(
 - txtsize:
 
   Base text size.
+
+- label_size:
+
+  Size of standard gene labels.
+
+- highlight_label_size:
+
+  Size of highlighted gene labels.
+
+- label_bg:
+
+  Fill color for label backgrounds.
+
+- label_bg_r:
+
+  Radius of label background boxes.
+
+- label_force:
+
+  Force parameter passed to ggrepel.
+
+- label_force_pull:
+
+  Pull force parameter passed to ggrepel.
+
+- label_max_overlaps:
+
+  Maximum number of overlapping labels.
+
+- seed:
+
+  Random seed for reproducible label placement.
 
 ## Value
 

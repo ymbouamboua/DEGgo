@@ -64,7 +64,10 @@
 <li><a href="#example-dataset-airway">Example dataset: airway</a></li>
 </ul>
 </li>
+<li><a href="#single-differential-expression-analysis">Single differential expression analysis</a></li>
+<li><a href="#pairwise-differential-expression-analysis">Pairwise differential expression analysis</a></li>
 <li><a href="#main-functions">Main functions</a></li>
+<li><a href="#available-functions">Available Functions</a></li>
 <li><a href="#supported-organisms">Supported organisms</a></li>
 <li><a href="#documentation">Documentation</a></li>
 <li><a href="#citation">Citation</a></li>
@@ -93,7 +96,7 @@
 <h2 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a>
 </h2>
 <p align="center">
-<img src="reference/figures/DEGgo_workflow.png" width="500"></p>
+<img src="reference/figures/DEGgo_workflow.png" width="300"></p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -123,32 +126,69 @@
 <span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.delim</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"airway_metadata.tsv"</span>, package <span class="op">=</span> <span class="st">"DEGgo"</span><span class="op">)</span>,</span>
 <span>  check.names <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="single-differential-expression-analysis">Single differential expression analysis<a class="anchor" aria-label="anchor" href="#single-differential-expression-analysis"></a>
+</h2>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
+<span>  counts <span class="op">=</span> <span class="va">counts</span>,</span>
+<span>  metadata <span class="op">=</span> <span class="va">metadata</span>,</span>
+<span>  organism <span class="op">=</span> <span class="st">"mouse"</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"DESeq2"</span>,</span>
+<span>  analysis_mode <span class="op">=</span> <span class="st">"single"</span>,</span>
+<span>  sample_col <span class="op">=</span> <span class="st">"sample"</span>,</span>
+<span>  design_formula <span class="op">=</span> <span class="op">~</span> <span class="va">treatment</span>,</span>
+<span>  contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"PAMH"</span>, <span class="st">"PBS"</span><span class="op">)</span>,</span>
+<span>  output_dir <span class="op">=</span> <span class="st">"DEGgo_results"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">metadata</span><span class="op">$</span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">$</span><span class="va">dex</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">summary</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="pairwise-differential-expression-analysis">Pairwise differential expression analysis<a class="anchor" aria-label="anchor" href="#pairwise-differential-expression-analysis"></a>
+</h2>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">pairwise_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  TreatmentA_vs_Control_Male <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"comparison_group"</span>,</span>
+<span>    <span class="st">"TreatmentA_Male"</span>,</span>
+<span>    <span class="st">"Control_Male"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  TreatmentA_vs_Control_Female <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"comparison_group"</span>,</span>
+<span>    <span class="st">"TreatmentA_Female"</span>,</span>
+<span>    <span class="st">"Control_Female"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  Male_vs_Female_Control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"comparison_group"</span>,</span>
+<span>    <span class="st">"Control_Male"</span>,</span>
+<span>    <span class="st">"Control_Female"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
 <span>  counts <span class="op">=</span> <span class="va">counts</span>,</span>
 <span>  metadata <span class="op">=</span> <span class="va">metadata</span>,</span>
-<span>  gene_col <span class="op">=</span> <span class="st">"gene_id"</span>,</span>
-<span>  organism <span class="op">=</span> <span class="st">"human"</span>,</span>
-<span>  sample_col <span class="op">=</span> <span class="st">"Run"</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"DESeq2"</span>,</span>
-<span>  analysis_mode <span class="op">=</span> <span class="st">"single"</span>,</span>
-<span>  design_formula <span class="op">=</span> <span class="op">~</span> <span class="va">cell</span> <span class="op">+</span> <span class="va">dex</span>,</span>
-<span>  contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dex"</span>, <span class="st">"trt"</span>, <span class="st">"untrt"</span><span class="op">)</span>,</span>
-<span>  output_dir <span class="op">=</span> <span class="st">"DEGgo_airway"</span>,</span>
-<span>  generate_report <span class="op">=</span> <span class="cn">TRUE</span>, </span>
-<span>  generate_pptx <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  report_formats <span class="op">=</span> <span class="st">"html"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">results</span><span class="op">$</span><span class="va">summary</span></span></code></pre></div>
-<p>The analysis generates differential expression results, significant DEG tables, volcano plots, PCA plots, heatmaps, Gene Ontology enrichment results, and an HTML report in the DEGgo_airway directory.</p>
-</div>
+<span>  organism <span class="op">=</span> <span class="st">"mouse"</span>,</span>
+<span>  analysis_mode <span class="op">=</span> <span class="st">"pairwise"</span>,</span>
+<span>  sample_col <span class="op">=</span> <span class="st">"sample"</span>,</span>
+<span>  pairwise_group_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"condition"</span>, <span class="st">"sex"</span><span class="op">)</span>,</span>
+<span>  pairwise_contrasts <span class="op">=</span> <span class="va">pairwise_contrasts</span>,</span>
+<span>  output_dir <span class="op">=</span> <span class="st">"DEGgo_results"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The analysis generates differential expression results, significant DEG tables, volcano plots, PCA plots, heatmaps, Gene Ontology enrichment results, and an HTML/PDF/PPTX report in the DEGgo_results directory.</p>
 </div>
 <div class="section level2">
 <h2 id="main-functions">Main functions<a class="anchor" aria-label="anchor" href="#main-functions"></a>
+</h2>
+</div>
+<div class="section level2">
+<h2 id="available-functions">Available Functions<a class="anchor" aria-label="anchor" href="#available-functions"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -166,71 +206,75 @@
 </tr>
 <tr>
 <td align="left"><code><a href="reference/explore_bulk_rnaseq.html">explore_bulk_rnaseq()</a></code></td>
-<td align="left">Raw and cleaned RNA-seq quality control</td>
+<td align="left">Perform exploratory quality control on raw RNA-seq data</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/remove_flagged_samples.html">remove_flagged_samples()</a></code></td>
-<td align="left">Remove failed or low-quality samples</td>
+<td align="left">Remove low-quality samples identified during quality control</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/marker_score_check.html">marker_score_check()</a></code></td>
-<td align="left">Tissue marker scoring and sample swap detection</td>
+<td align="left">Assess marker gene expression for biological sample validation</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_gene_heatmap.html">plot_gene_heatmap()</a></code></td>
-<td align="left">Marker or selected-gene heatmap</td>
+<td align="left">Visualize marker or selected genes as a heatmap</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/run_deggo.html">run_deggo()</a></code></td>
-<td align="left">Main DEGgo differential expression workflow</td>
+<td align="left">Run the complete bulk RNA-seq differential expression workflow</td>
+</tr>
+<tr>
+<td align="left"><code><a href="reference/run_sample_qc.html">run_sample_qc()</a></code></td>
+<td align="left">Perform post-filtering sample quality control and diagnostics</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/run_go_enrichment.html">run_go_enrichment()</a></code></td>
-<td align="left">Gene Ontology enrichment for DEG results</td>
+<td align="left">Perform Gene Ontology enrichment analysis</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_go_terms.html">plot_go_terms()</a></code></td>
-<td align="left">Publication-ready GO enrichment plots</td>
+<td align="left">Generate publication-ready Gene Ontology enrichment plots</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_all_go_terms.html">plot_all_go_terms()</a></code></td>
-<td align="left">Plot GO terms across multiple comparisons</td>
+<td align="left">Compare Gene Ontology enrichment across multiple analyses</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/extract_expression.html">extract_expression()</a></code></td>
-<td align="left">Extract raw, normalized, log2-normalized or VST expression values</td>
+<td align="left">Extract raw, normalized, log2-normalized, or VST expression values</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_gene_expression.html">plot_gene_expression()</a></code></td>
-<td align="left">Plot gene expression for selected genes</td>
+<td align="left">Visualize expression of selected genes across samples</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_heatmap.html">plot_heatmap()</a></code></td>
-<td align="left">Generate DEG heatmaps from differential expression results</td>
+<td align="left">Generate heatmaps of differentially expressed genes</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_pca.html">plot_pca()</a></code></td>
-<td align="left">Principal component analysis of RNA-seq samples</td>
+<td align="left">Perform principal component analysis (PCA)</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/plot_volcano.html">plot_volcano()</a></code></td>
-<td align="left">Volcano plot visualization of differential expression results</td>
+<td align="left">Generate publication-ready volcano plots</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/generate_deggo_report.html">generate_deggo_report()</a></code></td>
-<td align="left">Generate HTML/PDF DEGgo reports</td>
+<td align="left">Generate an automated HTML or PDF analysis report</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/generate_deggo_pptx.html">generate_deggo_pptx()</a></code></td>
-<td align="left">Generate PPTX DEGgo reports</td>
+<td align="left">Generate a PowerPoint summary report</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/deggo_extract_deg_genes.html">deggo_extract_deg_genes()</a></code></td>
-<td align="left">Extract genes of interest from DEG results</td>
+<td align="left">Extract selected genes from differential expression results</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/deggo_extract_go_genes.html">deggo_extract_go_genes()</a></code></td>
-<td align="left">Extract genes associated with enriched GO terms</td>
+<td align="left">Extract genes associated with enriched Gene Ontology terms</td>
 </tr>
 <tr>
 <td align="left"><code><a href="reference/deggo_extract_go_genes_pairwise.html">deggo_extract_go_genes_pairwise()</a></code></td>
@@ -238,11 +282,7 @@
 </tr>
 <tr>
 <td align="left"><code><a href="reference/deggo_extract_go_keywords.html">deggo_extract_go_keywords()</a></code></td>
-<td align="left">Extract GO terms matching biological keywords</td>
-</tr>
-<tr>
-<td align="left"><code><a href="reference/run_sample_qc.html">run_sample_qc()</a></code></td>
-<td align="left">Automated sample-level quality control metrics and diagnostics</td>
+<td align="left">Search enriched Gene Ontology terms using biological keywords</td>
 </tr>
 </tbody>
 </table>
@@ -281,7 +321,7 @@
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
 <p>The complete DEGgo tutorial and advanced workflows are available in the package vignette:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/browseVignettes.html" class="external-link">browseVignettes</a></span><span class="op">(</span><span class="st">"DEGgo"</span><span class="op">)</span></span></code></pre></div>
 </div>

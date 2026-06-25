@@ -87,6 +87,22 @@ automatically tries \code{"SYMBOL"}, \code{"gene"}, then \code{"ENSEMBL"}.}
 \item{style}{Plot style passed to \code{.deggo_theme()}.}
 
 \item{txtsize}{Base text size.}
+
+\item{label_size}{Size of standard gene labels.}
+
+\item{highlight_label_size}{Size of highlighted gene labels.}
+
+\item{label_bg}{Fill color for label backgrounds.}
+
+\item{label_bg_r}{Radius of label background boxes.}
+
+\item{label_force}{Force parameter passed to ggrepel.}
+
+\item{label_force_pull}{Pull force parameter passed to ggrepel.}
+
+\item{label_max_overlaps}{Maximum number of overlapping labels.}
+
+\item{seed}{Random seed for reproducible label placement.}
 }
 \value{
 A \code{ggplot} object.

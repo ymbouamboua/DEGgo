@@ -26,6 +26,10 @@ in \code{colnames(counts)}.}
 annotations.}
 
 \item{dpi}{Resolution used for the hierarchical clustering PNG.}
+
+\item{style}{Plot theme style.}
+
+\item{txtsize}{Base text size.}
 }
 \value{
 Invisibly returns a list containing the sample correlation matrix,

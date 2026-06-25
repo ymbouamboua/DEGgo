@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{plot_all_go_terms}
 \alias{plot_all_go_terms}
-\title{Plot GO enrichment terms for all pairwise comparisons}
+\title{Plot GO enrichment terms across all DEGgo comparisons}
 \usage{
 plot_all_go_terms(
   results,
@@ -16,51 +16,44 @@ plot_all_go_terms(
 )
 }
 \arguments{
-\item{results}{DEGgo results object returned by \code{run_deggo()}.}
+\item{results}{A DEGgo results object returned by \code{run_deggo()}. Must contain
+a \code{go_results} list.}
 
-\item{top_n}{Number of GO terms to display per regulation class
-(Up and Down). Default is \code{10}.}
+\item{top_n}{Integer. Number of top enriched GO terms to display per plot.
+Default is \code{10}.}
 
-\item{output_dir}{Optional output directory for exported figures.
-If \code{NULL}, plots are returned but not saved.}
+\item{txtsize}{Numeric. Base text size used in the GO plots. Default is \code{8}.}
 
-\item{width}{Plot width in inches. Default is \code{8}.}
+\item{style}{Character. Plot theme style passed to \code{plot_go_terms()}.
+Default is \code{"bw"}.}
 
-\item{height}{Plot height in inches. Default is \code{6}.}
+\item{output_dir}{Optional character. Directory where GO plots are saved.
+If \code{NULL}, plots are returned but not written to disk.}
 
-\item{dpi}{Plot resolution. Default is \code{300}.}
+\item{width}{Numeric. Plot width in inches for saved files. Default is \code{8}.}
 
-\item{font_size}{Base font size used in plots. Default is \code{8}.}
+\item{height}{Numeric. Plot height in inches for saved files. Default is \code{6}.}
+
+\item{dpi}{Integer. Resolution in dots per inch for saved PNG files.
+Default is \code{300}.}
 }
 \value{
-A named list of ggplot objects, one per comparison.
+A named list of \code{ggplot} objects, one per comparison. Comparisons
+without enriched GO terms return \code{NULL}.
 }
 \description{
-Generates GO enrichment plots for every comparison returned by
-\code{run_deggo()} and optionally exports figures to disk.
-}
-\details{
-This function iterates over all pairwise comparisons stored in
-\code{results$go_results} and calls \code{plot_go_terms()} on each
-GO enrichment table.
-
-If \code{output_dir} is supplied, PNG and PDF versions of all plots
-are automatically exported.
+Generate Gene Ontology enrichment plots for all comparisons stored in a
+DEGgo results object. This function iterates over \code{results$go_results},
+creates one GO plot per comparison using \code{plot_go_terms()}, and optionally
+saves each plot as PNG and PDF.
 }
 \examples{
 \dontrun{
-
 go_plots <- plot_all_go_terms(
   results = results,
   top_n = 10,
-  font_size = 8,
   output_dir = "GO_plots"
 )
-
-names(go_plots)
-
-go_plots$WAT_Female_PAMH_vs_PBS
-
 }
 
 }

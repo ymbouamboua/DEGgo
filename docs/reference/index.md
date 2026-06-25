@@ -35,7 +35,7 @@
 - [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md)
   : Plot GO terms by regulation status
 - [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md)
-  : Plot GO enrichment terms for all pairwise comparisons
+  : Plot GO enrichment terms across all DEGgo comparisons
 - [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md)
   : Plot normalized gene expression
 - [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md)

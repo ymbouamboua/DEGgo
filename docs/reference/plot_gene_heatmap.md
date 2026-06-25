@@ -21,12 +21,11 @@ plot_gene_heatmap(
   main = "Selected gene expression heatmap",
   color = (grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001")))(100),
   breaks = seq(-2, 2, length.out = 101),
-  border_color = "#9C9391",
   scale_rows = TRUE,
   cluster_rows = TRUE,
   cluster_cols = FALSE,
-  fontsize_row = 8,
-  fontsize_col = 7,
+  fontsize_row = 12,
+  fontsize_col = 10,
   width = 10,
   height = 7
 )
@@ -93,10 +92,6 @@ plot_gene_heatmap(
 - breaks:
 
   Numeric vector of color breaks.
-
-- border_color:
-
-  Border color for heatmap cells.
 
 - scale_rows:
 

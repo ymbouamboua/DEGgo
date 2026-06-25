@@ -5,7 +5,12 @@
 - [Installation](#installation)
 - [Quick start](#quick-start)
   - [Example dataset: airway](#example-dataset-airway)
+- [Single differential expression
+  analysis](#single-differential-expression-analysis)
+- [Pairwise differential expression
+  analysis](#pairwise-differential-expression-analysis)
 - [Main functions](#main-functions)
+- [Available Functions](#available-functions)
 - [Supported organisms](#supported-organisms)
 - [Documentation](#documentation)
 - [Citation](#citation)
@@ -74,57 +79,94 @@ metadata <- read.delim(
   system.file("extdata", "airway_metadata.tsv", package = "DEGgo"),
   check.names = FALSE
 )
+```
 
-metadata$condition <- metadata$dex
+## Single differential expression analysis
+
+``` r
+
 
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  gene_col = "gene_id",
-  organism = "human",
-  sample_col = "Run",
+  organism = "mouse",
   method = "DESeq2",
   analysis_mode = "single",
-  design_formula = ~ cell + dex,
-  contrast = c("dex", "trt", "untrt"),
-  output_dir = "DEGgo_airway",
-  generate_report = TRUE, 
-  generate_pptx = FALSE,
-  report_formats = "html"
+  sample_col = "sample",
+  design_formula = ~ treatment,
+  contrast = c("treatment", "PAMH", "PBS"),
+  output_dir = "DEGgo_results"
 )
 
 results$summary
 ```
 
+## Pairwise differential expression analysis
+
+``` r
+
+
+pairwise_contrasts <- list(
+  TreatmentA_vs_Control_Male = c(
+    "comparison_group",
+    "TreatmentA_Male",
+    "Control_Male"
+  ),
+  TreatmentA_vs_Control_Female = c(
+    "comparison_group",
+    "TreatmentA_Female",
+    "Control_Female"
+  ),
+  Male_vs_Female_Control = c(
+    "comparison_group",
+    "Control_Male",
+    "Control_Female"
+  )
+)
+
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+  organism = "mouse",
+  analysis_mode = "pairwise",
+  sample_col = "sample",
+  pairwise_group_cols = c("condition", "sex"),
+  pairwise_contrasts = pairwise_contrasts,
+  output_dir = "DEGgo_results"
+)
+```
+
 The analysis generates differential expression results, significant DEG
 tables, volcano plots, PCA plots, heatmaps, Gene Ontology enrichment
-results, and an HTML report in the DEGgo_airway directory.
+results, and an HTML/PDF/PPTX report in the DEGgo_results directory.
 
 ## Main functions
+
+## Available Functions
 
 | Function | Description |
 |:---|:---|
 | [`check_raw_counts()`](https://ymbouamboua.github.io/DEGgo/reference/check_raw_counts.md) | Validate raw count matrices and sample identifiers before analysis |
-| [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md) | Raw and cleaned RNA-seq quality control |
-| [`remove_flagged_samples()`](https://ymbouamboua.github.io/DEGgo/reference/remove_flagged_samples.md) | Remove failed or low-quality samples |
-| [`marker_score_check()`](https://ymbouamboua.github.io/DEGgo/reference/marker_score_check.md) | Tissue marker scoring and sample swap detection |
-| [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md) | Marker or selected-gene heatmap |
-| [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md) | Main DEGgo differential expression workflow |
-| [`run_go_enrichment()`](https://ymbouamboua.github.io/DEGgo/reference/run_go_enrichment.md) | Gene Ontology enrichment for DEG results |
-| [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md) | Publication-ready GO enrichment plots |
-| [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md) | Plot GO terms across multiple comparisons |
-| [`extract_expression()`](https://ymbouamboua.github.io/DEGgo/reference/extract_expression.md) | Extract raw, normalized, log2-normalized or VST expression values |
-| [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md) | Plot gene expression for selected genes |
-| [`plot_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_heatmap.md) | Generate DEG heatmaps from differential expression results |
-| [`plot_pca()`](https://ymbouamboua.github.io/DEGgo/reference/plot_pca.md) | Principal component analysis of RNA-seq samples |
-| [`plot_volcano()`](https://ymbouamboua.github.io/DEGgo/reference/plot_volcano.md) | Volcano plot visualization of differential expression results |
-| [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md) | Generate HTML/PDF DEGgo reports |
-| [`generate_deggo_pptx()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_pptx.md) | Generate PPTX DEGgo reports |
-| [`deggo_extract_deg_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_deg_genes.md) | Extract genes of interest from DEG results |
-| [`deggo_extract_go_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes.md) | Extract genes associated with enriched GO terms |
+| [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md) | Perform exploratory quality control on raw RNA-seq data |
+| [`remove_flagged_samples()`](https://ymbouamboua.github.io/DEGgo/reference/remove_flagged_samples.md) | Remove low-quality samples identified during quality control |
+| [`marker_score_check()`](https://ymbouamboua.github.io/DEGgo/reference/marker_score_check.md) | Assess marker gene expression for biological sample validation |
+| [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md) | Visualize marker or selected genes as a heatmap |
+| [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md) | Run the complete bulk RNA-seq differential expression workflow |
+| [`run_sample_qc()`](https://ymbouamboua.github.io/DEGgo/reference/run_sample_qc.md) | Perform post-filtering sample quality control and diagnostics |
+| [`run_go_enrichment()`](https://ymbouamboua.github.io/DEGgo/reference/run_go_enrichment.md) | Perform Gene Ontology enrichment analysis |
+| [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md) | Generate publication-ready Gene Ontology enrichment plots |
+| [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md) | Compare Gene Ontology enrichment across multiple analyses |
+| [`extract_expression()`](https://ymbouamboua.github.io/DEGgo/reference/extract_expression.md) | Extract raw, normalized, log2-normalized, or VST expression values |
+| [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md) | Visualize expression of selected genes across samples |
+| [`plot_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_heatmap.md) | Generate heatmaps of differentially expressed genes |
+| [`plot_pca()`](https://ymbouamboua.github.io/DEGgo/reference/plot_pca.md) | Perform principal component analysis (PCA) |
+| [`plot_volcano()`](https://ymbouamboua.github.io/DEGgo/reference/plot_volcano.md) | Generate publication-ready volcano plots |
+| [`generate_deggo_report()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_report.md) | Generate an automated HTML or PDF analysis report |
+| [`generate_deggo_pptx()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_pptx.md) | Generate a PowerPoint summary report |
+| [`deggo_extract_deg_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_deg_genes.md) | Extract selected genes from differential expression results |
+| [`deggo_extract_go_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes.md) | Extract genes associated with enriched Gene Ontology terms |
 | [`deggo_extract_go_genes_pairwise()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_genes_pairwise.md) | Extract GO-associated genes across pairwise comparisons |
-| [`deggo_extract_go_keywords()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_keywords.md) | Extract GO terms matching biological keywords |
-| [`run_sample_qc()`](https://ymbouamboua.github.io/DEGgo/reference/run_sample_qc.md) | Automated sample-level quality control metrics and diagnostics |
+| [`deggo_extract_go_keywords()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_go_keywords.md) | Search enriched Gene Ontology terms using biological keywords |
 
 ## Supported organisms
 
@@ -199,7 +241,7 @@ MIT © Yvon MBOUAMBOUA
 - [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md)
   : Plot GO terms by regulation status
 - [`plot_all_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_all_go_terms.md)
-  : Plot GO enrichment terms for all pairwise comparisons
+  : Plot GO enrichment terms across all DEGgo comparisons
 - [`plot_gene_expression()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_expression.md)
   : Plot normalized gene expression
 - [`plot_gene_heatmap()`](https://ymbouamboua.github.io/DEGgo/reference/plot_gene_heatmap.md)
