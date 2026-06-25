@@ -15,11 +15,12 @@ reproducible reporting.
 
 <p align="center">
 
+<img src="https://img.shields.io/badge/R-%3E%3D4.3-blue">
+<img src="https://img.shields.io/badge/license-MIT-green"> </a>
 <a href="https://doi.org/10.5281/zenodo.20785178">
 <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg">
-</a> <img src="https://img.shields.io/badge/R-%3E%3D4.3-blue">
-<img src="https://img.shields.io/badge/license-MIT-green">
 <img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social">
+</a>
 </p>
 
 ## Overview
