@@ -54,49 +54,40 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="deggo">DEGgo<a class="anchor" aria-label="anchor" href="#deggo"></a>
 </h1></div>
-<ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#workflow">Workflow</a></li>
-<li><a href="#installation">Installation</a></li>
-<li>
-<a href="#quick-start">Quick start</a>
-<ul>
-<li><a href="#example-dataset-airway">Example dataset: airway</a></li>
-</ul>
-</li>
-<li><a href="#single-differential-expression-analysis">Single differential expression analysis</a></li>
-<li><a href="#pairwise-differential-expression-analysis">Pairwise differential expression analysis</a></li>
-<li><a href="#main-functions">Main functions</a></li>
-<li><a href="#available-functions">Available Functions</a></li>
-<li><a href="#supported-organisms">Supported organisms</a></li>
-<li><a href="#documentation">Documentation</a></li>
-<li><a href="#citation">Citation</a></li>
-<li><a href="#license">License</a></li>
-</ul>
 <p align="center">
-<img src="https://img.shields.io/badge/R-%3E%3D4.3-blue"><img src="https://img.shields.io/badge/license-MIT-green"><a href="https://doi.org/10.5281/zenodo.20785178" class="external-link"> <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg" alt="DOI"></a> <img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social"></p>
+<img src="reference/figures/DEGgo_logo.png" alt="DEGgo logo" width="500"></p>
 <p align="center">
-<img src="reference/figures/DEGgo_logo.png" alt="DEGgo package logo showing an integrated workflow for bulk RNA-seq analysis" width="400"></p>
+An integrated framework for automated bulk RNA-seq differential expression analysis, functional enrichment, visualization, and reproducible reporting.
+</p>
+<p align="center">
+<a href="https://doi.org/10.5281/zenodo.20785178" class="external-link"> <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg"></a> <img src="https://img.shields.io/badge/R-%3E%3D4.3-blue"><img src="https://img.shields.io/badge/license-MIT-green"><img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social"></p>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>DEGgo is an R package for automated bulk RNA-seq downstream analysis.</p>
-<p>It provides an end-to-end workflow from raw count matrices and sample metadata to:</p>
+<p><strong>DEGgo</strong> is an R package for automated bulk RNA-seq downstream analysis.</p>
+<p>Starting from a raw count matrix and sample metadata, DEGgo performs sample quality control, differential expression analysis using <strong>DESeq2</strong>, <strong>edgeR</strong>, or <strong>limma</strong>, Gene Ontology enrichment, publication-ready visualization, and automated HTML/PDF/PPTX reporting within a single reproducible workflow.</p>
+<p>The package is designed for both bioinformaticians and experimental biologists, minimizing manual scripting while preserving analytical flexibility.</p>
+</div>
+<div class="section level2">
+<h2 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
+</h2>
 <ul>
-<li>quality control;</li>
-<li>sample validation;</li>
-<li>differential expression analysis;</li>
-<li>Gene Ontology enrichment;</li>
-<li>publication-ready visualizations;</li>
-<li>automated HTML/PDF/PPTX reporting.</li>
+<li>Automated bulk RNA-seq workflow</li>
+<li>Raw and post-filtering quality control</li>
+<li>Differential expression with DESeq2, edgeR, or limma</li>
+<li>Pairwise and single-comparison analyses</li>
+<li>Gene Ontology enrichment</li>
+<li>Publication-ready PCA, volcano plots, and heatmaps</li>
+<li>Automated HTML, PDF, and PowerPoint reports</li>
+<li>Reproducibility files and session information</li>
+<li>Human, mouse, rat, and custom OrgDb support</li>
 </ul>
-<p>DEGgo supports DESeq2, edgeR, and limma and is designed for both bioinformaticians and experimental biologists.</p>
 </div>
 <div class="section level2">
 <h2 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a>
 </h2>
 <p align="center">
-<img src="reference/figures/DEGgo_workflow.png" width="300"></p>
+<img src="reference/figures/DEGgo_workflow.png" width="850"></p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -104,6 +95,8 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Development version</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"ymbouamboua/DEGgo"</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
@@ -112,10 +105,7 @@
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="section level3">
-<h3 id="example-dataset-airway">Example dataset: airway<a class="anchor" aria-label="anchor" href="#example-dataset-airway"></a>
-</h3>
-<p>DEGgo provides a small DEGgo-ready example dataset derived from the Bioconductor <code>airway</code> package. This dataset contains human RNA-seq count data from airway smooth muscle cells treated with dexamethasone.</p>
+<p>The package includes a ready-to-use RNA-seq dataset derived from the Bioconductor <strong>airway</strong> experiment.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.delim</a></span><span class="op">(</span></span>
@@ -128,7 +118,6 @@
 <span>  check.names <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
-</div>
 <div class="section level2">
 <h2 id="single-differential-expression-analysis">Single differential expression analysis<a class="anchor" aria-label="anchor" href="#single-differential-expression-analysis"></a>
 </h2>
@@ -137,7 +126,7 @@
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
 <span>  counts <span class="op">=</span> <span class="va">counts</span>,</span>
 <span>  metadata <span class="op">=</span> <span class="va">metadata</span>,</span>
-<span>  organism <span class="op">=</span> <span class="st">"mouse"</span>,</span>
+<span>  organism <span class="op">=</span> <span class="st">"human"</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"DESeq2"</span>,</span>
 <span>  analysis_mode <span class="op">=</span> <span class="st">"single"</span>,</span>
 <span>  sample_col <span class="op">=</span> <span class="st">"sample"</span>,</span>
@@ -181,14 +170,9 @@
 <span>  pairwise_contrasts <span class="op">=</span> <span class="va">pairwise_contrasts</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="st">"DEGgo_results"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The analysis generates differential expression results, significant DEG tables, volcano plots, PCA plots, heatmaps, Gene Ontology enrichment results, and an HTML/PDF/PPTX report in the DEGgo_results directory.</p>
 </div>
 <div class="section level2">
-<h2 id="main-functions">Main functions<a class="anchor" aria-label="anchor" href="#main-functions"></a>
-</h2>
-</div>
-<div class="section level2">
-<h2 id="available-functions">Available Functions<a class="anchor" aria-label="anchor" href="#available-functions"></a>
+<h2 id="functions">Functions<a class="anchor" aria-label="anchor" href="#functions"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -315,12 +299,12 @@
 </tr>
 </tbody>
 </table>
-<p>Custom organisms are supported through user-supplied Bioconductor OrgDb annotation databases.</p>
+<p>Additional organisms can be analyzed by supplying a compatible Bioconductor <code>OrgDb</code> annotation database.</p>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
-<p>The complete DEGgo tutorial and advanced workflows are available in the package vignette:</p>
+<p>A complete tutorial and advanced examples are available in the package vignette.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/browseVignettes.html" class="external-link">browseVignettes</a></span><span class="op">(</span><span class="st">"DEGgo"</span><span class="op">)</span></span></code></pre></div>
@@ -328,8 +312,10 @@
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
-<p>If you use DEGgo, please cite:</p>
-<p>Yvon Mbouamboua, Vicent Prevot and Paolo Giacobini. (2026). DEGgo: automated bulk RNA-seq differential expression analysis and Gene Ontology enrichment. Zenodo. <a href="https://doi.org/10.5281/zenodo.20785178" class="external-link uri">https://doi.org/10.5281/zenodo.20785178</a></p>
+<p>If you use <strong>DEGgo</strong> in your research, please cite:</p>
+<blockquote>
+<p>Yvon Mbouamboua, Vincent Prevot, Paolo Giacobini (2026). <strong>DEGgo: automated bulk RNA-seq differential expression analysis and Gene Ontology enrichment.</strong> Zenodo. <a href="https://doi.org/10.5281/zenodo.20785178" class="external-link uri">https://doi.org/10.5281/zenodo.20785178</a></p>
+</blockquote>
 </div>
 </div>
 <div class="section level1">

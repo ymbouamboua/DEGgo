@@ -1,44 +1,40 @@
 # DEGgo
 
-- [Overview](#overview)
-- [Workflow](#workflow)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-  - [Example dataset: airway](#example-dataset-airway)
-- [Single differential expression
-  analysis](#single-differential-expression-analysis)
-- [Pairwise differential expression
-  analysis](#pairwise-differential-expression-analysis)
-- [Main functions](#main-functions)
-- [Available Functions](#available-functions)
-- [Supported organisms](#supported-organisms)
-- [Documentation](#documentation)
-- [Citation](#citation)
-- [License](#license)
+![DEGgo logo](reference/figures/DEGgo_logo.png)
 
-![](https://img.shields.io/badge/R-%3E%3D4.3-blue)![](https://img.shields.io/badge/license-MIT-green)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg)](https://doi.org/10.5281/zenodo.20785178)
-![](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
+An integrated framework for automated bulk RNA-seq differential
+expression analysis, functional enrichment, visualization, and
+reproducible reporting.
 
-![DEGgo package logo showing an integrated workflow for bulk RNA-seq
-analysis](reference/figures/DEGgo_logo.png)
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg)](https://doi.org/10.5281/zenodo.20785178)
+![](https://img.shields.io/badge/R-%3E%3D4.3-blue)![](https://img.shields.io/badge/license-MIT-green)![](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
 
 ## Overview
 
-DEGgo is an R package for automated bulk RNA-seq downstream analysis.
+**DEGgo** is an R package for automated bulk RNA-seq downstream
+analysis.
 
-It provides an end-to-end workflow from raw count matrices and sample
-metadata to:
+Starting from a raw count matrix and sample metadata, DEGgo performs
+sample quality control, differential expression analysis using
+**DESeq2**, **edgeR**, or **limma**, Gene Ontology enrichment,
+publication-ready visualization, and automated HTML/PDF/PPTX reporting
+within a single reproducible workflow.
 
-- quality control;
-- sample validation;
-- differential expression analysis;
-- Gene Ontology enrichment;
-- publication-ready visualizations;
-- automated HTML/PDF/PPTX reporting.
+The package is designed for both bioinformaticians and experimental
+biologists, minimizing manual scripting while preserving analytical
+flexibility.
 
-DEGgo supports DESeq2, edgeR, and limma and is designed for both
-bioinformaticians and experimental biologists.
+## Features
+
+- Automated bulk RNA-seq workflow
+- Raw and post-filtering quality control
+- Differential expression with DESeq2, edgeR, or limma
+- Pairwise and single-comparison analyses
+- Gene Ontology enrichment
+- Publication-ready PCA, volcano plots, and heatmaps
+- Automated HTML, PDF, and PowerPoint reports
+- Reproducibility files and session information
+- Human, mouse, rat, and custom OrgDb support
 
 ## Workflow
 
@@ -50,6 +46,8 @@ bioinformaticians and experimental biologists.
 
 
 install.packages("remotes")
+
+# Development version
 remotes::install_github("ymbouamboua/DEGgo")
 ```
 
@@ -61,11 +59,8 @@ library(DEGgo)
 
 ## Quick start
 
-### Example dataset: airway
-
-DEGgo provides a small DEGgo-ready example dataset derived from the
-Bioconductor `airway` package. This dataset contains human RNA-seq count
-data from airway smooth muscle cells treated with dexamethasone.
+The package includes a ready-to-use RNA-seq dataset derived from the
+Bioconductor **airway** experiment.
 
 ``` r
 
@@ -89,7 +84,7 @@ metadata <- read.delim(
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  organism = "mouse",
+  organism = "human",
   method = "DESeq2",
   analysis_mode = "single",
   sample_col = "sample",
@@ -136,13 +131,7 @@ results <- run_deggo(
 )
 ```
 
-The analysis generates differential expression results, significant DEG
-tables, volcano plots, PCA plots, heatmaps, Gene Ontology enrichment
-results, and an HTML/PDF/PPTX report in the DEGgo_results directory.
-
-## Main functions
-
-## Available Functions
+## Functions
 
 | Function | Description |
 |:---|:---|
@@ -178,13 +167,13 @@ DEGgo provides built-in annotation support for the following organisms:
 | Mouse (*Mus musculus*)    | `"mouse"` | `org.Mm.eg.db` |
 | Rat (*Rattus norvegicus*) | `"rat"`   | `org.Rn.eg.db` |
 
-Custom organisms are supported through user-supplied Bioconductor OrgDb
-annotation databases.
+Additional organisms can be analyzed by supplying a compatible
+Bioconductor `OrgDb` annotation database.
 
 ## Documentation
 
-The complete DEGgo tutorial and advanced workflows are available in the
-package vignette:
+A complete tutorial and advanced examples are available in the package
+vignette.
 
 ``` r
 
@@ -194,11 +183,12 @@ browseVignettes("DEGgo")
 
 ## Citation
 
-If you use DEGgo, please cite:
+If you use **DEGgo** in your research, please cite:
 
-Yvon Mbouamboua, Vicent Prevot and Paolo Giacobini. (2026). DEGgo:
-automated bulk RNA-seq differential expression analysis and Gene
-Ontology enrichment. Zenodo. <https://doi.org/10.5281/zenodo.20785178>
+> Yvon Mbouamboua, Vincent Prevot, Paolo Giacobini (2026). **DEGgo:
+> automated bulk RNA-seq differential expression analysis and Gene
+> Ontology enrichment.** Zenodo.
+> <https://doi.org/10.5281/zenodo.20785178>
 
 # License
 
