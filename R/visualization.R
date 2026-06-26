@@ -1529,17 +1529,40 @@ plot_gene_heatmap <- function(
   metadata[[sample_col]] <- as.character(metadata[[sample_col]])
   rownames(metadata) <- metadata[[sample_col]]
 
-  sample_cols <- intersect(colnames(counts), metadata[[sample_col]])
-  if (!length(sample_cols)) stop("No matching sample columns found.", call. = FALSE)
+  # IMPORTANT:
+  # keep sample order from metadata, not from counts
+  sample_cols <- metadata[[sample_col]][metadata[[sample_col]] %in% colnames(counts)]
+
+  if (!length(sample_cols)) {
+    stop("No matching sample columns found.", call. = FALSE)
+  }
+
+  metadata <- metadata[sample_cols, , drop = FALSE]
 
   mat <- as.matrix(counts[, sample_cols, drop = FALSE])
   rownames(mat) <- as.character(counts[[gene_col]])
-  storage.mode(mat) <- "numeric"
 
-  feature <- if (!is.na(feature_col)) as.character(counts[[feature_col]]) else rownames(mat)
+  suppressWarnings(storage.mode(mat) <- "numeric")
+
+  if (anyNA(mat)) {
+    stop(
+      "Expression matrix contains NA after numeric conversion. ",
+      "Check that sample columns contain only numeric counts.",
+      call. = FALSE
+    )
+  }
+
+  feature <- if (!is.na(feature_col)) {
+    as.character(counts[[feature_col]])
+  } else {
+    rownames(mat)
+  }
 
   keep <- rownames(mat) %in% genes | toupper(feature) %in% toupper(genes)
-  if (!any(keep)) stop("None of the requested genes were found.", call. = FALSE)
+
+  if (!any(keep)) {
+    stop("None of the requested genes were found.", call. = FALSE)
+  }
 
   mat_use <- mat[keep, , drop = FALSE]
   rownames(mat_use) <- make.unique(feature[keep])
@@ -1554,8 +1577,13 @@ plot_gene_heatmap <- function(
 
   if (!is.null(order_by)) {
     missing <- setdiff(order_by, colnames(metadata_use))
+
     if (length(missing)) {
-      stop("order_by column(s) not found: ", paste(missing, collapse = ", "), call. = FALSE)
+      stop(
+        "order_by column(s) not found: ",
+        paste(missing, collapse = ", "),
+        call. = FALSE
+      )
     }
 
     ord <- do.call(order, metadata_use[, order_by, drop = FALSE])
@@ -1563,21 +1591,43 @@ plot_gene_heatmap <- function(
     mat_use <- mat_use[, rownames(metadata_use), drop = FALSE]
   }
 
-  annotation_col <- metadata_use[, intersect(annotation_cols, colnames(metadata_use)), drop = FALSE]
-  if (!ncol(annotation_col)) annotation_col <- NULL
+  annotation_col <- metadata_use[
+    ,
+    intersect(annotation_cols, colnames(metadata_use)),
+    drop = FALSE
+  ]
+
+  if (!ncol(annotation_col)) {
+    annotation_col <- NULL
+  } else {
+    annotation_col[] <- lapply(annotation_col, factor)
+  }
 
   if (isTRUE(scale_rows)) {
     mat_use <- t(scale(t(mat_use)))
     mat_use <- mat_use[stats::complete.cases(mat_use), , drop = FALSE]
   }
 
-  if (!nrow(mat_use)) stop("No valid genes after scaling.", call. = FALSE)
+  if (!nrow(mat_use)) {
+    stop("No valid genes after scaling.", call. = FALSE)
+  }
 
-  annotation_col <- metadata_use[, intersect(annotation_cols, colnames(metadata_use)), drop = FALSE]
-  annotation_col[] <- lapply(annotation_col, factor)
+  if (!is.null(annotation_col)) {
+    annotation_col <- annotation_col[colnames(mat_use), , drop = FALSE]
+  }
 
   if (is.null(annotation_colors) || is.character(annotation_colors)) {
-    annotation_colors <- .deggo_annotation_colors(annotation_col)
+    annotation_colors <- if (!is.null(annotation_col)) {
+      .deggo_annotation_colors(annotation_col)
+    } else {
+      NULL
+    }
+  }
+
+  stopifnot(identical(colnames(mat_use), rownames(metadata_use)))
+
+  if (!is.null(annotation_col)) {
+    stopifnot(identical(colnames(mat_use), rownames(annotation_col)))
   }
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -1597,6 +1647,8 @@ plot_gene_heatmap <- function(
     mat_use,
     annotation_col = annotation_col,
     annotation_colors = annotation_colors,
+    cluster_rows = cluster_rows,
+    cluster_cols = cluster_cols,
     fontsize = 7,
     fontsize_row = fontsize_row_use,
     fontsize_col = fontsize_col_use,
@@ -1605,7 +1657,7 @@ plot_gene_heatmap <- function(
     show_colnames = TRUE,
     treeheight_row = 0,
     treeheight_col = 0,
-    angle_col = 90,
+    angle_col = "90",
     main = main,
     color = color,
     breaks = breaks,
@@ -1614,7 +1666,6 @@ plot_gene_heatmap <- function(
     height = height
   )
 }
-
 
 
 # ========================================================= #
