@@ -2311,8 +2311,8 @@ plot_go_terms <- function(
     top_n = 10,
     wrap_width = 50,
     color_values = c(
-      "Up" = "#740001",
-      "Down" = "#6497b1"
+      Up = "#740001",
+      Down = "#6497b1"
     ),
     size_range = c(2, 6),
     style = "bw",
@@ -2320,133 +2320,206 @@ plot_go_terms <- function(
     txtsize = 12
 ) {
 
-  for (pkg in c("ggplot2", "dplyr", "stringr", "forcats")) {
-    if (!requireNamespace(pkg, quietly = TRUE)) {
-      stop("Package '", pkg, "' is required.", call. = FALSE)
-    }
-  }
+  if (!requireNamespace("ggplot2", quietly = TRUE))
+    stop("Package 'ggplot2' is required.", call. = FALSE)
 
-  if (is.null(go_df) || !is.data.frame(go_df) || nrow(go_df) == 0) {
+  if (!requireNamespace("stringr", quietly = TRUE))
+    stop("Package 'stringr' is required.", call. = FALSE)
+
+  if (!requireNamespace("forcats", quietly = TRUE))
+    stop("Package 'forcats' is required.", call. = FALSE)
+
+  if (is.null(go_df) || !is.data.frame(go_df) || nrow(go_df) == 0)
     stop("go_df is empty.", call. = FALSE)
-  }
 
-  required <- c("Description", "FoldEnrichment", "p.adjust", "Count", "Regulation")
-  missing <- setdiff(required, colnames(go_df))
+  required <- c(
+    "Description",
+    "FoldEnrichment",
+    "p.adjust",
+    "Count",
+    "Regulation"
+  )
 
-  if (length(missing) > 0) {
+  miss <- setdiff(required, colnames(go_df))
+
+  if (length(miss))
     stop(
-      "Missing column(s) in go_df: ",
-      paste(missing, collapse = ", "),
+      "Missing column(s): ",
+      paste(miss, collapse = ", "),
       call. = FALSE
     )
-  }
 
-  df <- go_df |>
-    dplyr::mutate(
-      Description = stringr::str_to_upper(.data[["Description"]]),
-      Regulation = factor(.data[["Regulation"]], levels = c("Up", "Down")),
-      FoldEnrichment = as.numeric(.data[["FoldEnrichment"]]),
-      p.adjust = as.numeric(.data[["p.adjust"]]),
-      Count = as.integer(.data[["Count"]])
-    ) |>
-    dplyr::filter(
-      !is.na(.data[["Regulation"]]),
-      is.finite(.data[["FoldEnrichment"]]),
-      is.finite(.data[["p.adjust"]]),
-      .data[["p.adjust"]] > 0
-    )
+  ## ----------------------------- #
+  ## Clean
+  ## ----------------------------- #
 
-  if (nrow(df) == 0) {
+  df <- go_df
+
+  df$Description <- toupper(trimws(df$Description))
+  df$Regulation <- factor(df$Regulation,
+                          levels = c("Up", "Down"))
+
+  df$FoldEnrichment <- as.numeric(df$FoldEnrichment)
+  df$p.adjust <- as.numeric(df$p.adjust)
+  df$Count <- as.integer(df$Count)
+
+  keep <-
+    !is.na(df$Regulation) &
+    is.finite(df$FoldEnrichment) &
+    is.finite(df$p.adjust) &
+    df$p.adjust > 0
+
+  df <- df[keep, , drop = FALSE]
+
+  if (!nrow(df))
     stop("No valid GO terms after cleaning.", call. = FALSE)
-  }
+
+  ## ----------------------------- #
+  ## Keyword filtering
+  ## ----------------------------- #
 
   if (!is.null(go_terms_of_interest)) {
-    go_terms_of_interest <- stringr::str_to_upper(go_terms_of_interest)
 
-    df <- df |>
-      dplyr::filter(.data[["Description"]] %in% go_terms_of_interest)
-  }
-
-  df <- df |>
-    dplyr::group_by(.data[["Regulation"]], .data[["Description"]]) |>
-    dplyr::arrange(
-      .data[["p.adjust"]],
-      dplyr::desc(.data[["FoldEnrichment"]]),
-      .by_group = TRUE
-    ) |>
-    dplyr::slice_head(n = 1) |>
-    dplyr::ungroup()
-
-  if (is.null(go_terms_of_interest)) {
-    df <- df |>
-      dplyr::group_by(.data[["Regulation"]]) |>
-      dplyr::arrange(
-        .data[["p.adjust"]],
-        dplyr::desc(.data[["FoldEnrichment"]]),
-        .by_group = TRUE
-      ) |>
-      dplyr::slice_head(n = top_n) |>
-      dplyr::ungroup()
-  }
-
-  df <- df |>
-    dplyr::mutate(
-      log10FDR = -log10(.data[["p.adjust"]]),
-      Description_wrapped = stringr::str_wrap(
-        .data[["Description"]],
-        width = wrap_width
-      ),
-      Regulation = droplevels(.data[["Regulation"]]),
-      Description_wrapped = forcats::fct_reorder(
-        .data[["Description_wrapped"]],
-        .data[["log10FDR"]]
-      )
+    pattern <- paste(
+      toupper(go_terms_of_interest),
+      collapse = "|"
     )
 
-  present_regs <- unique(as.character(df$Regulation))
-  color_values <- color_values[names(color_values) %in% present_regs]
+    keep <- grepl(
+      pattern,
+      df$Description,
+      ignore.case = TRUE
+    )
 
-  if (nrow(df) == 0) {
-    stop("No GO terms left after filtering.", call. = FALSE)
+    df <- df[keep, , drop = FALSE]
+
+    if (!nrow(df))
+      stop(
+        "No GO terms matched the requested keywords.",
+        call. = FALSE
+      )
   }
+
+  ## ----------------------------- #
+  ## Keep best term per regulation
+  ## ----------------------------- #
+
+  ord <- order(
+    df$Regulation,
+    df$Description,
+    df$p.adjust,
+    -df$FoldEnrichment
+  )
+
+  df <- df[ord, ]
+
+  dup <- duplicated(
+    paste(df$Regulation, df$Description)
+  )
+
+  df <- df[!dup, , drop = FALSE]
+
+  ## ----------------------------- #
+  ## Top N
+  ## ----------------------------- #
+
+  if (is.null(go_terms_of_interest)) {
+
+    split_df <- split(df, df$Regulation)
+
+    split_df <- lapply(split_df, function(x) {
+
+      x <- x[order(
+        x$p.adjust,
+        -x$FoldEnrichment
+      ), ]
+
+      head(x, top_n)
+
+    })
+
+    df <- do.call(rbind, split_df)
+    rownames(df) <- NULL
+  }
+
+  ## ----------------------------- #
+  ## Plot variables
+  ## ----------------------------- #
+
+  df$log10FDR <- -log10(df$p.adjust)
+
+  df$Description_wrapped <-
+    stringr::str_wrap(
+      df$Description,
+      width = wrap_width
+    )
+
+  df$Description_wrapped <-
+    forcats::fct_reorder(
+      df$Description_wrapped,
+      df$log10FDR
+    )
+
+  regs <- unique(as.character(df$Regulation))
+
+  color_values <- color_values[
+    names(color_values) %in% regs
+  ]
+
+  ## ----------------------------- #
+  ## Plot
+  ## ----------------------------- #
 
   ggplot2::ggplot(
     df,
     ggplot2::aes(
-      x = .data[["log10FDR"]],
-      y = .data[["Description_wrapped"]]
+      x = log10FDR,
+      y = Description_wrapped
     )
   ) +
+
     ggplot2::geom_segment(
       ggplot2::aes(
         x = 0,
-        xend = .data[["log10FDR"]],
-        yend = .data[["Description_wrapped"]],
-        color = .data[["Regulation"]]
+        xend = log10FDR,
+        yend = Description_wrapped,
+        colour = Regulation
       ),
-      linewidth = 0.8,
-      alpha = 1
+      linewidth = 0.8
     ) +
+
     ggplot2::geom_point(
       ggplot2::aes(
-        size = .data[["FoldEnrichment"]],
-        color = .data[["Regulation"]]
-      ),
-      alpha = 1
+        size = FoldEnrichment,
+        colour = Regulation
+      )
     ) +
-    ggplot2::scale_color_manual(
-      values = color_values,
-      drop = TRUE
+
+    ggplot2::scale_colour_manual(
+      values = color_values
     ) +
-    ggplot2::scale_size(range = size_range) +
+
+    ggplot2::scale_size(
+      range = size_range
+    ) +
+
     ggplot2::labs(
       x = expression(-log[10](FDR)),
       y = NULL,
+      colour = "Regulation",
       size = "Fold enrichment",
-      color = "Regulation",
-      title = comparison %||% "GO enrichment"
+      title = ifelse(
+        is.null(comparison),
+        "GO enrichment",
+        comparison
+      )
     ) +
-    .deggo_theme(style = style, x.ang = x_angle, txtsize = txtsize)
+
+    .deggo_theme(
+      style = style,
+      x.ang = x_angle,
+      txtsize = txtsize
+    )
 }
 
 
