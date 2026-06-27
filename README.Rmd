@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 
-<p align="center"> <img src="man/figures/DEGgo_logo.png" alt="DEGgo logo" width="500"></p>
+<p align="center"> <img src="man/figures/DEGgo_logo.svg" alt="DEGgo logo" width="500"></p>
 <p align="center">
 An integrated framework for automated bulk RNA-seq differential expression analysis,
 functional enrichment, visualization, and reproducible reporting.

@@ -3,7 +3,7 @@ DEGgo
 
 <p align="center">
 
-<img src="man/figures/DEGgo_logo.png" alt="DEGgo logo" width="500">
+<img src="man/figures/DEGgo_logo.svg" alt="DEGgo logo" width="500">
 </p>
 
 <p align="center">
