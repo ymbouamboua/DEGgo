@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{plot_heatmap}
 \alias{plot_heatmap}
-\title{Generate DEGgo heatmap}
+\title{Plot a DEGgo Differential Expression Heatmap}
 \usage{
 plot_heatmap(
   vsd,
@@ -11,7 +11,7 @@ plot_heatmap(
   contrast = NULL,
   sample_subset = NULL,
   metadata_filter = NULL,
-  top_n_heatmap = 50,
+  top_n_heatmap = 20,
   padj_cutoff = 0.05,
   main = "Top Differentially Expressed Genes",
   output_dir = "DEGgo_out",
@@ -23,61 +23,93 @@ plot_heatmap(
   scale_rows = TRUE,
   cluster_rows = TRUE,
   cluster_cols = FALSE,
-  fontsize_row = 12,
-  fontsize_col = 10,
-  width = 8,
-  height = 10
+  fontsize_row = NULL,
+  fontsize_col = NULL,
+  width = NULL,
+  height = NULL,
+  show_rownames = NULL,
+  show_colnames = NULL
 )
 }
 \arguments{
-\item{vsd}{Variance-stabilized dataset.}
+\item{vsd}{A variance-stabilized object, typically a \code{DESeqTransform} object
+produced by DESeq2.}
 
-\item{res_df}{Differential expression results data frame.}
+\item{res_df}{Data frame of differential expression results. Must contain
+\code{padj} and \code{log2FoldChange}, and either \code{ENSEMBL} or \code{gene_id}.}
 
 \item{metadata}{Sample metadata data frame.}
 
-\item{contrast}{Contrast name to plot.}
+\item{contrast}{Optional contrast vector of the form
+\code{c(variable, level_1, level_2)}. If supplied, only samples belonging to the
+two contrast levels are shown.}
 
-\item{sample_subset}{Optional sample vector to retain.}
+\item{sample_subset}{Optional character vector of sample names to retain.}
 
-\item{metadata_filter}{Optional named list used to filter metadata.}
+\item{metadata_filter}{Optional named list used to filter metadata columns.
+For example \code{list(tissue = "BAT", sex = "Female")}.}
 
-\item{top_n_heatmap}{Number of genes displayed in the heatmap.}
+\item{top_n_heatmap}{Integer. Number of top genes to display.}
 
-\item{padj_cutoff}{Adjusted p-value threshold.}
+\item{padj_cutoff}{Numeric. Adjusted p-value cutoff used to select
+significant genes.}
 
-\item{main}{Heatmap title.}
+\item{main}{Character. Heatmap title.}
 
-\item{output_dir}{Directory for exported plots.}
+\item{output_dir}{Character. Output directory.}
 
-\item{filename}{Output file name without extension.}
+\item{filename}{Character. Output filename without extension.}
 
-\item{fallback}{Logical. If TRUE, use top ranked genes when no significant
-genes pass \code{padj_cutoff}.}
+\item{fallback}{Logical. If \code{TRUE}, use the top genes ranked by adjusted
+p-value when no genes pass \code{padj_cutoff}.}
 
-\item{annotation_cols}{Metadata columns shown as heatmap annotations.}
+\item{annotation_cols}{Character vector of metadata columns to display as
+sample annotations.}
 
-\item{annotation_colors}{Named list of annotation colors.}
+\item{annotation_colors}{Optional annotation colors passed to \code{pheatmap}.
+If \code{NULL}, colors are generated automatically by DEGgo.}
 
-\item{order_by}{Metadata columns used to order samples.}
+\item{order_by}{Optional character vector of metadata columns used to order
+samples before plotting.}
 
-\item{scale_rows}{Logical; scale rows before plotting.}
+\item{scale_rows}{Logical. If \code{TRUE}, scale expression values by gene.}
 
-\item{cluster_rows}{Logical; cluster genes.}
+\item{cluster_rows}{Logical. If \code{TRUE}, cluster genes. The dendrogram is
+hidden by default using \code{treeheight_row = 0}.}
 
-\item{cluster_cols}{Logical; cluster samples.}
+\item{cluster_cols}{Logical. If \code{TRUE}, cluster samples. Defaults to \code{FALSE}.}
 
-\item{fontsize_row}{Row label font size.}
+\item{fontsize_row}{Optional numeric. Row label font size. If \code{NULL}, it is
+chosen automatically.}
 
-\item{fontsize_col}{Column label font size.}
+\item{fontsize_col}{Optional numeric. Column label font size. If \code{NULL}, it is
+chosen automatically.}
 
-\item{width}{Plot width in inches.}
+\item{width}{Optional numeric. Plot width in inches. If \code{NULL}, it is chosen
+automatically.}
 
-\item{height}{Plot height in inches.}
+\item{height}{Optional numeric. Plot height in inches. If \code{NULL}, it is chosen
+automatically.}
+
+\item{show_rownames}{Optional logical. Whether to show gene labels. If \code{NULL},
+shown automatically for heatmaps with 80 genes or fewer.}
+
+\item{show_colnames}{Optional logical. Whether to show sample labels. If
+\code{NULL}, shown automatically for heatmaps with 60 samples or fewer.}
 }
 \value{
-Heatmap expression matrix, invisibly.
+Invisibly returns the plotted matrix, or \code{NULL} if the heatmap is
+skipped.
 }
 \description{
-Generates a clustered heatmap of top differentially expressed genes.
+Generate a publication-ready heatmap of the top differentially expressed
+genes using variance-stabilized expression values. The function selects the
+most significant genes, optionally filters samples by contrast or metadata,
+adds sample annotations, scales genes by row, and exports a PNG heatmap.
+}
+\details{
+By default, rows are clustered but dendrograms are hidden, producing a clean
+report-friendly visualization while preserving gene ordering by expression
+similarity. Columns are not clustered by default to preserve sample or
+metadata-defined ordering.
 }

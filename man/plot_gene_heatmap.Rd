@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{plot_gene_heatmap}
 \alias{plot_gene_heatmap}
-\title{Plot expression heatmap for selected genes}
+\title{Plot Expression Heatmap for Selected Genes}
 \usage{
 plot_gene_heatmap(
   counts,
@@ -18,41 +18,45 @@ plot_gene_heatmap(
   output_dir = "DEGgo_out",
   filename = "Gene_Expression_Heatmap",
   main = "Selected gene expression heatmap",
-  color = (grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001")))(100),
+  color = (grDevices::colorRampPalette(c("#6497B1", "#F7F7F7", "#740001")))(100),
   breaks = seq(-2, 2, length.out = 101),
   scale_rows = TRUE,
   cluster_rows = TRUE,
   cluster_cols = FALSE,
-  fontsize_row = 12,
-  fontsize_col = 10,
-  width = 10,
-  height = 7
+  fontsize_row = NULL,
+  fontsize_col = NULL,
+  width = NULL,
+  height = NULL,
+  show_rownames = NULL,
+  show_colnames = NULL
 )
 }
 \arguments{
-\item{counts}{Count matrix or count table.}
+\item{counts}{Count matrix or count table. If a data frame is provided, one
+column must contain gene identifiers.}
 
-\item{metadata}{Sample metadata.}
+\item{metadata}{Sample metadata data frame.}
 
-\item{genes}{Genes to display.}
+\item{genes}{Character vector of gene IDs or gene symbols to display.}
 
-\item{gene_col}{Gene ID column.}
+\item{gene_col}{Candidate gene ID columns.}
 
-\item{feature_col}{Gene symbol column.}
+\item{feature_col}{Candidate gene symbol/name columns.}
 
-\item{sample_col}{Sample column.}
+\item{sample_col}{Candidate sample identifier columns in \code{metadata}.}
 
-\item{assay_transform}{Expression transformation.}
+\item{assay_transform}{Expression transformation, either \code{"log2"} or
+\code{"log2cpm"}.}
 
-\item{annotation_cols}{Metadata columns shown above heatmap.}
+\item{annotation_cols}{Metadata columns shown above the heatmap.}
 
-\item{annotation_colors}{Named list of annotation colors.}
+\item{annotation_colors}{Optional annotation colors passed to \code{pheatmap}.}
 
-\item{order_by}{Metadata columns used to order samples.}
+\item{order_by}{Optional metadata columns used to order samples.}
 
 \item{output_dir}{Output directory.}
 
-\item{filename}{Output filename.}
+\item{filename}{Output filename without extension.}
 
 \item{main}{Heatmap title.}
 
@@ -60,23 +64,39 @@ plot_gene_heatmap(
 
 \item{breaks}{Numeric vector of color breaks.}
 
-\item{scale_rows}{Scale genes.}
+\item{scale_rows}{Logical. If \code{TRUE}, scale expression by gene.}
 
-\item{cluster_rows}{Cluster genes.}
+\item{cluster_rows}{Logical. If \code{TRUE}, cluster genes.}
 
-\item{cluster_cols}{Cluster samples.}
+\item{cluster_cols}{Logical. If \code{TRUE}, cluster samples.}
 
-\item{fontsize_row}{Row names size.}
+\item{fontsize_row}{Optional row label font size. If \code{NULL}, chosen
+automatically.}
 
-\item{fontsize_col}{Column names size.}
+\item{fontsize_col}{Optional column label font size. If \code{NULL}, chosen
+automatically.}
 
-\item{width}{Plot width.}
+\item{width}{Optional plot width in inches. If \code{NULL}, chosen automatically.}
 
-\item{height}{Plot height.}
+\item{height}{Optional plot height in inches. If \code{NULL}, chosen automatically.}
+
+\item{show_rownames}{Optional logical. If \code{NULL}, shown automatically for
+heatmaps with 80 genes or fewer.}
+
+\item{show_colnames}{Optional logical. If \code{NULL}, shown automatically for
+heatmaps with 60 samples or fewer.}
 }
 \value{
-Expression matrix used for plotting.
+Invisibly returns the expression matrix used for plotting.
 }
 \description{
-Generates a clustered heatmap for user-defined genes.
+Generate a publication-ready heatmap for user-defined genes using raw counts
+and sample metadata. The function matches samples, transforms expression,
+optionally scales genes by row, adds metadata annotations, and exports a PNG
+heatmap.
+}
+\details{
+By default, genes are clustered but dendrograms are hidden for a clean
+report-friendly DEGgo visualization. Samples are not clustered by default,
+preserving metadata-defined order.
 }

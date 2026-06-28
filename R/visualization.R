@@ -376,25 +376,6 @@
   )
 }
 
-
-.deggo_heatmap_size <- function(
-    n_genes,
-    n_samples,
-    min_width = 5,
-    max_width = 14,
-    min_height = 4,
-    max_height = 18,
-    gene_unit = 0.18,
-    sample_unit = 0.22
-) {
-  width <- min(max_width, max(min_width, 3 + n_samples * sample_unit))
-  height <- min(max_height, max(min_height, 2.5 + n_genes * gene_unit))
-
-  list(width = width, height = height)
-}
-
-
-
 # ========================================================= #
 # DEGgo colors
 # ========================================================= #
@@ -1228,35 +1209,102 @@ plot_pca <- function(
 # HEATMAP
 # ========================================================= #
 
-#' Generate DEGgo heatmap
+#' Compute Automatic Heatmap Dimensions
 #'
-#' Generates a clustered heatmap of top differentially expressed genes.
+#' Internal helper used by DEGgo to compute publication-friendly heatmap
+#' dimensions from the number of genes and samples.
 #'
-#' @param vsd Variance-stabilized dataset.
-#' @param res_df Differential expression results data frame.
+#' @param n_genes Integer. Number of genes displayed in the heatmap.
+#' @param n_samples Integer. Number of samples displayed in the heatmap.
+#' @param base_width Numeric. Base plot width in inches.
+#' @param base_height Numeric. Base plot height in inches.
+#' @param gene_unit Numeric. Height added per gene.
+#' @param sample_unit Numeric. Width added per sample.
+#' @param min_width,max_width Numeric. Minimum and maximum plot width.
+#' @param min_height,max_height Numeric. Minimum and maximum plot height.
+#'
+#' @return A list with `width` and `height`.
+#'
+#' @keywords internal
+#' @noRd
+.deggo_heatmap_size <- function(
+    n_genes,
+    n_samples,
+    base_width = 5.5,
+    base_height = 4.5,
+    gene_unit = 0.18,
+    sample_unit = 0.22,
+    min_width = 6,
+    max_width = 14,
+    min_height = 5,
+    max_height = 16
+) {
+  width <- base_width + n_samples * sample_unit
+  height <- base_height + n_genes * gene_unit
+
+  width <- max(min_width, min(width, max_width))
+  height <- max(min_height, min(height, max_height))
+
+  list(width = width, height = height)
+}
+
+
+#' Plot a DEGgo Differential Expression Heatmap
+#'
+#' Generate a publication-ready heatmap of the top differentially expressed
+#' genes using variance-stabilized expression values. The function selects the
+#' most significant genes, optionally filters samples by contrast or metadata,
+#' adds sample annotations, scales genes by row, and exports a PNG heatmap.
+#'
+#' By default, rows are clustered but dendrograms are hidden, producing a clean
+#' report-friendly visualization while preserving gene ordering by expression
+#' similarity. Columns are not clustered by default to preserve sample or
+#' metadata-defined ordering.
+#'
+#' @param vsd A variance-stabilized object, typically a `DESeqTransform` object
+#'   produced by DESeq2.
+#' @param res_df Data frame of differential expression results. Must contain
+#'   `padj` and `log2FoldChange`, and either `ENSEMBL` or `gene_id`.
 #' @param metadata Sample metadata data frame.
-#' @param top_n_heatmap Number of genes displayed in the heatmap.
-#' @param padj_cutoff Adjusted p-value threshold.
-#' @param main Heatmap title.
-#' @param output_dir Directory for exported plots.
-#' @param filename Output file name without extension.
-#' @param fallback Logical. If TRUE, use top ranked genes when no significant
-#'   genes pass \code{padj_cutoff}.
-#' @param contrast Contrast name to plot.
-#' @param sample_subset Optional sample vector to retain.
-#' @param metadata_filter Optional named list used to filter metadata.
-#' @param annotation_cols Metadata columns shown as heatmap annotations.
-#' @param annotation_colors Named list of annotation colors.
-#' @param order_by Metadata columns used to order samples.
-#' @param scale_rows Logical; scale rows before plotting.
-#' @param cluster_rows Logical; cluster genes.
-#' @param cluster_cols Logical; cluster samples.
-#' @param fontsize_row Row label font size.
-#' @param fontsize_col Column label font size.
-#' @param width Plot width in inches.
-#' @param height Plot height in inches.
+#' @param contrast Optional contrast vector of the form
+#'   `c(variable, level_1, level_2)`. If supplied, only samples belonging to the
+#'   two contrast levels are shown.
+#' @param sample_subset Optional character vector of sample names to retain.
+#' @param metadata_filter Optional named list used to filter metadata columns.
+#'   For example `list(tissue = "BAT", sex = "Female")`.
+#' @param top_n_heatmap Integer. Number of top genes to display.
+#' @param padj_cutoff Numeric. Adjusted p-value cutoff used to select
+#'   significant genes.
+#' @param main Character. Heatmap title.
+#' @param output_dir Character. Output directory.
+#' @param filename Character. Output filename without extension.
+#' @param fallback Logical. If `TRUE`, use the top genes ranked by adjusted
+#'   p-value when no genes pass `padj_cutoff`.
+#' @param annotation_cols Character vector of metadata columns to display as
+#'   sample annotations.
+#' @param annotation_colors Optional annotation colors passed to `pheatmap`.
+#'   If `NULL`, colors are generated automatically by DEGgo.
+#' @param order_by Optional character vector of metadata columns used to order
+#'   samples before plotting.
+#' @param scale_rows Logical. If `TRUE`, scale expression values by gene.
+#' @param cluster_rows Logical. If `TRUE`, cluster genes. The dendrogram is
+#'   hidden by default using `treeheight_row = 0`.
+#' @param cluster_cols Logical. If `TRUE`, cluster samples. Defaults to `FALSE`.
+#' @param fontsize_row Optional numeric. Row label font size. If `NULL`, it is
+#'   chosen automatically.
+#' @param fontsize_col Optional numeric. Column label font size. If `NULL`, it is
+#'   chosen automatically.
+#' @param width Optional numeric. Plot width in inches. If `NULL`, it is chosen
+#'   automatically.
+#' @param height Optional numeric. Plot height in inches. If `NULL`, it is chosen
+#'   automatically.
+#' @param show_rownames Optional logical. Whether to show gene labels. If `NULL`,
+#'   shown automatically for heatmaps with 80 genes or fewer.
+#' @param show_colnames Optional logical. Whether to show sample labels. If
+#'   `NULL`, shown automatically for heatmaps with 60 samples or fewer.
 #'
-#' @return Heatmap expression matrix, invisibly.
+#' @return Invisibly returns the plotted matrix, or `NULL` if the heatmap is
+#'   skipped.
 #'
 #' @export
 plot_heatmap <- function(
@@ -1266,7 +1314,7 @@ plot_heatmap <- function(
     contrast = NULL,
     sample_subset = NULL,
     metadata_filter = NULL,
-    top_n_heatmap = 50,
+    top_n_heatmap = 20,
     padj_cutoff = 0.05,
     main = "Top Differentially Expressed Genes",
     output_dir = "DEGgo_out",
@@ -1278,48 +1326,88 @@ plot_heatmap <- function(
     scale_rows = TRUE,
     cluster_rows = TRUE,
     cluster_cols = FALSE,
-    fontsize_row = 12,
-    fontsize_col = 10,
-    width = 8,
-    height = 10
+    fontsize_row = NULL,
+    fontsize_col = NULL,
+    width = NULL,
+    height = NULL,
+    show_rownames = NULL,
+    show_colnames = NULL
 ) {
 
   log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   log("Generating heatmap...", type = "info")
 
+  .return_null <- function(reason) {
+    log(reason, type = "warn")
+    return(NULL)
+  }
+
   if (!requireNamespace("pheatmap", quietly = TRUE)) {
     stop("Package 'pheatmap' is required.", call. = FALSE)
   }
 
+  if (!requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+    stop("Package 'SummarizedExperiment' is required.", call. = FALSE)
+  }
+
+  if (is.null(vsd) || is.null(res_df) || is.null(metadata)) {
+    return(.return_null("Heatmap skipped: vsd, res_df or metadata is NULL."))
+  }
+
   mat <- SummarizedExperiment::assay(vsd)
 
-  if (!is.null(sample_subset)) {
-
-    sample_subset <- intersect(sample_subset, colnames(mat))
-    mat <- mat[ ,sample_subset,drop = FALSE]
-    metadata <- metadata[sample_subset,,drop = FALSE]
+  if (is.null(rownames(mat)) || is.null(colnames(mat))) {
+    return(.return_null("Heatmap skipped: vst matrix must have rownames and colnames."))
   }
 
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
-
-  if (!is.null(metadata_filter)) {
-
-    keep <- rep(TRUE, nrow(metadata))
-
-    for (nm in names(metadata_filter)) {
-      keep <- keep &
-        metadata[[nm]] %in% metadata_filter[[nm]]
-    }
-
-    metadata <- metadata[keep, , drop = FALSE]
-    mat <- mat[,rownames(metadata), drop = FALSE]
-  }
 
   if (!"sample" %in% colnames(metadata)) {
     metadata$sample <- rownames(metadata)
   }
 
+  metadata$sample <- as.character(metadata$sample)
   rownames(metadata) <- metadata$sample
+
+  common_samples <- intersect(colnames(mat), rownames(metadata))
+
+  if (length(common_samples) < 2) {
+    return(.return_null("Heatmap skipped: fewer than 2 common samples between vst matrix and metadata."))
+  }
+
+  mat <- mat[, common_samples, drop = FALSE]
+  metadata <- metadata[common_samples, , drop = FALSE]
+
+  if (!is.null(sample_subset)) {
+    sample_subset <- intersect(sample_subset, colnames(mat))
+
+    if (length(sample_subset) < 2) {
+      return(.return_null("Heatmap skipped: fewer than 2 samples after sample_subset."))
+    }
+
+    mat <- mat[, sample_subset, drop = FALSE]
+    metadata <- metadata[sample_subset, , drop = FALSE]
+  }
+
+  if (!is.null(metadata_filter)) {
+    keep <- rep(TRUE, nrow(metadata))
+
+    for (nm in names(metadata_filter)) {
+      if (!nm %in% colnames(metadata)) {
+        stop("metadata_filter column not found: ", nm, call. = FALSE)
+      }
+
+      keep <- keep & metadata[[nm]] %in% metadata_filter[[nm]]
+    }
+
+    metadata <- metadata[keep, , drop = FALSE]
+
+    if (nrow(metadata) < 2) {
+      return(.return_null("Heatmap skipped: fewer than 2 samples after metadata_filter."))
+    }
+
+    mat <- mat[, rownames(metadata), drop = FALSE]
+  }
 
   if (!is.null(contrast)) {
     contrast_col <- contrast[1]
@@ -1329,41 +1417,104 @@ plot_heatmap <- function(
       stop("Contrast column not found in metadata: ", contrast_col, call. = FALSE)
     }
 
-    keep_samples <- rownames(metadata)[
-      metadata[[contrast_col]] %in% contrast_levels
-    ]
-
+    keep_samples <- rownames(metadata)[metadata[[contrast_col]] %in% contrast_levels]
     keep_samples <- intersect(keep_samples, colnames(mat))
 
-    if (!length(keep_samples)) {
-      stop("No samples found for contrast: ", paste(contrast, collapse = " "), call. = FALSE)
+    if (length(keep_samples) < 2) {
+      return(.return_null(
+        paste0(
+          "Heatmap skipped: fewer than 2 samples found for contrast: ",
+          paste(contrast, collapse = " ")
+        )
+      ))
     }
 
     mat <- mat[, keep_samples, drop = FALSE]
     metadata <- metadata[keep_samples, , drop = FALSE]
-  } else {
-    metadata <- metadata[colnames(mat), , drop = FALSE]
   }
 
-  top <- res_df |>
-    subset(!is.na(padj) & !is.na(log2FoldChange) & padj < padj_cutoff) |>
-    {\(x) x[order(x$padj, -abs(x$log2FoldChange)), , drop = FALSE]}() |>
-    utils::head(top_n_heatmap)
+  required_cols <- c("padj", "log2FoldChange")
+  missing_cols <- setdiff(required_cols, colnames(res_df))
+
+  if (length(missing_cols)) {
+    stop(
+      "res_df missing required column(s): ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (!"ENSEMBL" %in% colnames(res_df)) {
+    if ("gene_id" %in% colnames(res_df)) {
+      res_df$ENSEMBL <- res_df$gene_id
+    } else {
+      stop("res_df must contain an ENSEMBL or gene_id column.", call. = FALSE)
+    }
+  }
+
+  if (!"SYMBOL" %in% colnames(res_df)) {
+    res_df$SYMBOL <- res_df$ENSEMBL
+  }
+
+  rownames(mat) <- sub("\\..*$", "", rownames(mat))
+  res_df$ENSEMBL <- sub("\\..*$", "", as.character(res_df$ENSEMBL))
+
+  top <- res_df[
+    !is.na(res_df$padj) &
+      !is.na(res_df$log2FoldChange) &
+      res_df$padj < padj_cutoff,
+    ,
+    drop = FALSE
+  ]
+
+  top <- top[order(top$padj, -abs(top$log2FoldChange)), , drop = FALSE]
+  top <- utils::head(top, top_n_heatmap)
 
   if (!nrow(top) && isTRUE(fallback)) {
-    top <- res_df |>
-      subset(!is.na(padj) & !is.na(log2FoldChange)) |>
-      {\(x) x[order(x$padj, -abs(x$log2FoldChange)), , drop = FALSE]}() |>
-      utils::head(top_n_heatmap)
+    log("No significant genes found. Using fallback genes ranked by padj.", type = "warn")
+
+    top <- res_df[
+      !is.na(res_df$padj) &
+        !is.na(res_df$log2FoldChange),
+      ,
+      drop = FALSE
+    ]
+
+    top <- top[order(top$padj, -abs(top$log2FoldChange)), , drop = FALSE]
+    top <- utils::head(top, top_n_heatmap)
   }
 
-  if (!nrow(top)) return(NULL)
+  if (!nrow(top)) {
+    return(.return_null("Heatmap skipped: no genes available after filtering."))
+  }
 
   genes_use <- intersect(top$ENSEMBL, rownames(mat))
-  if (!length(genes_use)) return(NULL)
+
+  if (!length(genes_use)) {
+    log(
+      paste("Example top genes:", paste(head(top$ENSEMBL), collapse = ", ")),
+      type = "warn"
+    )
+    log(
+      paste("Example matrix genes:", paste(head(rownames(mat)), collapse = ", ")),
+      type = "warn"
+    )
+    return(.return_null("Heatmap skipped: no top genes found in vst matrix rownames."))
+  }
 
   top <- top[match(genes_use, top$ENSEMBL), , drop = FALSE]
   mat_use <- mat[genes_use, , drop = FALSE]
+
+  keep_rows <- apply(mat_use, 1, function(x) all(is.finite(x)))
+  keep_cols <- apply(mat_use, 2, function(x) all(is.finite(x)))
+
+  mat_use <- mat_use[keep_rows, keep_cols, drop = FALSE]
+
+  if (nrow(mat_use) < 2 || ncol(mat_use) < 2) {
+    return(.return_null("Heatmap skipped: fewer than 2 genes or 2 samples after finite-value filtering."))
+  }
+
+  top <- top[match(rownames(mat_use), top$ENSEMBL), , drop = FALSE]
 
   gene_labels <- ifelse(
     is.na(top$SYMBOL) | top$SYMBOL == "",
@@ -1377,8 +1528,13 @@ plot_heatmap <- function(
 
   if (!is.null(order_by)) {
     missing <- setdiff(order_by, colnames(metadata_use))
+
     if (length(missing)) {
-      stop("order_by column(s) not found: ", paste(missing, collapse = ", "), call. = FALSE)
+      stop(
+        "order_by column(s) not found: ",
+        paste(missing, collapse = ", "),
+        call. = FALSE
+      )
     }
 
     ord <- do.call(order, metadata_use[, order_by, drop = FALSE])
@@ -1399,18 +1555,33 @@ plot_heatmap <- function(
   }
 
   if (isTRUE(scale_rows)) {
+    gene_sd <- apply(mat_use, 1, stats::sd, na.rm = TRUE)
+    keep_genes <- is.finite(gene_sd) & gene_sd > 0
+
+    mat_use <- mat_use[keep_genes, , drop = FALSE]
+
+    if (nrow(mat_use) < 2) {
+      return(.return_null("Heatmap skipped: fewer than 2 genes after removing zero-variance genes."))
+    }
+
     mat_use <- t(scale(t(mat_use)))
-    mat_use <- mat_use[stats::complete.cases(mat_use), , drop = FALSE]
+
+    mat_use <- mat_use[
+      apply(mat_use, 1, function(x) all(is.finite(x))),
+      ,
+      drop = FALSE
+    ]
   }
 
-  if (nrow(mat_use) < 2) return(NULL)
+  if (nrow(mat_use) < 2 || ncol(mat_use) < 2) {
+    return(.return_null("Heatmap skipped: final matrix has fewer than 2 genes or 2 samples."))
+  }
 
   if (is.null(annotation_colors) || is.character(annotation_colors)) {
     annotation_colors <- .deggo_annotation_colors(annotation_col)
   }
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-
 
   hm_size <- .deggo_heatmap_size(
     n_genes = nrow(mat_use),
@@ -1420,19 +1591,56 @@ plot_heatmap <- function(
   if (is.null(width)) width <- hm_size$width
   if (is.null(height)) height <- hm_size$height
 
-  fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
-  fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+  if (is.null(fontsize_row)) {
+    fontsize_row_use <- if (nrow(mat_use) <= 20) {
+      9
+    } else if (nrow(mat_use) <= 40) {
+      7
+    } else if (nrow(mat_use) <= 80) {
+      6
+    } else {
+      5
+    }
+  } else {
+    fontsize_row_use <- fontsize_row
+  }
+
+  if (is.null(fontsize_col)) {
+    fontsize_col_use <- if (ncol(mat_use) <= 12) {
+      9
+    } else if (ncol(mat_use) <= 25) {
+      7
+    } else if (ncol(mat_use) <= 50) {
+      6
+    } else {
+      5
+    }
+  } else {
+    fontsize_col_use <- fontsize_col
+  }
+
+  if (is.null(show_rownames)) {
+    show_rownames <- nrow(mat_use) <= 80
+  }
+
+  if (is.null(show_colnames)) {
+    show_colnames <- ncol(mat_use) <= 60
+  }
+
+  outfile <- file.path(output_dir, paste0(filename, ".png"))
 
   pheatmap::pheatmap(
     mat_use,
     annotation_col = annotation_col,
     annotation_colors = annotation_colors,
+    cluster_rows = cluster_rows,
+    cluster_cols = cluster_cols,
     fontsize_row = fontsize_row_use,
     fontsize_col = fontsize_col_use,
-    fontsize = 7,
+    fontsize = 9,
     border_color = NA,
-    show_rownames = TRUE,
-    show_colnames = TRUE,
+    show_rownames = show_rownames,
+    show_colnames = show_colnames,
     treeheight_row = 0,
     treeheight_col = 0,
     angle_col = 90,
@@ -1441,48 +1649,78 @@ plot_heatmap <- function(
       c("#6497B1", "#F7F7F7", "#740001")
     )(100),
     breaks = seq(-2, 2, length.out = 101),
-    filename = file.path(output_dir, paste0(filename, ".png")),
+    filename = outfile,
     width = width,
     height = height
   )
+
+  if (!file.exists(outfile)) {
+    return(.return_null("Heatmap file was not created by pheatmap."))
+  }
+
+  # log(
+  #   paste0(
+  #     "Heatmap saved: ",
+  #     outfile,
+  #     " | genes: ", nrow(mat_use),
+  #     " | samples: ", ncol(mat_use),
+  #     " | size: ", round(width, 2), "x", round(height, 2), " in"
+  #   ),
+  #   type = "done"
+  # )
 
   invisible(mat_use)
 }
 
 
 
-
 # ========================================================= #
 # GENE EXPRESSION HEATMAP
 # ========================================================= #
-#' Plot expression heatmap for selected genes
+#' Plot Expression Heatmap for Selected Genes
 #'
-#' Generates a clustered heatmap for user-defined genes.
+#' Generate a publication-ready heatmap for user-defined genes using raw counts
+#' and sample metadata. The function matches samples, transforms expression,
+#' optionally scales genes by row, adds metadata annotations, and exports a PNG
+#' heatmap.
 #'
-#' @param counts Count matrix or count table.
-#' @param metadata Sample metadata.
-#' @param genes Genes to display.
-#' @param gene_col Gene ID column.
-#' @param feature_col Gene symbol column.
-#' @param sample_col Sample column.
-#' @param assay_transform Expression transformation.
-#' @param annotation_cols Metadata columns shown above heatmap.
-#' @param annotation_colors Named list of annotation colors.
-#' @param order_by Metadata columns used to order samples.
+#' By default, genes are clustered but dendrograms are hidden for a clean
+#' report-friendly DEGgo visualization. Samples are not clustered by default,
+#' preserving metadata-defined order.
+#'
+#' @param counts Count matrix or count table. If a data frame is provided, one
+#'   column must contain gene identifiers.
+#' @param metadata Sample metadata data frame.
+#' @param genes Character vector of gene IDs or gene symbols to display.
+#' @param gene_col Candidate gene ID columns.
+#' @param feature_col Candidate gene symbol/name columns.
+#' @param sample_col Candidate sample identifier columns in `metadata`.
+#' @param assay_transform Expression transformation, either `"log2"` or
+#'   `"log2cpm"`.
+#' @param annotation_cols Metadata columns shown above the heatmap.
+#' @param annotation_colors Optional annotation colors passed to `pheatmap`.
+#' @param order_by Optional metadata columns used to order samples.
 #' @param output_dir Output directory.
-#' @param filename Output filename.
+#' @param filename Output filename without extension.
 #' @param main Heatmap title.
-#' @param scale_rows Scale genes.
-#' @param cluster_rows Cluster genes.
-#' @param cluster_cols Cluster samples.
-#' @param width Plot width.
-#' @param height Plot height.
-#' @param fontsize_row Row names size.
-#' @param fontsize_col Column names size.
 #' @param color Heatmap color palette.
 #' @param breaks Numeric vector of color breaks.
+#' @param scale_rows Logical. If `TRUE`, scale expression by gene.
+#' @param cluster_rows Logical. If `TRUE`, cluster genes.
+#' @param cluster_cols Logical. If `TRUE`, cluster samples.
+#' @param fontsize_row Optional row label font size. If `NULL`, chosen
+#'   automatically.
+#' @param fontsize_col Optional column label font size. If `NULL`, chosen
+#'   automatically.
+#' @param width Optional plot width in inches. If `NULL`, chosen automatically.
+#' @param height Optional plot height in inches. If `NULL`, chosen automatically.
+#' @param show_rownames Optional logical. If `NULL`, shown automatically for
+#'   heatmaps with 80 genes or fewer.
+#' @param show_colnames Optional logical. If `NULL`, shown automatically for
+#'   heatmaps with 60 samples or fewer.
 #'
-#' @return Expression matrix used for plotting.
+#' @return Invisibly returns the expression matrix used for plotting.
+#'
 #' @export
 #'
 plot_gene_heatmap <- function(
@@ -1499,15 +1737,17 @@ plot_gene_heatmap <- function(
     output_dir = "DEGgo_out",
     filename = "Gene_Expression_Heatmap",
     main = "Selected gene expression heatmap",
-    color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
+    color = grDevices::colorRampPalette(c("#6497B1", "#F7F7F7", "#740001"))(100),
     breaks = seq(-2, 2, length.out = 101),
     scale_rows = TRUE,
     cluster_rows = TRUE,
     cluster_cols = FALSE,
-    fontsize_row = 12,
-    fontsize_col = 10,
-    width = 10,
-    height = 7
+    fontsize_row = NULL,
+    fontsize_col = NULL,
+    width = NULL,
+    height = NULL,
+    show_rownames = NULL,
+    show_colnames = NULL
 ) {
 
   assay_transform <- match.arg(assay_transform)
@@ -1523,18 +1763,21 @@ plot_gene_heatmap <- function(
   feature_col <- feature_col[feature_col %in% colnames(counts)][1]
   sample_col <- sample_col[sample_col %in% colnames(metadata)][1]
 
-  if (is.na(gene_col)) stop("No gene ID column found.", call. = FALSE)
-  if (is.na(sample_col)) stop("No sample column found.", call. = FALSE)
+  if (is.na(gene_col)) {
+    stop("No gene ID column found.", call. = FALSE)
+  }
+
+  if (is.na(sample_col)) {
+    stop("No sample column found.", call. = FALSE)
+  }
 
   metadata[[sample_col]] <- as.character(metadata[[sample_col]])
   rownames(metadata) <- metadata[[sample_col]]
 
-  # IMPORTANT:
-  # keep sample order from metadata, not from counts
   sample_cols <- metadata[[sample_col]][metadata[[sample_col]] %in% colnames(counts)]
 
-  if (!length(sample_cols)) {
-    stop("No matching sample columns found.", call. = FALSE)
+  if (length(sample_cols) < 2) {
+    stop("Fewer than 2 matching sample columns found.", call. = FALSE)
   }
 
   metadata <- metadata[sample_cols, , drop = FALSE]
@@ -1558,19 +1801,40 @@ plot_gene_heatmap <- function(
     rownames(mat)
   }
 
-  keep <- rownames(mat) %in% genes | toupper(feature) %in% toupper(genes)
+  genes_query <- unique(as.character(genes))
+
+  keep <- rownames(mat) %in% genes_query |
+    toupper(feature) %in% toupper(genes_query)
 
   if (!any(keep)) {
     stop("None of the requested genes were found.", call. = FALSE)
   }
 
   mat_use <- mat[keep, , drop = FALSE]
-  rownames(mat_use) <- make.unique(feature[keep])
+  feature_use <- feature[keep]
+
+  feature_use[is.na(feature_use) | feature_use == ""] <- rownames(mat_use)[
+    is.na(feature_use) | feature_use == ""
+  ]
+
+  rownames(mat_use) <- make.unique(feature_use)
 
   if (assay_transform == "log2") {
     mat_use <- log2(mat_use + 1)
   } else {
-    mat_use <- log2(t(t(mat_use) / colSums(mat) * 1e6) + 1)
+    lib <- colSums(mat)
+    lib[lib == 0] <- NA_real_
+    mat_use <- log2(t(t(mat_use) / lib * 1e6) + 1)
+  }
+
+  mat_use <- mat_use[
+    apply(mat_use, 1, function(x) all(is.finite(x))),
+    apply(mat_use, 2, function(x) all(is.finite(x))),
+    drop = FALSE
+  ]
+
+  if (nrow(mat_use) < 1 || ncol(mat_use) < 2) {
+    stop("Not enough valid genes or samples for heatmap.", call. = FALSE)
   }
 
   metadata_use <- metadata[colnames(mat_use), , drop = FALSE]
@@ -1597,20 +1861,36 @@ plot_gene_heatmap <- function(
     drop = FALSE
   ]
 
-  if (!ncol(annotation_col)) {
-    annotation_col <- NULL
-  } else {
+  if (ncol(annotation_col)) {
     annotation_col[] <- lapply(annotation_col, factor)
+  } else {
+    annotation_col <- NULL
   }
 
   if (isTRUE(scale_rows)) {
+    gene_sd <- apply(mat_use, 1, stats::sd, na.rm = TRUE)
+    keep_genes <- is.finite(gene_sd) & gene_sd > 0
+
+    mat_use <- mat_use[keep_genes, , drop = FALSE]
+
+    if (nrow(mat_use) < 1) {
+      stop("No valid genes after removing zero-variance genes.", call. = FALSE)
+    }
+
     mat_use <- t(scale(t(mat_use)))
-    mat_use <- mat_use[stats::complete.cases(mat_use), , drop = FALSE]
+
+    mat_use <- mat_use[
+      apply(mat_use, 1, function(x) all(is.finite(x))),
+      ,
+      drop = FALSE
+    ]
   }
 
-  if (!nrow(mat_use)) {
-    stop("No valid genes after scaling.", call. = FALSE)
+  if (nrow(mat_use) < 1 || ncol(mat_use) < 2) {
+    stop("Final heatmap matrix has fewer than 1 gene or 2 samples.", call. = FALSE)
   }
+
+  metadata_use <- metadata_use[colnames(mat_use), , drop = FALSE]
 
   if (!is.null(annotation_col)) {
     annotation_col <- annotation_col[colnames(mat_use), , drop = FALSE]
@@ -1624,12 +1904,6 @@ plot_gene_heatmap <- function(
     }
   }
 
-  stopifnot(identical(colnames(mat_use), rownames(metadata_use)))
-
-  if (!is.null(annotation_col)) {
-    stopifnot(identical(colnames(mat_use), rownames(annotation_col)))
-  }
-
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
   hm_size <- .deggo_heatmap_size(
@@ -1640,8 +1914,43 @@ plot_gene_heatmap <- function(
   if (is.null(width)) width <- hm_size$width
   if (is.null(height)) height <- hm_size$height
 
-  fontsize_row_use <- ifelse(nrow(mat_use) > 80, 5, fontsize_row)
-  fontsize_col_use <- ifelse(ncol(mat_use) > 30, 5, fontsize_col)
+  if (is.null(fontsize_row)) {
+    fontsize_row_use <- if (nrow(mat_use) <= 20) {
+      9
+    } else if (nrow(mat_use) <= 40) {
+      7
+    } else if (nrow(mat_use) <= 80) {
+      6
+    } else {
+      5
+    }
+  } else {
+    fontsize_row_use <- fontsize_row
+  }
+
+  if (is.null(fontsize_col)) {
+    fontsize_col_use <- if (ncol(mat_use) <= 12) {
+      9
+    } else if (ncol(mat_use) <= 25) {
+      7
+    } else if (ncol(mat_use) <= 50) {
+      6
+    } else {
+      5
+    }
+  } else {
+    fontsize_col_use <- fontsize_col
+  }
+
+  if (is.null(show_rownames)) {
+    show_rownames <- nrow(mat_use) <= 80
+  }
+
+  if (is.null(show_colnames)) {
+    show_colnames <- ncol(mat_use) <= 60
+  }
+
+  outfile <- file.path(output_dir, paste0(filename, ".png"))
 
   pheatmap::pheatmap(
     mat_use,
@@ -1649,23 +1958,26 @@ plot_gene_heatmap <- function(
     annotation_colors = annotation_colors,
     cluster_rows = cluster_rows,
     cluster_cols = cluster_cols,
-    fontsize = 7,
+    fontsize = 9,
     fontsize_row = fontsize_row_use,
     fontsize_col = fontsize_col_use,
     border_color = NA,
-    show_rownames = TRUE,
-    show_colnames = TRUE,
+    show_rownames = show_rownames,
+    show_colnames = show_colnames,
     treeheight_row = 0,
     treeheight_col = 0,
-    angle_col = "90",
+    angle_col = 90,
     main = main,
     color = color,
     breaks = breaks,
-    filename = file.path(output_dir, paste0(filename, ".png")),
+    filename = outfile,
     width = width,
     height = height
   )
+
+  invisible(mat_use)
 }
+
 
 
 # ========================================================= #
@@ -1848,22 +2160,48 @@ explore_bulk_rnaseq <- function(
     n_samples = ncol(mat)
   )
 
-  heatmap_width <- if (is.null(width)) hm_size$width else width
-  heatmap_height <- if (is.null(height)) hm_size$height else height
+  sample_hm_size <- .deggo_heatmap_size(
+    n_genes = ncol(mat),
+    n_samples = ncol(mat),
+    base_width = 5,
+    base_height = 5,
+    sample_unit = 0.18,
+    gene_unit = 0.18,
+    min_width = 6,
+    max_width = 14,
+    min_height = 6,
+    max_height = 14
+  )
 
-  fontsize_row_use <- ifelse(nrow(mat) > 80, 5, 7)
-  fontsize_col_use <- ifelse(ncol(mat) > 30, 5, 7)
+  heatmap_width <- sample_hm_size$width
+  heatmap_height <- sample_hm_size$height
+
+  fontsize_sample <- if (ncol(mat) <= 12) {
+    8
+  } else if (ncol(mat) <= 30) {
+    6
+  } else {
+    5
+  }
+
 
   pheatmap::pheatmap(
     cor_mat,
     annotation_col = annotation_col,
     annotation_colors = ann_colors,
-    fontsize_row = fontsize_row_use,
-    fontsize_col = fontsize_col_use,
-    filename = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
-    main = "Sample Correlation",
-    color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    fontsize = 9,
+    fontsize_row = fontsize_sample,
+    fontsize_col = fontsize_sample,
     border_color = NA,
+    show_rownames = ncol(mat) <= 60,
+    show_colnames = ncol(mat) <= 60,
+    filename = file.path(output_dir, "Sample_Correlation_Heatmap.png"),
+    main = "Sample correlation",
+    color = grDevices::colorRampPalette(c("#6497B1", "#F7F7F7", "#740001"))(100),
     width = heatmap_width,
     height = heatmap_height
   )
@@ -1981,21 +2319,38 @@ explore_bulk_rnaseq <- function(
     top_mat <- top_mat[stats::complete.cases(top_mat), , drop = FALSE]
 
     if (nrow(top_mat) >= 2) {
+      top_hm_size <- .deggo_heatmap_size(
+        n_genes = min(nrow(top_mat), 100),
+        n_samples = ncol(top_mat),
+        base_width = 5.5,
+        base_height = 4.5,
+        gene_unit = 0.08,
+        sample_unit = 0.20,
+        min_width = 6,
+        max_width = 14,
+        min_height = 5,
+        max_height = 12
+      )
+
       pheatmap::pheatmap(
         top_mat,
         annotation_col = annotation_col,
         annotation_colors = ann_colors,
-        fontsize_row = fontsize_row_use,
-        fontsize_col = fontsize_col_use,
+        fontsize = 9,
+        fontsize_row = 5,
+        fontsize_col = fontsize_sample,
         show_rownames = FALSE,
-        show_colnames = FALSE,
+        show_colnames = ncol(top_mat) <= 60,
         cluster_rows = TRUE,
         cluster_cols = TRUE,
-        color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
+        treeheight_row = 0,
+        treeheight_col = 0,
+        border_color = NA,
+        color = grDevices::colorRampPalette(c("#6497B1", "#F7F7F7", "#740001"))(100),
         breaks = seq(-2, 2, length.out = 101),
         filename = file.path(output_dir, "TopVariableGenes_Heatmap.png"),
-        width = heatmap_width,
-        height = heatmap_height
+        width = top_hm_size$width,
+        height = top_hm_size$height
       )
     }
   }
@@ -2004,22 +2359,15 @@ explore_bulk_rnaseq <- function(
 
   if (!is.null(markers) && length(markers) && exists("plot_gene_heatmap")) {
     marker_heatmap <- tryCatch(
-      plot_gene_heatmap(
-        counts = counts_df,
-        metadata = metadata,
-        genes = markers,
-        gene_col = gene_col,
-        feature_col = feature_col,
-        sample_col = sample_col,
-        annotation_cols = annotation_cols,
-        annotation_colors = ann_colors,
-        order_by = intersect(c("tissue", "sex", "treatment", "condition"), colnames(metadata)),
-        color = grDevices::colorRampPalette(c("#6497b1", "#F7F7F7", "#740001"))(100),
-        breaks = seq(-2, 2, length.out = 101),
-        output_dir = output_dir,
-        filename = "Marker_Heatmap",
-        main = "Marker gene expression"
-      ),
+        plot_gene_heatmap(
+          counts = counts_df,
+          metadata = metadata,
+          genes = markers,
+          gene_col = gene_col,
+          feature_col = feature_col,
+          sample_col = sample_col,
+          ...
+        ),
       error = function(e) NULL
     )
   }

@@ -186,7 +186,7 @@
 #'
 #' @keywords internal
 #' @noRd
-.safe_write_session_info <- function(output_dir) {
+.write_session_info <- function(output_dir) {
   x <- tryCatch(
     utils::capture.output(utils::sessionInfo()),
     error = function(e) {
@@ -443,27 +443,216 @@ extract_expression <- function(
 #'
 #' @keywords internal
 #' @noRd
-.safe_report <- function(
+# .safe_report <- function(
+#     res,
+#     output_dir,
+#     generate_report = TRUE,
+#     report_formats = "html",
+#     report_template = NULL
+# ) {
+#   if (!isTRUE(generate_report)) return(NULL)
+#
+#   tryCatch(
+#     generate_deggo_report(
+#       results = res,
+#       output_dir = output_dir,
+#       formats = report_formats,
+#       report_template = report_template
+#     ),
+#     error = function(e) {
+#       warning("Report generation failed: ", conditionMessage(e), call. = FALSE)
+#       NULL
+#     }
+#   )
+# }
+# .safe_report <- function(
+#     res,
+#     output_dir,
+#     generate_report = TRUE,
+#     report_formats = "html",
+#     report_template = NULL
+# ) {
+#
+#   log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
+#
+#   if (!isTRUE(generate_report)) {
+#     log("Report skipped: generate_report = FALSE", type = "warn")
+#     return(NULL)
+#   }
+#
+#   if (!requireNamespace("rmarkdown", quietly = TRUE)) {
+#     log("Report skipped: package 'rmarkdown' is not installed.", type = "warn")
+#     return(NULL)
+#   }
+#
+#   if (is.null(report_template) || !file.exists(report_template)) {
+#     log(
+#       paste("Report skipped: template not found:", report_template),
+#       type = "warn"
+#     )
+#     return(NULL)
+#   }
+#
+#   report_dir <- file.path(output_dir, "report")
+#   dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
+#
+#   report_files <- list()
+#
+#   for (fmt in report_formats) {
+#
+#     fmt <- match.arg(fmt, c("html", "pdf"))
+#
+#     output_file <- switch(
+#       fmt,
+#       html = "DEGgo_Report.html",
+#       pdf = "DEGgo_Report.pdf"
+#     )
+#
+#     output_format <- switch(
+#       fmt,
+#       html = "html_document",
+#       pdf = "pdf_document"
+#     )
+#
+#     log(paste("Rendering", fmt, "report..."), type = "info")
+#
+#     report_files[[fmt]] <- tryCatch({
+#
+#       out <- rmarkdown::render(
+#         input = report_template,
+#         output_format = output_format,
+#         output_file = output_file,
+#         output_dir = report_dir,
+#         params = list(
+#           results = res,
+#           sig_deg = res$sig_deg,
+#           go_results = res$go_results
+#         ),
+#         envir = new.env(parent = globalenv()),
+#         quiet = TRUE
+#       )
+#
+#       # log(paste("Report saved:", out), type = "done")
+#       # out
+#
+#     }, error = function(e) {
+#       log(paste("Report failed:", conditionMessage(e)), type = "error")
+#       NULL
+#     })
+#   }
+#
+#   report_files <- report_files[!vapply(report_files, is.null, logical(1))]
+#
+#   if (!length(report_files)) {
+#     log("No report file was generated.", type = "warn")
+#     return(NULL)
+#   }
+#
+#   report_files
+# }
+.deggo_report <- function(
     res,
     output_dir,
     generate_report = TRUE,
     report_formats = "html",
     report_template = NULL
 ) {
+
+  log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
+
   if (!isTRUE(generate_report)) return(NULL)
 
-  tryCatch(
-    generate_deggo_report(
-      results = res,
-      output_dir = output_dir,
-      formats = report_formats,
-      report_template = report_template
-    ),
-    error = function(e) {
-      warning("Report generation failed: ", conditionMessage(e), call. = FALSE)
-      NULL
+  if (!requireNamespace("rmarkdown", quietly = TRUE)) {
+    log("Report skipped: rmarkdown not installed.", type = "warn")
+    return(NULL)
+  }
+
+  if (is.null(report_template) || !file.exists(report_template)) {
+    log(paste("Report skipped: template not found:", report_template), type = "warn")
+    return(NULL)
+  }
+
+  report_dir <- file.path(output_dir, "DEGgo_Report")
+  dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
+
+  report_dir <- normalizePath(report_dir, winslash = "/", mustWork = TRUE)
+  output_dir <- normalizePath(output_dir, winslash = "/", mustWork = TRUE)
+
+  local_template <- file.path(report_dir, "skeleton.Rmd")
+  file.copy(report_template, local_template, overwrite = TRUE)
+
+  res$report_dir <- report_dir
+  res$original_output_dir <- output_dir
+
+  report_files <- list()
+
+  for (fmt in report_formats) {
+
+    output_file <- switch(
+      fmt,
+      html = "DEGgo_Report.html",
+      pdf = "DEGgo_Report.pdf"
+    )
+
+    output_format <- switch(
+      fmt,
+      html = rmarkdown::html_document(
+        toc = TRUE,
+        toc_depth = 3,
+        number_sections = TRUE,
+        theme = "flatly",
+        self_contained = FALSE,
+        lib_dir = "DEGgo_Report_files"
+      ),
+      pdf = rmarkdown::pdf_document(
+        toc = TRUE,
+        toc_depth = 3,
+        number_sections = TRUE
+      )
+    )
+
+    log(paste("Rendering", fmt, "report..."), type = "info")
+
+    out <- tryCatch(
+      rmarkdown::render(
+        input = local_template,
+        output_format = output_format,
+        output_file = output_file,
+        output_dir = report_dir,
+        knit_root_dir = output_dir,
+        params = list(
+          results = res,
+          sig_deg = res$sig_deg,
+          go_results = res$go_results,
+          summary = res$summary,
+          metadata = res$metadata,
+          output_dir = output_dir
+        ),
+        envir = new.env(parent = globalenv()),
+        quiet = TRUE
+      ),
+      error = function(e) {
+        log(paste("Report failed:", conditionMessage(e)), type = "error")
+        NULL
+      }
+    )
+
+    if (!is.null(out) && file.exists(out)) {
+      report_files[[fmt]] <- out
+      log(paste("Report saved:", out), type = "done")
     }
-  )
+  }
+
+  if (file.exists(local_template)) {
+    unlink(local_template)
+  }
+
+  if (!length(report_files)) {
+    log("No report file was generated.", type = "warn")
+    return(NULL)
+  }
+
+  report_files
 }
 
 
@@ -703,3 +892,95 @@ extract_expression <- function(
   pca_list
 }
 
+
+
+# ======================================================= #
+# .deggo_existing_file
+# ======================================================= #
+#' Return the First Existing File from Candidate Paths
+#'
+#' Internal helper used by DEGgo to safely resolve a file path from several
+#' candidate locations. This is useful for maintaining compatibility between
+#' older DEGgo output layouts and the current organized output structure.
+#'
+#' @param ... Character vectors containing candidate file paths.
+#'
+#' @return A character string giving the first existing file path, or
+#'   `NA_character_` if none of the candidate files exist.
+#'
+#' @keywords internal
+#' @noRd
+.deggo_existing_file <- function(...) {
+  x <- unlist(list(...), use.names = FALSE)
+  x <- x[!is.na(x) & nzchar(x)]
+  x <- x[file.exists(x)]
+  if (length(x)) x[1] else NA_character_
+}
+
+
+# ======================================================= #
+# .deggo_organize_run_files
+# ======================================================= #
+#' Organize DEGgo Run-Level Output Files
+#'
+#' Internal helper used by `run_deggo()` to move run-level files into their
+#' appropriate output folders after they are written. The summary table is moved
+#' into the mode-specific significant results folder, while session information
+#' and the output manifest are moved into the reproducibility folder.
+#'
+#' This keeps the top-level DEGgo output directory clean while preserving
+#' compatibility with both single-comparison and pairwise workflows.
+#'
+#' @param output_dir Character string. Path to the main DEGgo output directory.
+#' @param analysis_mode Character string. Analysis mode, either `"single"` or
+#'   `"pairwise"`.
+#'
+#' @return Invisibly returns a list with the final paths:
+#' \describe{
+#'   \item{summary_file}{Path to the organized summary TSV file.}
+#'   \item{session_file}{Path to the organized `sessionInfo.txt` file.}
+#'   \item{manifest_file}{Path to the organized output manifest TSV file.}
+#' }
+#'
+#' @keywords internal
+#' @noRd
+.deggo_organize_run_files <- function(output_dir, analysis_mode = c("single", "pairwise")) {
+
+  analysis_mode <- match.arg(analysis_mode)
+
+  repro_dir <- file.path(output_dir, "reproducibility")
+  sig_dir <- file.path(output_dir, paste0(analysis_mode, "_significant"))
+
+  dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
+  dir.create(sig_dir, recursive = TRUE, showWarnings = FALSE)
+
+  summary_src <- file.path(output_dir, paste0(analysis_mode, "_summary.tsv"))
+  summary_dst <- file.path(sig_dir, paste0(analysis_mode, "_summary.tsv"))
+
+  session_src <- file.path(output_dir, "sessionInfo.txt")
+  session_dst <- file.path(repro_dir, "sessionInfo.txt")
+
+  manifest_src <- file.path(output_dir, "DEGgo_output_manifest.tsv")
+  manifest_dst <- file.path(repro_dir, "DEGgo_output_manifest.tsv")
+
+  if (file.exists(summary_src)) {
+    file.copy(summary_src, summary_dst, overwrite = TRUE)
+    unlink(summary_src)
+  }
+
+  if (file.exists(session_src)) {
+    file.copy(session_src, session_dst, overwrite = TRUE)
+    unlink(session_src)
+  }
+
+  if (file.exists(manifest_src)) {
+    file.copy(manifest_src, manifest_dst, overwrite = TRUE)
+    unlink(manifest_src)
+  }
+
+  invisible(list(
+    summary_file = summary_dst,
+    session_file = session_dst,
+    manifest_file = manifest_dst
+  ))
+}

@@ -30,6 +30,7 @@ params:
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
@@ -53,10 +54,85 @@ outdir <- params$output_dir %||% res$output_dir
 if (is.null(outdir) || is.na(outdir)) outdir <- getwd()
 outdir <- normalizePath(outdir, winslash = "/", mustWork = FALSE)
 
+# ------------------------------------------------------------
+# Detect analysis mode: single or pairwise
+# ------------------------------------------------------------
+
+analysis_mode <- params$analysis_mode %||%
+  res$analysis_mode %||%
+  res$mode %||%
+  NULL
+
+if (is.null(analysis_mode) || is.na(analysis_mode)) {
+  analysis_mode <- if (
+    dir.exists(file.path(outdir, "pairwise_results")) ||
+    dir.exists(file.path(outdir, "pairwise_significant")) ||
+    file.exists(file.path(outdir, "pairwise_summary.tsv"))
+  ) {
+    "pairwise"
+  } else {
+    "single"
+  }
+}
+
+analysis_mode <- as.character(analysis_mode)
+
+# ------------------------------------------------------------
+# Generic DEGgo output paths
+# ------------------------------------------------------------
+
+summary_file <- file.path(
+  outdir,
+  paste0(analysis_mode, "_significant"),
+  paste0(analysis_mode, "_summary.tsv")
+)
+
+if (!file.exists(summary_file)) {
+  summary_file <- file.path(outdir, paste0(analysis_mode, "_summary.tsv"))
+}
+
+session_file <- file.path(outdir, "reproducibility", "sessionInfo.txt")
+if (!file.exists(session_file)) {
+  session_file <- file.path(outdir, "sessionInfo.txt")
+}
+
+manifest_file <- file.path(outdir, "reproducibility", "DEGgo_output_manifest.tsv")
+if (!file.exists(manifest_file)) {
+  manifest_file <- file.path(outdir, "DEGgo_output_manifest.tsv")
+}
+
+summary_tbl <- if (file.exists(summary_file)) {
+  read.delim(summary_file, stringsAsFactors = FALSE)
+} else {
+  NULL
+}
+
+manifest_tbl <- if (file.exists(manifest_file)) {
+  read.delim(manifest_file, stringsAsFactors = FALSE)
+} else {
+  NULL
+}
+
+session_txt <- if (file.exists(session_file)) {
+  paste(readLines(session_file, warn = FALSE), collapse = "\n")
+} else {
+  NULL
+}
+
+# ------------------------------------------------------------
+# Main report objects
+# ------------------------------------------------------------
+
 md <- params$metadata %||% res$metadata
 sig <- params$sig_deg %||% res$sig_deg
 go <- params$go_results %||% res$go_results
-sumtab <- params$summary %||% res$summary
+
+sumtab <- params$summary %||%
+  res$summary %||%
+  summary_tbl
+
+
+
 
 html_escape <- function(x) {
   x <- as.character(x)
@@ -67,38 +143,55 @@ html_escape <- function(x) {
   x
 }
 
-html_box <- function(title, text = NULL, type = "info") {
+section_note <- function(title, text = NULL) {
   if (is.null(text)) {
     text <- title
-    title <- switch(
-      type,
-      section = "About this section",
-      expected = "Expected pattern",
-      success = "Interpretation",
-      warning = "Warning",
-      info = "Information",
-      "Information"
-    )
+    title <- "About this section"
   }
 
   cat(
-    '<div class="', type, '-box">',
-    '<div class="', type, '-title">', html_escape(title), '</div>',
-    '<div class="', type, '-text">', text, '</div>',
+    '<div class="section-box">',
+    '<div class="section-title">', html_escape(title), '</div>',
+    '<div class="section-text">', text, '</div>',
     '</div>'
   )
 }
 
-section_note <- function(title, text = NULL) html_box(title, text, "section")
-info_box <- function(title, text) html_box(title, text, "info")
-success_box <- function(title, text) html_box(title, text, "success")
-warning_box <- function(title, text) html_box(title, text, "warning")
+info_box <- function(title, text) {
+  cat(
+    '<div class="info-box">',
+    '<div class="info-title">', html_escape(title), '</div>',
+    '<div class="info-text">', text, '</div>',
+    '</div>'
+  )
+}
 
 expected_box <- function(items, title = "Expected pattern") {
-  html_box(
-    title,
-    paste0("<ul>", paste0("<li>", items, "</li>", collapse = ""), "</ul>"),
-    "expected"
+  cat(
+    '<div class="expected-box">',
+    '<div class="expected-title">', html_escape(title), '</div>',
+    '<div class="expected-text"><ul>',
+    paste0("<li>", items, "</li>", collapse = ""),
+    '</ul></div>',
+    '</div>'
+  )
+}
+
+success_box <- function(title, text) {
+  cat(
+    '<div class="success-box">',
+    '<div class="success-title">', html_escape(title), '</div>',
+    '<div class="success-text">', text, '</div>',
+    '</div>'
+  )
+}
+
+warning_box <- function(title, text) {
+  cat(
+    '<div class="warning-box">',
+    '<div class="warning-title">', html_escape(title), '</div>',
+    '<div class="warning-text">', text, '</div>',
+    '</div>'
   )
 }
 
@@ -115,6 +208,76 @@ html_card <- function(title, value, subtitle = NULL) {
     '</div>'
   )
 }
+
+metric_grid <- function(cards) {
+  cat('<div class="metric-grid">')
+  for (x in cards) {
+    html_card(
+      title = x$title,
+      value = x$value,
+      subtitle = x$subtitle %||% NULL
+    )
+  }
+  cat('</div>')
+}
+
+
+
+html_box <- function(title, text = NULL, type = "info") {
+  if (is.null(text)) {
+    text <- title
+    title <- switch(
+      type,
+      section = "About this section",
+      expected = "Expected pattern",
+      success = "Interpretation",
+      warning = "Warning",
+      info = "Information",
+      "Information"
+    )
+  }
+
+  cat(paste0(
+    '<div class="', type, '-box">',
+    '<div class="', type, '-title">', html_escape(title), '</div>',
+    '<div class="', type, '-text">', text, '</div>',
+    '</div>'
+  ))
+}
+
+
+
+section_note <- function(title, text = NULL) html_box(title, text, "section")
+info_box <- function(title, text) html_box(title, text, "info")
+success_box <- function(title, text) html_box(title, text, "success")
+warning_box <- function(title, text) html_box(title, text, "warning")
+
+expected_box <- function(items, title = "Expected pattern") {
+  html_box(
+    title,
+    paste0("<ul>", paste0("<li>", items, "</li>", collapse = ""), "</ul>"),
+    "expected"
+  )
+}
+
+
+
+html_card <- function(title, value, subtitle = NULL) {
+  cat(paste0(
+    '<div class="metric-card">',
+    '<div class="metric-title">', html_escape(title), '</div>',
+    '<div class="metric-value">', html_escape(value), '</div>',
+    if (!is.null(subtitle)) {
+      paste0('<div class="metric-subtitle">', html_escape(subtitle), '</div>')
+    } else {
+      ''
+    },
+    '</div>'
+  ))
+}
+
+
+
 
 metric_grid <- function(cards) {
   cat('<div class="metric-grid">')
@@ -196,11 +359,26 @@ figure_badge <- function(f) {
   "Figure"
 }
 
+# html_img_src <- function(f) {
+#   f <- normalizePath(f, winslash = "/", mustWork = TRUE)
+#   out_abs <- normalizePath(outdir, winslash = "/", mustWork = TRUE)
+#   sub(paste0("^", out_abs, "/?"), "", f)
+# }
+
 html_img_src <- function(f) {
+
   f <- normalizePath(f, winslash = "/", mustWork = TRUE)
-  out_abs <- normalizePath(outdir, winslash = "/", mustWork = TRUE)
-  sub(paste0("^", out_abs, "/?"), "", f)
+
+  original_outdir <- params$results$original_output_dir %||% outdir
+  original_outdir <- normalizePath(original_outdir, winslash = "/", mustWork = FALSE)
+
+  sub(
+    paste0("^", original_outdir, "/?"),
+    "../",
+    f
+  )
 }
+
 
 plot_gallery <- function(files, badge = NULL, empty = "No figures found.") {
   files <- files[file.exists(files)]
@@ -343,6 +521,10 @@ body {
   line-height: 1.6;
 }
 
+.main-container {
+  max-width: 1280px !important;
+}
+
 h1, h2, h3 {
   font-weight: 750;
   color: var(--deggo-navy-dark);
@@ -371,11 +553,27 @@ a {
 }
 
 .metric-card {
-  background: var(--deggo-card);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
   padding: 18px;
   border-radius: 16px;
   border: 1px solid var(--deggo-border);
   box-shadow: 0 8px 26px rgba(0,0,0,0.055);
+}
+
+.metric-card:nth-child(1) {
+  border-top: 5px solid var(--deggo-navy);
+}
+
+.metric-card:nth-child(2) {
+  border-top: 5px solid var(--deggo-blue);
+}
+
+.metric-card:nth-child(3) {
+  border-top: 5px solid var(--deggo-red);
+}
+
+.metric-card:nth-child(4) {
+  border-top: 5px solid #059669;
 }
 
 .metric-title {
@@ -401,10 +599,15 @@ a {
 
 .figure-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(360px, 1fr));
+  grid-template-columns: repeat(3, minmax(300px, 1fr));
   gap: 24px;
   margin-top: 20px;
 }
+
+.figure-badge.Volcano { background: #740001; }
+.figure-badge.Heatmap { background: #0057B8; }
+.figure-badge.GO { background: #059669; }
+.figure-badge.QC { background: #F97316; }
 
 .figure-card {
   background: var(--deggo-card);
@@ -456,19 +659,14 @@ a {
   font-weight: 800;
 }
 
-.table,
-.dataTable,
-.output-table {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.045);
-}
-
 .output-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 15px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.045);
 }
 
 .output-table th,
@@ -593,6 +791,23 @@ code {
 # Overview
 
 ```{r overview, results='asis'}
+
+# Add in Overview
+metric_grid(list(
+  list(title = "Samples", value = nrow(md)),
+  list(title = "Genes analyzed", value = format(res$summary$total_genes[1], big.mark = ",")),
+  list(title = "Significant DEGs", value = format(sum(sumtab$significant), big.mark = ",")),
+  list(title = "Comparisons", value = nrow(sumtab))
+))
+
+
+success_box(
+  "Biological take-home message",
+  paste(
+    "The strongest transcriptomic changes should be interpreted by combining",
+    "the DEG summary, volcano plots, heatmaps and GO enrichment results."
+  )
+)
 
 section_note(
   "Report overview",
@@ -1363,7 +1578,11 @@ if (file.exists(run_params)) {
   )
 }
 
-session_file <- file.path(outdir, "sessionInfo.txt")
+#session_file <- file.path(outdir, "sessionInfo.txt")
+session_file <- file.path(params$output_dir, "reproducibility", "sessionInfo.txt")
+if (!file.exists(session_file)) {
+  session_file <- file.path(params$output_dir, "sessionInfo.txt")
+}
 
 if (file.exists(session_file)) {
   cat("\n\n## Session info\n\n")

@@ -1,3 +1,13 @@
+# ============================================================ #
+# DEGgo main workflow helpers
+# ============================================================ #
+
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+
+# ============================================================ #
+# Single mode
+# ============================================================ #
 #' Run DEGgo single-comparison analysis
 #'
 #' Internal helper used by `run_deggo()` to perform a standard
@@ -43,8 +53,6 @@
     txtsize, log
 ) {
 
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-
   log("[7/11] Running differential expression analysis", type = "step")
 
   de_results <- run_de(
@@ -56,7 +64,10 @@
   )
 
   dds <- de_results$dds %||% de_results$object
-  dds <- .annotate_dds(dds, orgdb = orgdb)
+
+  if (method == "DESeq2") {
+    dds <- .annotate_dds(dds, orgdb = orgdb)
+  }
 
   res_df <- de_results$res_df
 
@@ -67,7 +78,10 @@
     orgdb = orgdb
   )
 
-  res_df <- map_entrez_ids(res_df = res_df, orgdb = orgdb)
+  res_df <- map_entrez_ids(
+    res_df = res_df,
+    orgdb = orgdb
+  )
 
   processed <- process_deg_results(
     res_df = res_df,
@@ -85,7 +99,8 @@
     top_n_labels = top_n_labels,
     txtsize = txtsize,
     output_dir = dirs$volcano,
-    filename = "Volcano_Plot",
+    filename = "single_comparison_Volcano_Plot",
+    title = "single_comparison",
     logfc_cutoff = logfc_cutoff,
     padj_cutoff = padj_cutoff
   )
@@ -110,8 +125,8 @@
       top_n_heatmap = top_n_heatmap,
       padj_cutoff = padj_cutoff,
       output_dir = dirs$heatmaps,
-      main = "Top DEG heatmap",
-      filename = "Top_DEG_Heatmap",
+      main = "single_comparison",
+      filename = "single_comparison_Heatmap",
       annotation_cols = intersect(
         c("condition", "treatment", "sex", "tissue"),
         colnames(metadata)
@@ -166,17 +181,56 @@
 
   log("[11/11] Exporting final results", type = "step")
 
-  export_deg_results(res_df, sig_deg, dirs$results)
+  utils::write.table(
+    res_df,
+    file.path(dirs$results, "single_comparison.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  utils::write.table(
+    sig_deg,
+    file.path(dirs$significant, "single_comparison_significant.tsv"),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
 
   de_results$dds <- dds
   de_results$res_df <- res_df
-  de_results$results <- list(single_comparison = res_df)
-  de_results$sig_deg <- sig_deg
+
+  de_results$results <- list(
+    single_comparison = res_df
+  )
+
+  de_results$sig_deg <- list(
+    single_comparison = sig_deg
+  )
+
   de_results$volcano_plot <- volcano_plot
+  de_results$volcano_plots <- list(
+    single_comparison = volcano_plot
+  )
+
   de_results$pca_plot <- pca_plot
+  de_results$pca <- list(
+    single_comparison = pca_plot
+  )
+
   de_results$heatmap_matrix <- heatmap_matrix
-  de_results$go_results <- go_results
+  de_results$heatmaps <- list(
+    single_comparison = heatmap_matrix
+  )
+
+  de_results$go_results <- list(
+    single_comparison = go_results
+  )
+
   de_results$go_plot <- go_plot
+  de_results$go_plots <- list(
+    single_comparison = go_plot
+  )
 
   de_results$summary <- data.frame(
     comparison = "single_comparison",
@@ -201,6 +255,9 @@
 }
 
 
+# ============================================================ #
+# Pairwise mode
+# ============================================================ #
 #' Run DEGgo pairwise differential expression analysis
 #'
 #' Internal helper used by `run_deggo()` to perform automated
@@ -294,7 +351,7 @@
 
   for (nm in names(de_results$results)) {
 
-    log("Processing comparison: ", nm, type = "info")
+    log(paste("Processing comparison:", nm), type = "info")
 
     res_df <- de_results$results[[nm]]
 
@@ -440,6 +497,7 @@
 
 
 
+
 #' Ensure a gene identifier column is present
 #'
 #' Internal helper that guarantees a count table contains an explicit gene
@@ -548,7 +606,9 @@
 
 
 
-
+# ============================================================ #
+# Main run_deggo
+# ============================================================ #
 #' Run DEGgo bulk RNA-seq downstream analysis
 #'
 #' Run a complete and automated bulk RNA-seq downstream analysis workflow.
@@ -747,8 +807,6 @@ run_deggo <- function(
     seed = 123
 ) {
 
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-
   set.seed(seed)
 
   method <- match.arg(method)
@@ -763,7 +821,9 @@ run_deggo <- function(
 
   log("==== STARTING DEGgo ANALYSIS ====", type = "header")
 
-  if (is.null(output_dir)) output_dir <- "DEGgo_results"
+  if (is.null(output_dir)) {
+    output_dir <- "DEGgo_results"
+  }
 
   output_dir <- file.path(
     output_dir,
@@ -786,16 +846,36 @@ run_deggo <- function(
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
 
   if (is.null(report_template)) {
-    report_template <- system.file(
-      "rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd",
-      package = "DEGgo"
-    )
 
-    if (!nzchar(report_template) || !file.exists(report_template)) {
-      report_template <- file.path(
+    candidates <- c(
+      system.file(
+        "rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd",
+        package = "DEGgo"
+      ),
+      file.path(
         getwd(),
         "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
+      ),
+      file.path(
+        dirname(getwd()),
+        "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
+      ),
+      file.path(
+        dirname(dirname(getwd())),
+        "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
       )
+    )
+
+    candidates <- candidates[nzchar(candidates)]
+    candidates <- candidates[file.exists(candidates)]
+
+    if (!length(candidates)) {
+      warning(
+        "DEGgo report template not found. Report generation will be skipped."
+      )
+      report_template <- NULL
+    } else {
+      report_template <- candidates[1]
     }
   }
 
@@ -803,9 +883,9 @@ run_deggo <- function(
   qc_clean <- NULL
   marker_check <- NULL
 
-  # ------------------------------------------------------- #
-  # 1. Optional raw QC
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Raw QC
+  # ---------------------------------------------------------- #
 
   if (isTRUE(raw_qc)) {
 
@@ -859,9 +939,9 @@ run_deggo <- function(
     }
   }
 
-  # ------------------------------------------------------- #
-  # 2. Input preparation
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Input preparation
+  # ---------------------------------------------------------- #
 
   log("[1/11] Matching counts and metadata", type = "step")
 
@@ -888,11 +968,6 @@ run_deggo <- function(
 
     counts <- as.matrix(counts)
     suppressWarnings(storage.mode(counts) <- "numeric")
-
-    if (!is.numeric(counts)) {
-      stop("counts must be numeric when prepare_input = FALSE.", call. = FALSE)
-    }
-
     counts <- round(counts)
     storage.mode(counts) <- "integer"
 
@@ -911,9 +986,9 @@ run_deggo <- function(
     stop("counts must be a matrix after input preparation.", call. = FALSE)
   }
 
-  # ------------------------------------------------------- #
-  # 3. Optional marker validation after preparation
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Marker validation
+  # ---------------------------------------------------------- #
 
   if (!is.null(marker_sets)) {
 
@@ -951,9 +1026,9 @@ run_deggo <- function(
     )
   }
 
-  # ------------------------------------------------------- #
-  # 4. Annotation, validation, filtering
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Annotation and validation
+  # ---------------------------------------------------------- #
 
   log("[2/11] Loading annotation database", type = "step")
   orgdb <- .get_orgdb(organism = organism, orgdb = orgdb)
@@ -963,10 +1038,11 @@ run_deggo <- function(
   sample_col_use <- sample_col[sample_col %in% colnames(metadata)][1]
 
   if (is.na(sample_col_use)) {
-    stop(
-      "No valid sample column found in metadata. Please specify 'sample_col'.",
-      call. = FALSE
-    )
+    stop("No valid sample column found in metadata.", call. = FALSE)
+  }
+
+  if (is.null(rownames(metadata)) || any(rownames(metadata) == "")) {
+    rownames(metadata) <- metadata[[sample_col_use]]
   }
 
   if (analysis_mode == "single") {
@@ -1044,12 +1120,18 @@ run_deggo <- function(
     )
   }
 
-
   sample_ids <- colnames(counts)
+
   metadata <- metadata[match(sample_ids, rownames(metadata)), , drop = FALSE]
   rownames(metadata) <- sample_ids
+  metadata[[sample_col_use]] <- sample_ids
+
+  # ---------------------------------------------------------- #
+  # Cleaning and filtering
+  # ---------------------------------------------------------- #
 
   log("[4/11] Cleaning gene identifiers", type = "step")
+
   counts <- clean_ensembl_ids(counts)
 
   log("[5/11] Filtering low-expression genes", type = "step")
@@ -1065,6 +1147,7 @@ run_deggo <- function(
 
   colnames(counts) <- sample_ids
   rownames(metadata) <- sample_ids
+  metadata[[sample_col_use]] <- sample_ids
 
   .save_clean_input_files(
     counts = counts,
@@ -1073,9 +1156,9 @@ run_deggo <- function(
     save_clean_inputs = save_clean_inputs
   )
 
-  # ------------------------------------------------------- #
-  # 5. Sample QC after filtering
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Sample QC after filtering
+  # ---------------------------------------------------------- #
 
   log("[6/11] Sample quality control", type = "step")
 
@@ -1090,9 +1173,9 @@ run_deggo <- function(
     )
   )
 
-  # ------------------------------------------------------- #
-  # 6. Differential expression
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Differential expression
+  # ---------------------------------------------------------- #
 
   if (analysis_mode == "pairwise") {
 
@@ -1134,9 +1217,9 @@ run_deggo <- function(
     )
   }
 
-  # ------------------------------------------------------- #
-  # 7. Common finalization
-  # ------------------------------------------------------- #
+  # ---------------------------------------------------------- #
+  # Final metadata and report/PPTX compatibility
+  # ---------------------------------------------------------- #
 
   de_results$counts <- counts
   de_results$metadata <- de_results$metadata %||% metadata
@@ -1148,7 +1231,11 @@ run_deggo <- function(
   de_results$qc_clean <- qc_clean
   de_results$marker_check <- marker_check
 
-  .safe_write_session_info(output_dir)
+  if (is.null(de_results$summary)) {
+    stop("DEGgo internal error: summary table was not created.", call. = FALSE)
+  }
+
+  .write_session_info(output_dir)
 
   de_results$run_params <- .make_run_params(
     deggo_version = deggo_version,
@@ -1177,17 +1264,15 @@ run_deggo <- function(
     repro_dir = repro_dir
   )
 
-  de_results$output_manifest <- .write_deggo_manifest(
-    output_dir = output_dir,
-    dirs = dirs,
-    analysis_mode = analysis_mode
-  )
-
   .save_repro(
     res = de_results,
     repro_dir = repro_dir,
     save_reproducibility = save_reproducibility
   )
+
+  # ---------------------------------------------------------- #
+  # Write run-level summary
+  # ---------------------------------------------------------- #
 
   utils::write.table(
     de_results$summary,
@@ -1197,29 +1282,71 @@ run_deggo <- function(
     row.names = FALSE
   )
 
-  log("[REPORT] Generating DEGgo report", type = "step")
+  # ---------------------------------------------------------- #
+  # Write output manifest
+  # ---------------------------------------------------------- #
 
-  de_results$report_files <- .safe_report(
-    res = de_results,
+  de_results$output_manifest <- .write_deggo_manifest(
     output_dir = output_dir,
-    generate_report = generate_report,
-    report_formats = report_formats,
-    report_template = report_template
+    dirs = dirs,
+    analysis_mode = analysis_mode
   )
+
+  # ---------------------------------------------------------- #
+  # Organize run-level files BEFORE report/PPTX
+  # ---------------------------------------------------------- #
+
+  run_files <- .deggo_organize_run_files(
+    output_dir = output_dir,
+    analysis_mode = analysis_mode
+  )
+
+  de_results$summary_file <- run_files$summary_file
+  de_results$session_file <- run_files$session_file
+  de_results$manifest_file <- run_files$manifest_file
+
+  # ---------------------------------------------------------- #
+  # Report
+  # ---------------------------------------------------------- #
+
+  de_results$report_files <- NULL
+
+  if (isTRUE(generate_report)) {
+
+    log("[REPORT] Generating DEGgo report", type = "step")
+
+    de_results$report_files <- .deggo_report(
+      res = de_results,
+      output_dir = output_dir,
+      generate_report = generate_report,
+      report_formats = report_formats,
+      report_template = report_template
+    )
+
+  }
+
+  # ---------------------------------------------------------- #
+  # PowerPoint
+  # ---------------------------------------------------------- #
 
   de_results$pptx_file <- NULL
 
   if (isTRUE(generate_pptx)) {
 
+    report_dir <- file.path(output_dir, "DEGgo_Report")
+    dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
+
     if (is.null(pptx_file)) {
-      pptx_file <- file.path(output_dir, "DEGgo_Report.pptx")
+      pptx_file <- file.path(report_dir, "DEGgo_Report.pptx")
     }
 
     de_results$pptx_file <- generate_deggo_pptx(
       results = de_results,
       output_file = pptx_file
     )
+
   }
+
 
   log(
     paste0("==== DEGgo ", toupper(analysis_mode), " ANALYSIS COMPLETE ===="),
@@ -1227,5 +1354,5 @@ run_deggo <- function(
     duration = as.numeric(difftime(Sys.time(), t_start, units = "secs"))
   )
 
-  return(de_results)
+  de_results
 }
