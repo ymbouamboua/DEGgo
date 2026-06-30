@@ -22,6 +22,13 @@ run_deggo(
   logfc_cutoff = 0.25,
   top_n_heatmap = 50,
   top_n_labels = 10,
+  min_expr_count = 20,
+  min_expr_samples = 3,
+  min_prevalence = 0.6,
+  max_sample_fraction = 0.45,
+  min_group_mean = 10,
+  expr_filter_groups = "auto",
+  clean_deg_tables = TRUE,
   ontology = c("BP", "MF", "CC"),
   organism = c("human", "mouse", "rat", "custom"),
   orgdb = NULL,
@@ -49,195 +56,107 @@ run_deggo(
 )
 }
 \arguments{
-\item{counts}{Raw count table, data frame or matrix. Rows should represent
-genes/features and columns should represent samples. If \code{prepare_input = TRUE}, DEGgo attempts to detect gene and sample columns automatically using
-\code{gene_col}, \code{feature_col}, and \code{sample_col}.}
+\item{counts}{Raw count matrix or data frame.}
 
-\item{metadata}{Sample metadata data frame. Must contain a sample identifier
-column matching the count matrix sample names. For single analysis, it must
-contain \code{condition} unless this is encoded in the design/contrast workflow.
-For pairwise analysis, \code{condition} can be automatically generated from
-\code{pairwise_group_cols}.}
+\item{metadata}{Sample metadata data frame.}
 
-\item{gene_col}{Character vector of possible gene identifier column names.
-Used during input preparation.}
+\item{gene_col}{Candidate gene identifier column names.}
 
-\item{feature_col}{Character vector of possible feature/gene symbol column
-names. Used during input preparation and marker-based checks.}
+\item{feature_col}{Candidate gene symbol/name column names.}
 
-\item{sample_col}{Character vector of possible sample identifier column names
-in \code{metadata}.}
+\item{sample_col}{Candidate sample identifier column names.}
 
-\item{prepare_input}{Logical. If \code{TRUE}, automatically prepares and matches
-the count table and metadata using \code{prepare_counts_metadata()}. If \code{FALSE},
-\code{counts} must already be a numeric matrix with sample names matching
-metadata row names or a sample column.}
+\item{prepare_input}{Logical. Prepare and match input tables.}
 
-\item{raw_qc}{Logical. If \code{TRUE}, run exploratory raw sample QC before input
-preparation and differential expression analysis using
-\code{explore_bulk_rnaseq()}.}
+\item{raw_qc}{Logical. Run raw count QC.}
 
-\item{remove_flagged}{Logical. If \code{TRUE}, remove samples flagged by the raw QC
-table before continuing the workflow. Default is \code{FALSE} to keep sample
-exclusion under user control.}
+\item{remove_flagged}{Logical. Remove QC-flagged samples.}
 
-\item{qc_markers}{Optional character vector of marker genes used during raw
-and clean QC.}
+\item{qc_markers}{Optional marker genes for QC.}
 
-\item{marker_sets}{Optional named list of marker gene sets used for
-marker-based biological validation with \code{marker_score_check()}.}
+\item{marker_sets}{Optional named marker gene sets.}
 
-\item{qc_sample_col}{Optional sample column used by \code{remove_flagged_samples()}.
-If \code{NULL}, the first value of \code{sample_col} is used.}
+\item{qc_sample_col}{Optional sample column for QC.}
 
-\item{qc_output_prefix}{Character prefix used for QC output directories.}
+\item{qc_output_prefix}{QC output prefix.}
 
-\item{output_dir}{Output directory. If \code{NULL}, results are written to
-\code{"DEGgo_results"}. A dated DEGgo subdirectory is created automatically.}
+\item{output_dir}{Output directory.}
 
-\item{padj_cutoff}{Adjusted p-value cutoff used to define significant DEGs.}
+\item{padj_cutoff}{Adjusted p-value cutoff.}
 
-\item{logfc_cutoff}{Absolute log2 fold-change cutoff used to define
-significant DEGs.}
+\item{logfc_cutoff}{Absolute log2 fold-change cutoff.}
 
-\item{top_n_heatmap}{Number of top genes to display in DEG heatmaps.}
+\item{top_n_heatmap}{Number of genes shown in heatmaps.}
 
-\item{top_n_labels}{Number of top genes to label in volcano plots.}
+\item{top_n_labels}{Number of genes labelled in volcano plots.}
 
-\item{ontology}{Gene Ontology namespace. One of \code{"BP"}, \code{"MF"}, or \code{"CC"}.}
+\item{min_expr_count}{Minimum expression count for clean DEG filtering.}
 
-\item{organism}{Organism used for gene annotation. One of \code{"human"},
-\code{"mouse"}, \code{"rat"}, or \code{"custom"}.}
+\item{min_expr_samples}{Minimum samples passing expression threshold.}
 
-\item{orgdb}{Optional AnnotationDbi OrgDb object. Required when
-\code{organism = "custom"}.}
+\item{min_prevalence}{Minimum prevalence for clean DEG filtering.}
 
-\item{method}{Differential expression method. One of \code{"DESeq2"}, \code{"edgeR"},
-or \code{"limma"}. Pairwise mode currently supports DESeq2 only.}
+\item{max_sample_fraction}{Maximum single-sample fraction.}
 
-\item{analysis_mode}{Analysis mode. \code{"single"} runs one differential
-expression analysis. \code{"pairwise"} runs multiple pairwise DESeq2 contrasts.}
+\item{min_group_mean}{Minimum group mean expression.}
 
-\item{contrast}{Optional contrast passed to the differential expression
-engine in single-analysis mode.}
+\item{expr_filter_groups}{Grouping variables for expression filtering.}
 
-\item{design_formula}{Design formula used by the differential expression
-engine, for example \code{~ condition} or \code{~ batch + condition}.}
+\item{clean_deg_tables}{Logical. Apply post-DEG expression cleaning.}
 
-\item{pairwise_group_cols}{Character vector of metadata columns used to define
-pairwise groups. Required when \code{analysis_mode = "pairwise"}.}
+\item{ontology}{GO ontology.}
 
-\item{pairwise_contrast_col}{Name of the metadata column used to store or
-generate pairwise contrast groups.}
+\item{organism}{Organism name.}
 
-\item{pairwise_contrasts}{Optional named list of pairwise contrasts. If
-provided, these contrasts are used instead of automatically generated
-contrasts.}
+\item{orgdb}{Optional custom OrgDb object.}
 
-\item{filter_method}{Low-expression filtering method. One of \code{"count"},
-\code{"cpm"}, or \code{"none"}.}
+\item{method}{Differential expression method.}
 
-\item{pairwise_mode}{Pairwise comparison mode. One of \code{"all"},
-\code{"within_first"}, or \code{"within_second"}.}
+\item{analysis_mode}{Single or pairwise analysis mode.}
 
-\item{min_count}{Minimum count threshold used by count-based filtering.}
+\item{contrast}{Contrast vector for single analysis.}
 
-\item{min_samples}{Minimum number of samples required to pass the count/CPM
-threshold.}
+\item{design_formula}{Design formula.}
 
-\item{min_total}{Minimum total count required for a gene to be retained.}
+\item{pairwise_group_cols}{Metadata columns used to build pairwise groups.}
 
-\item{generate_report}{Logical. If \code{TRUE}, generate DEGgo report files.}
+\item{pairwise_contrast_col}{Name of pairwise contrast column.}
 
-\item{report_formats}{Character vector of report formats, for example
-\code{"html"}, \code{"pdf"}, or \code{c("html", "pdf")}.}
+\item{pairwise_contrasts}{Optional named list of pairwise contrasts.}
 
-\item{report_template}{Optional path to a custom R Markdown report template.
-If \code{NULL}, the package DEGgo template is used.}
+\item{filter_method}{Gene filtering method.}
 
-\item{generate_pptx}{Logical. If \code{TRUE}, generate a PowerPoint report.}
+\item{pairwise_mode}{Pairwise contrast generation mode.}
 
-\item{pptx_file}{Optional path to the output PowerPoint file. If \code{NULL},
-\code{"DEGgo_Report.pptx"} is written inside \code{output_dir}.}
+\item{min_count}{Minimum count threshold.}
 
-\item{save_reproducibility}{Logical. If \code{TRUE}, save reproducibility files,
-including run objects and session information.}
+\item{min_samples}{Minimum number of samples passing \code{min_count}.}
 
-\item{save_clean_inputs}{Logical. If \code{TRUE}, save cleaned count and metadata
-tables after sample matching and filtering.}
+\item{min_total}{Minimum total count.}
 
-\item{txtsize}{Base text size used in DEGgo visualizations.}
+\item{generate_report}{Logical. Generate report.}
 
-\item{seed}{Random seed for reproducibility.}
+\item{report_formats}{Report formats.}
+
+\item{report_template}{Optional report template path.}
+
+\item{generate_pptx}{Logical. Generate PowerPoint.}
+
+\item{pptx_file}{Optional PowerPoint output file.}
+
+\item{save_reproducibility}{Logical. Save reproducibility bundle.}
+
+\item{save_clean_inputs}{Logical. Save cleaned input tables.}
+
+\item{txtsize}{Base text size.}
+
+\item{seed}{Random seed.}
 }
 \value{
-A named list containing differential expression results, significant
-DEGs, summary tables, plots, GO enrichment results, QC outputs, cleaned
-counts and metadata, report paths, PowerPoint path, output directories,
-run parameters, manifest, and DEGgo version.
+A DEGgo results object.
 }
 \description{
-Run a complete and automated bulk RNA-seq downstream analysis workflow.
-}
-\details{
-DEGgo can perform optional raw sample quality control, optional removal of
-flagged samples, marker-based biological validation, input preparation,
-sample matching, gene identifier cleaning, low-expression filtering,
-differential expression analysis, result annotation, PCA, heatmap and volcano
-visualization, Gene Ontology enrichment, reproducibility export, and automated
-HTML/PDF/PPTX report generation.
-
-The function supports either a single differential expression analysis or
-multiple pairwise contrasts. Pairwise mode currently uses DESeq2.
-
-In single mode, DEGgo runs one differential expression analysis using the
-selected method and design formula. In pairwise mode, DEGgo builds or uses
-predefined pairwise contrasts from metadata columns and runs DESeq2 for each
-contrast.
-
-The raw QC step is performed before input preparation and filtering. The
-sample QC step is performed after gene filtering and uses the final matched
-count matrix and metadata.
-
-Automatic sample removal is disabled by default because exclusion of samples
-should usually be reviewed by the analyst.
-}
-\examples{
-\dontrun{
-results <- run_deggo(
-  counts = counts,
-  metadata = metadata,
-  organism = "mouse",
-  method = "DESeq2",
-  analysis_mode = "single",
-  design_formula = ~ condition,
-  contrast = c("condition", "treated", "control"),
-  sample_col = "sample"
-)
-
-pairwise_results <- run_deggo(
-  counts = counts,
-  metadata = metadata,
-  organism = "mouse",
-  method = "DESeq2",
-  analysis_mode = "pairwise",
-  pairwise_group_cols = c("treatment", "sex", "tissue"),
-  pairwise_contrasts = pairwise_contrasts,
-  sample_col = "sample",
-  raw_qc = TRUE,
-  remove_flagged = FALSE
-)
-}
-
-}
-\seealso{
-\code{prepare_counts_metadata},
-\code{explore_bulk_rnaseq},
-\code{remove_flagged_samples},
-\code{marker_score_check},
-\code{run_de},
-\code{run_deseq2_pairwise},
-\code{run_go_enrichment},
-\code{generate_deggo_report},
-\code{generate_deggo_pptx}
+Automated bulk RNA-seq differential expression workflow including QC,
+preprocessing, differential expression, annotation, visualization,
+GO enrichment, reporting, and reproducibility exports.
 }

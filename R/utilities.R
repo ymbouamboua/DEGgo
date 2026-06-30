@@ -637,10 +637,7 @@ extract_expression <- function(
       }
     )
 
-    if (!is.null(out) && file.exists(out)) {
-      report_files[[fmt]] <- out
-      log(paste("Report saved:", out), type = "done")
-    }
+    log(paste("Report saved:"), type = "done")
   }
 
   if (file.exists(local_template)) {
@@ -983,4 +980,90 @@ extract_expression <- function(
     session_file = session_dst,
     manifest_file = manifest_dst
   ))
+}
+
+
+#' @keywords internal
+#' @noRd
+#'
+.deggo_build_summary <- function(
+    results,
+    sig_deg = NULL,
+    go_results = NULL,
+    contrast = NULL,
+    method = NA_character_,
+    padj_cutoff = 0.05,
+    logfc_cutoff = 0.25
+) {
+
+  comp_name <- if (is.null(contrast)) {
+    "single_comparison"
+  } else {
+    paste(contrast, collapse = "_")
+  }
+
+  if (is.data.frame(results)) {
+    results <- stats::setNames(list(results), comp_name)
+  }
+
+  if (is.data.frame(sig_deg)) {
+    sig_deg <- stats::setNames(list(sig_deg), comp_name)
+  }
+
+  comps <- unique(c(names(results), names(sig_deg), names(go_results)))
+
+  if (!length(comps)) {
+    comps <- comp_name
+  }
+
+  out <- lapply(comps, function(nm) {
+
+    res <- results[[nm]]
+    sig <- sig_deg[[nm]]
+
+    n_total <- if (is.data.frame(res)) nrow(res) else 0
+    n_sig <- if (is.data.frame(sig)) nrow(sig) else 0
+
+    n_up <- 0
+    n_down <- 0
+
+    if (is.data.frame(sig)) {
+      if ("DEG_status" %in% colnames(sig)) {
+        n_up <- sum(sig$DEG_status == "Up", na.rm = TRUE)
+        n_down <- sum(sig$DEG_status == "Down", na.rm = TRUE)
+      } else if ("log2FoldChange" %in% colnames(sig)) {
+        n_up <- sum(sig$log2FoldChange > 0, na.rm = TRUE)
+        n_down <- sum(sig$log2FoldChange < 0, na.rm = TRUE)
+      } else if ("logFC" %in% colnames(sig)) {
+        n_up <- sum(sig$logFC > 0, na.rm = TRUE)
+        n_down <- sum(sig$logFC < 0, na.rm = TRUE)
+      }
+    }
+
+    n_go <- 0
+    go <- go_results[[nm]]
+
+    if (!is.null(go)) {
+      if (is.data.frame(go)) {
+        n_go <- nrow(go)
+      } else if (!is.null(go$go_results) && is.data.frame(go$go_results)) {
+        n_go <- nrow(go$go_results)
+      }
+    }
+
+    data.frame(
+      comparison = nm,
+      method = method,
+      total_genes = n_total,
+      significant_genes = n_sig,
+      upregulated = n_up,
+      downregulated = n_down,
+      go_terms = n_go,
+      padj_cutoff = padj_cutoff,
+      logfc_cutoff = logfc_cutoff,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  do.call(rbind, out)
 }

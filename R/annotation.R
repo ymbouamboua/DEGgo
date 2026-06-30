@@ -1,6 +1,6 @@
-# =========================================================
+# ========================================================= #
 # GET ORGDB
-# =========================================================
+# ========================================================= #
 #' Retrieve an organism-specific OrgDb annotation database
 #'
 #' Returns a Bioconductor OrgDb annotation database corresponding
@@ -131,6 +131,9 @@
 }
 
 
+# ============================================================ #
+# map_ensembl_to_feature
+# ============================================================ #
 
 #' Map Ensembl identifiers to feature names
 #'
@@ -177,6 +180,7 @@
 #'
 #' @keywords internal
 #' @noRd
+#'
 map_ensembl_to_feature <- function(
     ensembl_vec,
     orgdb,
@@ -252,6 +256,9 @@ map_ensembl_to_feature <- function(
 }
 
 
+# ============================================================ #
+# map_entrez_ids
+# ============================================================ #
 #' Map Ensembl identifiers to Entrez identifiers
 #'
 #' Annotates a differential expression result table by mapping
@@ -283,6 +290,7 @@ map_ensembl_to_feature <- function(
 #'
 #' @keywords internal
 #' @noRd
+#'
 map_entrez_ids <- function(
     res_df,
     orgdb
@@ -312,8 +320,16 @@ map_entrez_ids <- function(
 }
 
 
+
+# ============================================================ #
+# .annotate_dds
+# ============================================================ #
+#' Annotate dds object
+#'
+#' @param orgdb OrgDb annotation database.
 #' @keywords internal
 #' @noRd
+#'
 .annotate_dds <- function(dds, orgdb) {
 
   genes <- rownames(dds)
@@ -349,6 +365,10 @@ map_entrez_ids <- function(
 }
 
 
+
+# ============================================================ #
+# .annotate_de_results
+# ============================================================ #
 #' Annotate differential expression results
 #'
 #' @param res_df Differential expression result table.
@@ -360,7 +380,8 @@ map_entrez_ids <- function(
 #'
 #' @keywords internal
 #' @noRd
-annotate_de_results <- function(
+#'
+.annotate_de_results <- function(
     res_df,
     orgdb,
     padj_cutoff = 0.05,
@@ -385,3 +406,144 @@ annotate_de_results <- function(
 
   processed$res_df
 }
+
+
+# ============================================================ #
+# .deggo_annotate_result_table
+# ============================================================ #
+#' @keywords internal
+#' @noRd
+#'
+.deggo_annotate_result_table <- function(
+    res_df,
+    orgdb,
+    keytype = "ENSEMBL",
+    gene_col = "gene_id",
+    organism = NULL,
+    padj_cutoff = 0.05,
+    logfc_cutoff = 0.25,
+    ...
+) {
+  if (is.null(res_df) || !is.data.frame(res_df)) {
+    stop("res_df must be a data.frame.", call. = FALSE)
+  }
+  
+  # Prefer true Ensembl column if available
+  if ("ENSEMBL" %in% colnames(res_df)) {
+    gene_col <- "ENSEMBL"
+    keytype <- "ENSEMBL"
+  }
+  
+  if (!gene_col %in% colnames(res_df)) {
+    res_df[[gene_col]] <- rownames(res_df)
+  }
+  
+  add_deg_status <- function(x) {
+    if ("padj" %in% colnames(x) && "log2FoldChange" %in% colnames(x)) {
+      x$DEG_status <- "NS"
+      
+      x$DEG_status[
+        !is.na(x$padj) &
+          x$padj < padj_cutoff &
+          x$log2FoldChange >= logfc_cutoff
+      ] <- "Up"
+      
+      x$DEG_status[
+        !is.na(x$padj) &
+          x$padj < padj_cutoff &
+          x$log2FoldChange <= -logfc_cutoff
+      ] <- "Down"
+    }
+    
+    x
+  }
+  
+  extract_sig <- function(x) {
+    if (!all(c("padj", "log2FoldChange") %in% colnames(x))) {
+      return(x[0, , drop = FALSE])
+    }
+    
+    x[
+      !is.na(x$padj) &
+        x$padj < padj_cutoff &
+        abs(x$log2FoldChange) >= logfc_cutoff,
+      ,
+      drop = FALSE
+    ]
+  }
+  
+  if (is.null(orgdb)) {
+    warning("orgdb is NULL. Returning unannotated result table.", call. = FALSE)
+    
+    res_df <- add_deg_status(res_df)
+    
+    return(list(
+      res_df = res_df,
+      sig_deg = extract_sig(res_df)
+    ))
+  }
+  
+  if (!requireNamespace("AnnotationDbi", quietly = TRUE)) {
+    stop("Package 'AnnotationDbi' is required.", call. = FALSE)
+  }
+  
+  ids <- unique(as.character(res_df[[gene_col]]))
+  ids <- ids[!is.na(ids) & ids != ""]
+  
+  ann <- tryCatch(
+    AnnotationDbi::select(
+      orgdb,
+      keys = ids,
+      keytype = keytype,
+      columns = c("SYMBOL", "GENENAME", "ENTREZID")
+    ),
+    error = function(e) {
+      warning("Annotation failed: ", conditionMessage(e), call. = FALSE)
+      NULL
+    }
+  )
+  
+  if (is.null(ann) || nrow(ann) == 0) {
+    res_df$symbol <- NA_character_
+    res_df$gene_name <- NA_character_
+    res_df$entrez_id <- NA_character_
+    
+    res_df <- add_deg_status(res_df)
+    
+    return(list(
+      res_df = res_df,
+      sig_deg = extract_sig(res_df)
+    ))
+  }
+  
+  ann <- ann[!duplicated(ann[[keytype]]), , drop = FALSE]
+  
+  colnames(ann)[colnames(ann) == keytype] <- gene_col
+  colnames(ann)[colnames(ann) == "SYMBOL"] <- "symbol"
+  colnames(ann)[colnames(ann) == "GENENAME"] <- "gene_name"
+  colnames(ann)[colnames(ann) == "ENTREZID"] <- "entrez_id"
+  
+  out <- merge(
+    res_df,
+    ann,
+    by = gene_col,
+    all.x = TRUE,
+    sort = FALSE
+  )
+  
+  out <- out[match(res_df[[gene_col]], out[[gene_col]]), , drop = FALSE]
+  rownames(out) <- NULL
+  
+  out <- add_deg_status(out)
+  
+  out$feature <- out$symbol
+  out$feature[is.na(out$feature) | out$feature == ""] <- out$ENSEMBL[
+    is.na(out$feature) | out$feature == ""
+  ]
+  
+  list(
+    res_df = out,
+    sig_deg = extract_sig(out)
+  )
+}
+

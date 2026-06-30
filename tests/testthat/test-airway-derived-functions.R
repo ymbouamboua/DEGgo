@@ -1,22 +1,22 @@
 test_that("airway run provides reusable DEGgo objects", {
-  
+
   skip_if_not_installed("DESeq2")
   skip_if_not_installed("org.Hs.eg.db")
-  
+
   counts <- read.delim(
     system.file("extdata", "airway_counts.tsv", package = "DEGgo"),
     check.names = FALSE
   )
-  
+
   metadata <- read.delim(
     system.file("extdata", "airway_metadata.tsv", package = "DEGgo"),
     check.names = FALSE
   )
-  
+
   metadata$condition <- metadata$dex
-  
+
   outdir <- tempfile("DEGgo_airway_derived_")
-  
+
   res <- run_deggo(
     counts = counts,
     metadata = metadata,
@@ -36,10 +36,10 @@ test_that("airway run provides reusable DEGgo objects", {
     output_dir = outdir,
     generate_report = FALSE
   )
-  
+
   expect_true(is.list(res))
   expect_true(!is.null(res$dds))
   expect_true(!is.null(res$metadata))
   expect_true(!is.null(res$sig_deg))
-  expect_true(nrow(res$sig_deg) > 0)
+  expect_true(sum(vapply(res$sig_deg, nrow, numeric(1))) > 0)
 })

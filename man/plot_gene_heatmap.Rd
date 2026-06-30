@@ -25,6 +25,7 @@ plot_gene_heatmap(
   cluster_cols = FALSE,
   fontsize_row = NULL,
   fontsize_col = NULL,
+  show_dendrogram = FALSE,
   width = NULL,
   height = NULL,
   show_rownames = NULL,
@@ -75,6 +76,9 @@ automatically.}
 
 \item{fontsize_col}{Optional column label font size. If \code{NULL}, chosen
 automatically.}
+
+\item{show_dendrogram}{Logical. If TRUE, display row/column dendrograms
+when clustering is enabled.}
 
 \item{width}{Optional plot width in inches. If \code{NULL}, chosen automatically.}
 

@@ -471,6 +471,27 @@
 }
 
 
+#' @keywords internal
+#' @noRd
+.deggo_label_col <- function(df) {
+  if ("feature" %in% colnames(df)) {
+    "feature"
+  } else if ("symbol" %in% colnames(df)) {
+    "symbol"
+  } else if ("SYMBOL" %in% colnames(df)) {
+    "SYMBOL"
+  } else if ("gene_name" %in% colnames(df)) {
+    "gene_name"
+  } else if ("ENSEMBL" %in% colnames(df)) {
+    "ENSEMBL"
+  } else if ("gene_id" %in% colnames(df)) {
+    "gene_id"
+  } else {
+    stop("No gene label column found.", call. = FALSE)
+  }
+}
+
+
 # ========================================================= #
 # PLOT GENE EXPRESSION
 # ========================================================= #
@@ -752,15 +773,7 @@ plot_volcano <- function(
   res_df <- as.data.frame(res_df, stringsAsFactors = FALSE)
 
   if (is.null(gene_col)) {
-    gene_col <- if ("SYMBOL" %in% colnames(res_df)) {
-      "SYMBOL"
-    } else if ("gene" %in% colnames(res_df)) {
-      "gene"
-    } else if ("ENSEMBL" %in% colnames(res_df)) {
-      "ENSEMBL"
-    } else {
-      stop("No gene label column found. Provide 'gene_col'.", call. = FALSE)
-    }
+    gene_col <- .deggo_label_col(res_df)
   }
 
   p_col <- if (isTRUE(use_padj)) padj_col else pval_col
@@ -1197,13 +1210,13 @@ plot_pca <- function(
     text = "Plot not available",
     width = 1200,
     height = 900
-) {
-  grDevices::png(file, width = width, height = height, res = 150)
-  graphics::plot.new()
-  graphics::text(0.5, 0.5, labels = text, cex = 1.2)
-  grDevices::dev.off()
-  invisible(file)
-}
+  ) {
+    grDevices::png(file, width = width, height = height, res = 150)
+    graphics::plot.new()
+    graphics::text(0.5, 0.5, labels = text, cex = 1.2)
+    grDevices::dev.off()
+    invisible(file)
+  }
 
 # ========================================================= #
 # HEATMAP
@@ -1247,6 +1260,447 @@ plot_pca <- function(
 
   list(width = width, height = height)
 }
+
+
+# ========================================================= #
+# plot_heatmap
+# ========================================================= #
+
+#' @keywords internal
+#' @noRd
+.prepare_heatmap_annotations <- function(
+    metadata,
+    annotation_cols,
+    annotation_colors = NULL
+){
+
+  annotation <- metadata[, intersect(annotation_cols,colnames(metadata)), drop=FALSE]
+
+  if(ncol(annotation)){
+    annotation[] <- lapply(annotation,factor)
+  }else{
+    annotation <- NULL
+  }
+
+  if(is.null(annotation_colors))
+    annotation_colors <- .deggo_annotation_colors(annotation)
+  list(
+    annotation=annotation,
+    colors=annotation_colors
+  )
+}
+
+
+
+
+#' Prepare DEGgo heatmap matrix
+#'
+#' Internal helper used by `plot_heatmap()` to extract the VST matrix,
+#' subset samples, select top DEG genes and optionally scale rows.
+#'
+#' @param vsd Variance-stabilized object, usually returned by DESeq2::vst().
+#' @param res_df Differential expression result table.
+#' @param metadata Sample metadata data frame.
+#' @param contrast Optional contrast vector used to subset samples.
+#' @param sample_subset Optional character vector of samples to keep.
+#' @param metadata_filter Optional named list used to filter metadata rows.
+#' @param top_n_heatmap Number of top genes to display.
+#' @param padj_cutoff Adjusted p-value cutoff.
+#' @param fallback Logical. If TRUE, use top ranked genes when no significant
+#'   genes pass `padj_cutoff`.
+#' @param order_by Optional metadata columns used to order samples.
+#' @param scale_rows Logical. If TRUE, z-score scale genes by row.
+#' @param log Optional DEGgo logger.
+#'
+#' @return A list containing `matrix`, `metadata` and `top`, or NULL.
+#'
+#' @keywords internal
+#' @noRd
+.prepare_heatmap_matrix <- function(
+    vsd,
+    res_df,
+    metadata,
+    contrast = NULL,
+    sample_subset = NULL,
+    metadata_filter = NULL,
+    top_n_heatmap = 20,
+    padj_cutoff = 0.05,
+    fallback = TRUE,
+    order_by = NULL,
+    scale_rows = TRUE,
+    log = NULL
+) {
+
+  .return_null <- function(reason) {
+    if (!is.null(log)) log(reason, type = "warn")
+    return(NULL)
+  }
+
+  if (!requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+    stop("Package 'SummarizedExperiment' is required.", call. = FALSE)
+  }
+
+  if (is.null(vsd) || is.null(res_df) || is.null(metadata)) {
+    return(.return_null("Heatmap skipped: vsd, res_df or metadata is NULL."))
+  }
+
+  mat <- SummarizedExperiment::assay(vsd)
+
+  if (is.null(rownames(mat)) || is.null(colnames(mat))) {
+    return(.return_null("Heatmap skipped: vst matrix must have rownames and colnames."))
+  }
+
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  if (!"sample" %in% colnames(metadata)) {
+    metadata$sample <- rownames(metadata)
+  }
+
+  metadata$sample <- as.character(metadata$sample)
+  rownames(metadata) <- metadata$sample
+
+  common_samples <- intersect(colnames(mat), rownames(metadata))
+
+  if (length(common_samples) < 2) {
+    return(.return_null("Heatmap skipped: fewer than 2 common samples between vst matrix and metadata."))
+  }
+
+  mat <- mat[, common_samples, drop = FALSE]
+  metadata <- metadata[common_samples, , drop = FALSE]
+
+  if (!is.null(sample_subset)) {
+
+    sample_subset <- intersect(sample_subset, colnames(mat))
+
+    if (length(sample_subset) < 2) {
+      return(.return_null("Heatmap skipped: fewer than 2 samples after sample_subset."))
+    }
+
+    mat <- mat[, sample_subset, drop = FALSE]
+    metadata <- metadata[sample_subset, , drop = FALSE]
+  }
+
+  if (!is.null(metadata_filter)) {
+
+    keep <- rep(TRUE, nrow(metadata))
+
+    for (nm in names(metadata_filter)) {
+
+      if (!nm %in% colnames(metadata)) {
+        stop("metadata_filter column not found: ", nm, call. = FALSE)
+      }
+
+      keep <- keep & metadata[[nm]] %in% metadata_filter[[nm]]
+    }
+
+    metadata <- metadata[keep, , drop = FALSE]
+
+    if (nrow(metadata) < 2) {
+      return(.return_null("Heatmap skipped: fewer than 2 samples after metadata_filter."))
+    }
+
+    mat <- mat[, rownames(metadata), drop = FALSE]
+  }
+
+  if (!is.null(contrast)) {
+
+    contrast_col <- contrast[1]
+    contrast_levels <- contrast[2:3]
+
+    if (!contrast_col %in% colnames(metadata)) {
+      stop("Contrast column not found in metadata: ", contrast_col, call. = FALSE)
+    }
+
+    keep_samples <- rownames(metadata)[metadata[[contrast_col]] %in% contrast_levels]
+    keep_samples <- intersect(keep_samples, colnames(mat))
+
+    if (length(keep_samples) < 2) {
+      return(.return_null(
+        paste0(
+          "Heatmap skipped: fewer than 2 samples found for contrast: ",
+          paste(contrast, collapse = " ")
+        )
+      ))
+    }
+
+    mat <- mat[, keep_samples, drop = FALSE]
+    metadata <- metadata[keep_samples, , drop = FALSE]
+  }
+
+  required_cols <- c("padj", "log2FoldChange")
+  missing_cols <- setdiff(required_cols, colnames(res_df))
+
+  if (length(missing_cols)) {
+    stop(
+      "res_df missing required column(s): ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (!"ENSEMBL" %in% colnames(res_df)) {
+    if ("gene_id" %in% colnames(res_df)) {
+      res_df$ENSEMBL <- res_df$gene_id
+    } else {
+      stop("res_df must contain an ENSEMBL or gene_id column.", call. = FALSE)
+    }
+  }
+
+  label_col <- .deggo_label_col(res_df)
+
+  rownames(mat) <- sub("\\..*$", "", rownames(mat))
+  res_df$ENSEMBL <- sub("\\..*$", "", as.character(res_df$ENSEMBL))
+
+  top <- res_df[
+    !is.na(res_df$padj) &
+      !is.na(res_df$log2FoldChange) &
+      res_df$padj < padj_cutoff,
+    ,
+    drop = FALSE
+  ]
+
+  top <- top[
+    order(top$padj, -abs(top$log2FoldChange)),
+    ,
+    drop = FALSE
+  ]
+
+  top <- utils::head(top, top_n_heatmap)
+
+  if (!nrow(top) && isTRUE(fallback)) {
+
+    if (!is.null(log)) {
+      log("No significant genes found. Using fallback genes ranked by padj.", type = "warn")
+    }
+
+    top <- res_df[
+      !is.na(res_df$padj) &
+        !is.na(res_df$log2FoldChange),
+      ,
+      drop = FALSE
+    ]
+
+    top <- top[
+      order(top$padj, -abs(top$log2FoldChange)),
+      ,
+      drop = FALSE
+    ]
+
+    top <- utils::head(top, top_n_heatmap)
+  }
+
+  if (!nrow(top)) {
+    return(.return_null("Heatmap skipped: no genes available after filtering."))
+  }
+
+  genes_use <- intersect(top$ENSEMBL, rownames(mat))
+
+  if (!length(genes_use)) {
+    return(.return_null("Heatmap skipped: no top genes found in vst matrix rownames."))
+  }
+
+  top <- top[
+    match(genes_use, top$ENSEMBL),
+    ,
+    drop = FALSE
+  ]
+
+  mat_use <- mat[genes_use, , drop = FALSE]
+
+  keep_rows <- apply(mat_use, 1, function(x) all(is.finite(x)))
+  keep_cols <- apply(mat_use, 2, function(x) all(is.finite(x)))
+
+  mat_use <- mat_use[keep_rows, keep_cols, drop = FALSE]
+
+  if (nrow(mat_use) < 2 || ncol(mat_use) < 2) {
+    return(.return_null("Heatmap skipped: fewer than 2 genes or 2 samples after finite-value filtering."))
+  }
+
+  top <- top[
+    match(rownames(mat_use), top$ENSEMBL),
+    ,
+    drop = FALSE
+  ]
+
+  gene_labels <- as.character(top[[label_col]])
+
+  gene_labels[is.na(gene_labels) | gene_labels == ""] <- top$ENSEMBL[
+    is.na(gene_labels) | gene_labels == ""
+  ]
+
+  rownames(mat_use) <- make.unique(gene_labels)
+
+  metadata_use <- metadata[colnames(mat_use), , drop = FALSE]
+
+  if (!is.null(order_by)) {
+
+    missing <- setdiff(order_by, colnames(metadata_use))
+
+    if (length(missing)) {
+      stop(
+        "order_by column(s) not found: ",
+        paste(missing, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    ord <- do.call(order, metadata_use[, order_by, drop = FALSE])
+    metadata_use <- metadata_use[ord, , drop = FALSE]
+    mat_use <- mat_use[, rownames(metadata_use), drop = FALSE]
+  }
+
+  if (isTRUE(scale_rows)) {
+
+    gene_sd <- apply(mat_use, 1, stats::sd, na.rm = TRUE)
+    keep_genes <- is.finite(gene_sd) & gene_sd > 0
+
+    mat_use <- mat_use[keep_genes, , drop = FALSE]
+
+    if (nrow(mat_use) < 2) {
+      return(.return_null("Heatmap skipped: fewer than 2 genes after removing zero-variance genes."))
+    }
+
+    mat_use <- t(scale(t(mat_use)))
+
+    keep_finite <- apply(mat_use, 1, function(x) all(is.finite(x)))
+    mat_use <- mat_use[keep_finite, , drop = FALSE]
+  }
+
+  if (nrow(mat_use) < 2 || ncol(mat_use) < 2) {
+    return(.return_null("Heatmap skipped: final matrix has fewer than 2 genes or 2 samples."))
+  }
+
+  list(
+    matrix = mat_use,
+    metadata = metadata_use,
+    top = top
+  )
+}
+
+
+#' Save DEGgo heatmap
+#'
+#' Internal helper wrapping `pheatmap::pheatmap()`.
+#'
+#' @param mat Numeric heatmap matrix.
+#' @param annotation_col Column annotation data frame or NULL.
+#' @param annotation_colors Annotation colors list or NULL.
+#' @param main Heatmap title.
+#' @param output_dir Output directory.
+#' @param filename Output filename without extension.
+#' @param cluster_rows Logical.
+#' @param cluster_cols Logical.
+#' @param fontsize_row Row-label font size.
+#' @param fontsize_col Column-label font size.
+#' @param width Optional output width in inches.
+#' @param height Optional output height in inches.
+#' @param show_rownames Logical or NULL.
+#' @param show_colnames Logical or NULL.
+#'
+#' @return Invisibly returns the output file path.
+#'
+#' @keywords internal
+#' @noRd
+.save_heatmap <- function(
+    mat,
+    annotation_col = NULL,
+    annotation_colors = NULL,
+    main = "Top Differentially Expressed Genes",
+    output_dir = "DEGgo_out",
+    filename = "Heatmap",
+    cluster_rows = TRUE,
+    cluster_cols = FALSE,
+    fontsize_row = NULL,
+    fontsize_col = NULL,
+    show_dendrogram = FALSE,
+    width = NULL,
+    height = NULL,
+    show_rownames = NULL,
+    show_colnames = NULL
+) {
+
+  if (!requireNamespace("pheatmap", quietly = TRUE)) {
+    stop("Package 'pheatmap' is required.", call. = FALSE)
+  }
+
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  hm_size <- .deggo_heatmap_size(
+    n_genes = nrow(mat),
+    n_samples = ncol(mat)
+  )
+
+  if (is.null(width)) {
+    width <- hm_size$width
+  }
+
+  if (is.null(height)) {
+    height <- hm_size$height
+  }
+
+  fontsize_row_use <- fontsize_row %||% if (nrow(mat) <= 20) {
+    9
+  } else if (nrow(mat) <= 40) {
+    7
+  } else if (nrow(mat) <= 80) {
+    6
+  } else {
+    5
+  }
+
+  fontsize_col_use <- fontsize_col %||% if (ncol(mat) <= 12) {
+    9
+  } else if (ncol(mat) <= 25) {
+    7
+  } else if (ncol(mat) <= 50) {
+    6
+  } else {
+    5
+  }
+
+  if (is.null(show_rownames)) {
+    show_rownames <- nrow(mat) <= 80
+  }
+
+  if (is.null(show_colnames)) {
+    show_colnames <- ncol(mat) <= 60
+  }
+
+  outfile <- file.path(output_dir, paste0(filename, ".png"))
+
+  pheatmap::pheatmap(
+    mat,
+    annotation_col = annotation_col,
+    annotation_colors = annotation_colors,
+    cluster_rows = cluster_rows,
+    cluster_cols = cluster_cols,
+    fontsize_row = fontsize_row_use,
+    fontsize_col = fontsize_col_use,
+    fontsize = 9,
+    border_color = NA,
+    show_rownames = show_rownames,
+    show_colnames = show_colnames,
+    treeheight_row = if (isTRUE(cluster_rows) && isTRUE(show_dendrogram)) 50 else 0,
+    treeheight_col = if (isTRUE(cluster_cols) && isTRUE(show_dendrogram)) 50 else 0,
+    angle_col = 90,
+    main = main,
+    color = grDevices::colorRampPalette(
+      c("#6497B1", "#F7F7F7", "#740001")
+    )(100),
+    breaks = seq(-2, 2, length.out = 101),
+    filename = outfile,
+    width = width,
+    height = height
+  )
+
+  if (!file.exists(outfile)) {
+    warning("Heatmap file was not created by pheatmap.", call. = FALSE)
+    return(invisible(NULL))
+  }
+
+  invisible(outfile)
+}
+
 
 
 #' Plot a DEGgo Differential Expression Heatmap
@@ -1302,11 +1756,15 @@ plot_pca <- function(
 #'   shown automatically for heatmaps with 80 genes or fewer.
 #' @param show_colnames Optional logical. Whether to show sample labels. If
 #'   `NULL`, shown automatically for heatmaps with 60 samples or fewer.
-#'
+#' @param order_levels Optional named list defining factor level order for
+#'   metadata columns used in `order_by`.
+#' @param show_dendrogram Logical. If TRUE, display row/column dendrograms
+#'   when clustering is enabled.
 #' @return Invisibly returns the plotted matrix, or `NULL` if the heatmap is
 #'   skipped.
 #'
 #' @export
+#'
 plot_heatmap <- function(
     vsd,
     res_df,
@@ -1323,11 +1781,13 @@ plot_heatmap <- function(
     annotation_cols = c("condition", "treatment", "sex", "tissue"),
     annotation_colors = NULL,
     order_by = NULL,
+    order_levels = NULL,
     scale_rows = TRUE,
     cluster_rows = TRUE,
     cluster_cols = FALSE,
     fontsize_row = NULL,
     fontsize_col = NULL,
+    show_dendrogram = FALSE,
     width = NULL,
     height = NULL,
     show_rownames = NULL,
@@ -1452,9 +1912,7 @@ plot_heatmap <- function(
     }
   }
 
-  if (!"SYMBOL" %in% colnames(res_df)) {
-    res_df$SYMBOL <- res_df$ENSEMBL
-  }
+  label_col <- .deggo_label_col(res_df)
 
   rownames(mat) <- sub("\\..*$", "", rownames(mat))
   res_df$ENSEMBL <- sub("\\..*$", "", as.character(res_df$ENSEMBL))
@@ -1491,14 +1949,6 @@ plot_heatmap <- function(
   genes_use <- intersect(top$ENSEMBL, rownames(mat))
 
   if (!length(genes_use)) {
-    log(
-      paste("Example top genes:", paste(head(top$ENSEMBL), collapse = ", ")),
-      type = "warn"
-    )
-    log(
-      paste("Example matrix genes:", paste(head(rownames(mat)), collapse = ", ")),
-      type = "warn"
-    )
     return(.return_null("Heatmap skipped: no top genes found in vst matrix rownames."))
   }
 
@@ -1516,11 +1966,11 @@ plot_heatmap <- function(
 
   top <- top[match(rownames(mat_use), top$ENSEMBL), , drop = FALSE]
 
-  gene_labels <- ifelse(
-    is.na(top$SYMBOL) | top$SYMBOL == "",
-    top$ENSEMBL,
-    top$SYMBOL
-  )
+  gene_labels <- as.character(top[[label_col]])
+
+  gene_labels[is.na(gene_labels) | gene_labels == ""] <- top$ENSEMBL[
+    is.na(gene_labels) | gene_labels == ""
+  ]
 
   rownames(mat_use) <- make.unique(gene_labels)
 
@@ -1537,6 +1987,20 @@ plot_heatmap <- function(
       )
     }
 
+    for (v in order_by) {
+      if (!is.null(order_levels) && v %in% names(order_levels)) {
+        metadata_use[[v]] <- factor(
+          metadata_use[[v]],
+          levels = order_levels[[v]]
+        )
+      } else {
+        metadata_use[[v]] <- factor(
+          metadata_use[[v]],
+          levels = unique(as.character(metadata_use[[v]]))
+        )
+      }
+    }
+
     ord <- do.call(order, metadata_use[, order_by, drop = FALSE])
     metadata_use <- metadata_use[ord, , drop = FALSE]
     mat_use <- mat_use[, rownames(metadata_use), drop = FALSE]
@@ -1549,7 +2013,12 @@ plot_heatmap <- function(
   ]
 
   if (ncol(annotation_col)) {
-    annotation_col[] <- lapply(annotation_col, factor)
+    for (v in colnames(annotation_col)) {
+      annotation_col[[v]] <- factor(
+        annotation_col[[v]],
+        levels = unique(as.character(annotation_col[[v]]))
+      )
+    }
   } else {
     annotation_col <- NULL
   }
@@ -1581,6 +2050,16 @@ plot_heatmap <- function(
     annotation_colors <- .deggo_annotation_colors(annotation_col)
   }
 
+  if (!is.null(annotation_colors) && !is.null(annotation_col)) {
+    for (v in intersect(names(annotation_colors), colnames(annotation_col))) {
+      levs <- levels(annotation_col[[v]])
+
+      annotation_colors[[v]] <- annotation_colors[[v]][
+        levs[levs %in% names(annotation_colors[[v]])]
+      ]
+    }
+  }
+
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
   hm_size <- .deggo_heatmap_size(
@@ -1591,40 +2070,18 @@ plot_heatmap <- function(
   if (is.null(width)) width <- hm_size$width
   if (is.null(height)) height <- hm_size$height
 
-  if (is.null(fontsize_row)) {
-    fontsize_row_use <- if (nrow(mat_use) <= 20) {
-      9
-    } else if (nrow(mat_use) <= 40) {
-      7
-    } else if (nrow(mat_use) <= 80) {
-      6
-    } else {
-      5
-    }
-  } else {
-    fontsize_row_use <- fontsize_row
-  }
+  fontsize_row_use <- fontsize_row %||%
+    if (nrow(mat_use) <= 25) 10 else 9
 
-  if (is.null(fontsize_col)) {
-    fontsize_col_use <- if (ncol(mat_use) <= 12) {
-      9
-    } else if (ncol(mat_use) <= 25) {
-      7
-    } else if (ncol(mat_use) <= 50) {
-      6
-    } else {
-      5
-    }
-  } else {
-    fontsize_col_use <- fontsize_col
-  }
+  fontsize_col_use <- fontsize_col %||%
+    if (ncol(mat_use) <= 12) 10 else 9
 
   if (is.null(show_rownames)) {
-    show_rownames <- nrow(mat_use) <= 80
+    show_rownames <- TRUE
   }
 
   if (is.null(show_colnames)) {
-    show_colnames <- ncol(mat_use) <= 60
+    show_colnames <- TRUE
   }
 
   outfile <- file.path(output_dir, paste0(filename, ".png"))
@@ -1641,8 +2098,8 @@ plot_heatmap <- function(
     border_color = NA,
     show_rownames = show_rownames,
     show_colnames = show_colnames,
-    treeheight_row = 0,
-    treeheight_col = 0,
+    treeheight_row = if (isTRUE(cluster_rows) && isTRUE(show_dendrogram)) 50 else 0,
+    treeheight_col = if (isTRUE(cluster_cols) && isTRUE(show_dendrogram)) 50 else 0,
     angle_col = 90,
     main = main,
     color = grDevices::colorRampPalette(
@@ -1658,21 +2115,8 @@ plot_heatmap <- function(
     return(.return_null("Heatmap file was not created by pheatmap."))
   }
 
-  # log(
-  #   paste0(
-  #     "Heatmap saved: ",
-  #     outfile,
-  #     " | genes: ", nrow(mat_use),
-  #     " | samples: ", ncol(mat_use),
-  #     " | size: ", round(width, 2), "x", round(height, 2), " in"
-  #   ),
-  #   type = "done"
-  # )
-
   invisible(mat_use)
 }
-
-
 
 # ========================================================= #
 # GENE EXPRESSION HEATMAP
@@ -1718,6 +2162,8 @@ plot_heatmap <- function(
 #'   heatmaps with 80 genes or fewer.
 #' @param show_colnames Optional logical. If `NULL`, shown automatically for
 #'   heatmaps with 60 samples or fewer.
+#' @param show_dendrogram Logical. If TRUE, display row/column dendrograms
+#'   when clustering is enabled.
 #'
 #' @return Invisibly returns the expression matrix used for plotting.
 #'
@@ -1744,6 +2190,7 @@ plot_gene_heatmap <- function(
     cluster_cols = FALSE,
     fontsize_row = NULL,
     fontsize_col = NULL,
+    show_dendrogram = FALSE,
     width = NULL,
     height = NULL,
     show_rownames = NULL,
@@ -1964,8 +2411,8 @@ plot_gene_heatmap <- function(
     border_color = NA,
     show_rownames = show_rownames,
     show_colnames = show_colnames,
-    treeheight_row = 0,
-    treeheight_col = 0,
+    treeheight_row = if (isTRUE(cluster_rows) && isTRUE(show_dendrogram)) 50 else 0,
+    treeheight_col = if (isTRUE(cluster_cols) && isTRUE(show_dendrogram)) 50 else 0,
     angle_col = 90,
     main = main,
     color = color,
@@ -2359,15 +2806,14 @@ explore_bulk_rnaseq <- function(
 
   if (!is.null(markers) && length(markers) && exists("plot_gene_heatmap")) {
     marker_heatmap <- tryCatch(
-      plot_gene_heatmap(
-        counts = counts_df,
-        metadata = metadata,
-        genes = markers,
-        gene_col = gene_col,
-        feature_col = feature_col,
-        sample_col = sample_col,
-        ...
-      ),
+        plot_gene_heatmap(
+          counts = counts_df,
+          metadata = metadata,
+          genes = markers,
+          gene_col = gene_col,
+          feature_col = feature_col,
+          sample_col = sample_col
+        ),
       error = function(e) NULL
     )
   }
@@ -2436,201 +2882,6 @@ explore_bulk_rnaseq <- function(
 }
 
 
-# ========================================================= #
-# MARKER SCORE CHECK
-# ========================================================= #
-#' Validate sample identity using marker gene signatures
-#'
-#' Computes signature scores from predefined marker gene sets,
-#' predicts the most likely sample identity, and flags potential
-#' sample swaps or annotation mismatches.
-#'
-#' For each marker set, the function calculates the mean expression
-#' of all detected marker genes across samples. The predicted group
-#' corresponds to the marker set with the highest score.
-#'
-#' @param counts A data frame or matrix containing gene expression counts.
-#'   Rows correspond to genes and columns correspond to samples.
-#' @param metadata A data frame containing sample metadata.
-#' @param marker_sets Named list of marker gene vectors. Each list element
-#'   defines a biological group or tissue signature.
-#' @param sample_col Column name in \code{metadata} containing sample IDs.
-#'   Default is \code{"sample"}.
-#' @param group_col Column name in \code{metadata} containing the expected
-#'   sample annotation (e.g. tissue, condition). Default is \code{"tissue"}.
-#' @param feature_col Column name in \code{counts} containing gene symbols.
-#'   Default is \code{"gene_name"}.
-#' @param log_transform Logical; if \code{TRUE}, computes scores from
-#'   \code{log2(count + 1)} transformed values. Default is \code{TRUE}.
-#' @param plot Logical; if \code{TRUE}, returns a barplot of marker scores.
-#'   Default is \code{TRUE}.
-#' @param style Theme style passed to \code{.deggo_theme()}.
-#' @param txtsize Texte size passed to \code{.deggo_theme()}
-#'
-#' @return A list containing:
-#' \describe{
-#'   \item{scores}{Data frame with marker scores, predicted groups,
-#'   and swap flags.}
-#'   \item{long}{Long-format version of the score table.}
-#'   \item{swaps}{Subset of samples where predicted and expected
-#'   groups differ.}
-#'   \item{plot}{A ggplot object showing marker scores per sample
-#'   if \code{plot = TRUE}; otherwise \code{NULL}.}
-#' }
-#'
-#' @details
-#' The function performs a simple signature-based classification:
-#' \enumerate{
-#'   \item Matches marker genes against the feature column.
-#'   \item Computes the mean expression of matched genes for each sample.
-#'   \item Predicts the group with the highest signature score.
-#'   \item Flags samples where predicted and expected annotations differ.
-#' }
-#'
-#' Gene matching is case-insensitive.
-#'
-#' @examples
-#' \dontrun{
-#' marker_sets <- list(
-#'   BAT = c("Ucp1", "Cidea", "Ppargc1a"),
-#'   WAT = c("Adipoq", "Lep", "Fabp4"),
-#'   TESTIS = c("Amh", "Sox9", "Ddx4"),
-#'   OVARY = c("Foxl2", "Fshr", "Bmp15")
-#' )
-#'
-#' res <- marker_score_check(
-#'   counts = counts,
-#'   metadata = metadata,
-#'   marker_sets = marker_sets,
-#'   sample_col = "sample",
-#'   group_col = "tissue"
-#' )
-#'
-#' head(res$scores)
-#' res$swaps
-#' print(res$plot)
-#'}
-#' @importFrom reshape2 melt
-#' @importFrom ggplot2 ggplot aes geom_col coord_flip labs
-#'
-#' @export
-marker_score_check <- function(
-    counts,
-    metadata,
-    marker_sets,
-    sample_col = "sample",
-    group_col = "tissue",
-    feature_col = "gene_name",
-    log_transform = TRUE,
-    plot = TRUE,
-    style = "classic",
-    txtsize = 12
-) {
-
-  counts <- as.data.frame(counts, check.names = FALSE)
-  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
-
-  sample_cols <- metadata[[sample_col]]
-  sample_cols <- sample_cols[sample_cols %in% colnames(counts)]
-
-  if (length(sample_cols) == 0) {
-    stop("No metadata samples found in counts columns.", call. = FALSE)
-  }
-
-  gene_names <- toupper(counts[[feature_col]])
-
-  compute_one_score <- function(genes) {
-
-    keep <- gene_names %in% toupper(genes)
-
-    if (!any(keep)) {
-      return(rep(NA_real_, length(sample_cols)))
-    }
-
-    mat <- as.matrix(counts[keep, sample_cols, drop = FALSE])
-    storage.mode(mat) <- "numeric"
-
-    if (log_transform) {
-      mat <- log2(mat + 1)
-    }
-
-    colMeans(mat, na.rm = TRUE)
-  }
-
-  scores <- data.frame(
-    sample = sample_cols,
-    stringsAsFactors = FALSE
-  )
-
-  for (nm in names(marker_sets)) {
-    scores[[paste0(nm, "_score")]] <- compute_one_score(marker_sets[[nm]])
-  }
-
-  md <- metadata[, c(sample_col, group_col), drop = FALSE]
-  colnames(md) <- c("sample", "true_group")
-
-  scores <- merge(scores, md, by = "sample", all.x = TRUE)
-
-  score_cols <- paste0(names(marker_sets), "_score")
-  score_mat <- as.matrix(scores[, score_cols, drop = FALSE])
-
-  scores$predicted_group <- names(marker_sets)[
-    max.col(score_mat, ties.method = "first")
-  ]
-
-  scores$possible_swap <- (
-    scores$true_group != scores$predicted_group
-  )
-
-  scores_long <- reshape2::melt(
-    scores,
-    id.vars = c(
-      "sample",
-      "true_group",
-      "predicted_group",
-      "possible_swap"
-    ),
-    measure.vars = score_cols,
-    variable.name = "marker_set",
-    value.name = "score"
-  )
-
-  scores_long$marker_set <- sub(
-    "_score$",
-    "",
-    scores_long$marker_set
-  )
-
-  p <- NULL
-
-  if (plot) {
-
-    p <- ggplot2::ggplot(
-      scores_long,
-      ggplot2::aes(
-        x = sample,
-        y = score,
-        fill = marker_set
-      )
-    ) +
-      ggplot2::geom_col(position = "dodge") +
-      ggplot2::coord_flip() +
-      ggplot2::labs(
-        x = NULL,
-        y = "Mean marker score",
-        fill = "Marker set"
-      ) +
-      .deggo_theme(style = style, txtsize = txtsize)
-  }
-
-  list(
-    scores = scores,
-    long = scores_long,
-    swaps = scores[scores$possible_swap, , drop = FALSE],
-    plot = p
-  )
-}
-
 
 
 
@@ -2670,6 +2921,8 @@ plot_go_terms <- function(
 
   if (!requireNamespace("ggplot2", quietly = TRUE))
     stop("Package 'ggplot2' is required.", call. = FALSE)
+
+  Description_wrapped <- FoldEnrichment <- Regulation <- log10FDR <- NULL
 
   if (!requireNamespace("stringr", quietly = TRUE))
     stop("Package 'stringr' is required.", call. = FALSE)
@@ -2782,7 +3035,7 @@ plot_go_terms <- function(
         -x$FoldEnrichment
       ), ]
 
-      head(x, top_n)
+      utils::head(x, top_n)
 
     })
 
@@ -2963,4 +3216,378 @@ plot_all_go_terms <- function(
   names(plots) <- names(results$go_results)
 
   plots
+}
+
+#' @keywords internal
+#' @noRd
+#'
+.deggo_pca_vars <- function(
+    metadata,
+    sample_col = "sample",
+    analysis_mode = c("single", "pairwise"),
+    design_formula = NULL,
+    contrast = NULL,
+    pairwise_group_cols = NULL,
+    pca_vars = NULL
+) {
+  analysis_mode <- match.arg(analysis_mode)
+
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  if (!is.null(pca_vars)) {
+    vars <- pca_vars
+  } else if (analysis_mode == "pairwise") {
+    vars <- pairwise_group_cols
+  } else {
+    vars <- unique(c(
+      all.vars(design_formula),
+      contrast[1]
+    ))
+  }
+
+  vars <- unique(vars)
+  vars <- vars[!is.na(vars) & vars != ""]
+  vars <- setdiff(vars, sample_col)
+  vars <- intersect(vars, colnames(metadata))
+
+  vars <- vars[vapply(vars, function(v) {
+    n <- length(unique(stats::na.omit(metadata[[v]])))
+    n >= 2 && n <= 20
+  }, logical(1))]
+
+  vars
+}
+
+
+#' @keywords internal
+#' @noRd
+#'
+.deggo_make_pca_plots <- function(
+    dds,
+    metadata,
+    output_dir,
+    analysis_mode,
+    sample_col = "sample",
+    pca_vars = NULL,
+    txtsize = 12
+) {
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  if (!sample_col %in% colnames(metadata)) {
+    metadata[[sample_col]] <- rownames(metadata)
+  }
+
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  plots <- list()
+
+  plots$sample <- plot_pca(
+    dds = dds,
+    metadata = metadata,
+    output_dir = output_dir,
+    filename = paste0(analysis_mode, "_PCA_by_", sample_col),
+    intgroup = sample_col,
+    color_by = sample_col,
+    title = paste("PCA by", sample_col),
+    txtsize = txtsize
+  )
+
+  if (!is.null(pca_vars) && length(pca_vars)) {
+    for (v in pca_vars) {
+      plots[[v]] <- plot_pca(
+        dds = dds,
+        metadata = metadata,
+        output_dir = output_dir,
+        filename = paste0(analysis_mode, "_PCA_by_", v),
+        intgroup = v,
+        color_by = v,
+        title = paste("PCA by", v),
+        txtsize = txtsize
+      )
+    }
+  }
+
+  if (!is.null(pca_vars) && length(pca_vars) >= 2) {
+    combs <- utils::combn(pca_vars, 2, simplify = FALSE)
+
+    for (cc in combs) {
+      v1 <- cc[1]
+      v2 <- cc[2]
+      nm <- paste(v1, v2, sep = "_")
+
+      plots[[nm]] <- plot_pca(
+        dds = dds,
+        metadata = metadata,
+        output_dir = output_dir,
+        filename = paste0(analysis_mode, "_PCA_by_", nm),
+        intgroup = c(v1, v2),
+        color_by = v1,
+        shape_by = v2,
+        title = paste("PCA by", v1, "+", v2),
+        txtsize = txtsize
+      )
+    }
+  }
+
+  plots
+}
+
+
+#' @keywords internal
+#' @noRd
+#'
+.deggo_make_plots <- function(
+    de_results,
+    counts,
+    metadata,
+    dirs,
+    analysis_mode,
+    method,
+    padj_cutoff,
+    logfc_cutoff,
+    top_n_heatmap,
+    top_n_labels,
+    txtsize,
+    log,
+    contrast = NULL,
+    order_by = NULL,
+    pairwise_contrast_col = NULL,
+    pairwise_contrasts = NULL,
+    sample_col = "sample",
+    pca_vars = NULL,
+    plot_order_vars = NULL
+) {
+
+  if (method == "DESeq2" && !is.null(de_results$dds)) {
+
+    log("[10/11] Generating PCA", type = "step")
+
+    de_results$pca <- .deggo_make_pca_plots(
+      dds = de_results$dds,
+      metadata = metadata,
+      output_dir = dirs$pca,
+      analysis_mode = analysis_mode,
+      sample_col = sample_col,
+      pca_vars = pca_vars,
+      txtsize = txtsize
+    )
+
+    vsd <- de_results$pca$sample$vsd
+
+    log("[10/11] Generating heatmaps", type = "step")
+
+    for (nm in names(de_results$sig_deg_clean)) {
+
+      sig_df <- de_results$sig_deg_clean[[nm]]
+
+      if (is.null(sig_df) || !is.data.frame(sig_df) || nrow(sig_df) <= 1) {
+        log(paste0("Heatmap skipped for ", nm, ": fewer than 2 genes."), type = "warn")
+        next
+      }
+
+      heatmap_contrast <- NULL
+      heatmap_sample_subset <- NULL
+      heatmap_filter <- NULL
+      heatmap_order_by <- order_by
+      heatmap_order_levels <- NULL
+
+      if (analysis_mode == "single") {
+        heatmap_contrast <- contrast
+        heatmap_order_by <- plot_order_vars
+
+        heatmap_order_levels <- stats::setNames(
+          list(rev(contrast[2:3])),
+          contrast[1]
+        )
+      }
+
+      if (
+        analysis_mode == "pairwise" &&
+        !is.null(pairwise_contrasts) &&
+        nm %in% names(pairwise_contrasts)
+      ) {
+        contrast_vec <- pairwise_contrasts[[nm]]
+
+        heatmap_sample_subset <- rownames(metadata)[
+          metadata[[contrast_vec[1]]] %in% contrast_vec[2:3]
+        ]
+
+        if (length(heatmap_sample_subset) < 2) {
+          log(
+            paste0(
+              "Heatmap skipped for ",
+              nm,
+              ": fewer than 2 samples."
+            ),
+            type = "warn"
+          )
+          next
+        }
+
+        heatmap_order_by <- contrast_vec[1]
+
+        heatmap_order_levels <- stats::setNames(
+          list(rev(contrast_vec[2:3])),
+          contrast_vec[1]
+        )
+
+        heatmap_order_by <- contrast_vec[1]
+
+        heatmap_order_levels <- stats::setNames(
+          list(rev(contrast_vec[2:3])),
+          contrast_vec[1]
+        )
+
+      }
+
+      tryCatch(
+        plot_heatmap(
+          vsd = vsd,
+          res_df = sig_df,
+          metadata = metadata,
+          contrast = heatmap_contrast,
+          sample_subset = heatmap_sample_subset,
+          metadata_filter = heatmap_filter,
+          order_by = heatmap_order_by,
+          order_levels = heatmap_order_levels,
+          output_dir = dirs$heatmaps,
+          filename = paste0(nm, "_Heatmap"),
+          main = nm,
+          top_n_heatmap = top_n_heatmap,
+          cluster_rows = TRUE,
+          cluster_cols = FALSE,
+          show_dendrogram = FALSE
+        ),
+        error = function(e) {
+          log(
+            paste0("Heatmap failed for ", nm, ": ", conditionMessage(e)),
+            type = "warn"
+          )
+          NULL
+        }
+      )
+    }
+  }
+
+  log("[10/11] Generating volcano plots", type = "step")
+
+  for (nm in names(de_results$results)) {
+    res_df <- de_results$results[[nm]]
+
+    if (!is.null(res_df) && nrow(res_df) > 0) {
+      plot_volcano(
+        res_df = res_df,
+        title = nm,
+        output_dir = dirs$volcano,
+        filename = paste0(nm, "_Volcano"),
+        padj_cutoff = padj_cutoff,
+        logfc_cutoff = logfc_cutoff,
+        top_n_labels = top_n_labels,
+        txtsize = txtsize
+      )
+    }
+  }
+
+  de_results
+}
+
+
+
+
+#' @keywords internal
+#' @noRd
+#'
+.deggo_make_go <- function(
+    de_results,
+    dirs,
+    ontology,
+    orgdb,
+    txtsize,
+    log
+) {
+
+  log("[11/11] Running GO enrichment", type = "step")
+
+  go_results <- list()
+
+  go_plot_dir <- file.path(dirs$go, "GO_plots")
+  dir.create(dirs$go, recursive = TRUE, showWarnings = FALSE)
+  dir.create(go_plot_dir, recursive = TRUE, showWarnings = FALSE)
+
+  for (nm in names(de_results$sig_deg_clean)) {
+
+    sig_df <- de_results$sig_deg_clean[[nm]]
+
+    if (is.null(sig_df) || nrow(sig_df) == 0) {
+      go_results[[nm]] <- NULL
+      next
+    }
+
+    go_obj <- tryCatch(
+      run_go_enrichment(
+        sig_deg = sig_df,
+        comparison = nm,
+        ontology = ontology,
+        orgdb = orgdb,
+        output_dir = dirs$go,
+        entrez_col = "entrez_id"
+      ),
+      error = function(e) {
+        log(paste("GO skipped for", nm, ":", conditionMessage(e)), type = "warn")
+        NULL
+      }
+    )
+
+    go_results[[nm]] <- go_obj
+
+    if (is.null(go_obj)) {
+      next
+    }
+
+    go_df <- if (is.data.frame(go_obj)) {
+      go_obj
+    } else if (!is.null(go_obj$go_results) && is.data.frame(go_obj$go_results)) {
+      go_obj$go_results
+    } else {
+      NULL
+    }
+
+    if (!is.null(go_df) && nrow(go_df) > 0) {
+      p_go <- tryCatch(
+        plot_go_terms(
+          go_df = go_df,
+          comparison = nm,
+          top_n = 10,
+          txtsize = txtsize,
+          style = "bw"
+        ),
+        error = function(e) {
+          log(paste("GO plot skipped for", nm, ":", conditionMessage(e)), type = "warn")
+          NULL
+        }
+      )
+
+      if (!is.null(p_go)) {
+        ggplot2::ggsave(
+          filename = file.path(go_plot_dir, paste0(nm, "_GO_terms.png")),
+          plot = p_go,
+          width = 8,
+          height = 6,
+          dpi = 300,
+          bg = "white"
+        )
+
+        ggplot2::ggsave(
+          filename = file.path(go_plot_dir, paste0(nm, "_GO_terms.pdf")),
+          plot = p_go,
+          width = 8,
+          height = 6,
+          bg = "white"
+        )
+      }
+    }
+  }
+
+  de_results$go_results <- go_results
+  de_results
 }

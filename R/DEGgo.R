@@ -1,163 +1,62 @@
-# ============================================================ #
-# DEGgo main workflow helpers
-# ============================================================ #
-
-`%||%` <- function(x, y) if (is.null(x)) y else x
 
 # ============================================================ #
 # Main run_deggo
 # ============================================================ #
 #' Run DEGgo bulk RNA-seq downstream analysis
 #'
-#' Run a complete and automated bulk RNA-seq downstream analysis workflow.
+#' Automated bulk RNA-seq differential expression workflow including QC,
+#' preprocessing, differential expression, annotation, visualization,
+#' GO enrichment, reporting, and reproducibility exports.
+#' @param counts Raw count matrix or data frame.
+#' @param metadata Sample metadata data frame.
+#' @param gene_col Candidate gene identifier column names.
+#' @param feature_col Candidate gene symbol/name column names.
+#' @param sample_col Candidate sample identifier column names.
+#' @param prepare_input Logical. Prepare and match input tables.
+#' @param raw_qc Logical. Run raw count QC.
+#' @param remove_flagged Logical. Remove QC-flagged samples.
+#' @param qc_markers Optional marker genes for QC.
+#' @param marker_sets Optional named marker gene sets.
+#' @param qc_sample_col Optional sample column for QC.
+#' @param qc_output_prefix QC output prefix.
+#' @param output_dir Output directory.
+#' @param padj_cutoff Adjusted p-value cutoff.
+#' @param logfc_cutoff Absolute log2 fold-change cutoff.
+#' @param top_n_heatmap Number of genes shown in heatmaps.
+#' @param top_n_labels Number of genes labelled in volcano plots.
+#' @param min_expr_count Minimum expression count for clean DEG filtering.
+#' @param min_expr_samples Minimum samples passing expression threshold.
+#' @param min_prevalence Minimum prevalence for clean DEG filtering.
+#' @param max_sample_fraction Maximum single-sample fraction.
+#' @param min_group_mean Minimum group mean expression.
+#' @param expr_filter_groups Grouping variables for expression filtering.
+#' @param clean_deg_tables Logical. Apply post-DEG expression cleaning.
+#' @param ontology GO ontology.
+#' @param organism Organism name.
+#' @param orgdb Optional custom OrgDb object.
+#' @param method Differential expression method.
+#' @param analysis_mode Single or pairwise analysis mode.
+#' @param contrast Contrast vector for single analysis.
+#' @param design_formula Design formula.
+#' @param pairwise_group_cols Metadata columns used to build pairwise groups.
+#' @param pairwise_contrast_col Name of pairwise contrast column.
+#' @param pairwise_contrasts Optional named list of pairwise contrasts.
+#' @param filter_method Gene filtering method.
+#' @param pairwise_mode Pairwise contrast generation mode.
+#' @param min_count Minimum count threshold.
+#' @param min_samples Minimum number of samples passing `min_count`.
+#' @param min_total Minimum total count.
+#' @param generate_report Logical. Generate report.
+#' @param report_formats Report formats.
+#' @param report_template Optional report template path.
+#' @param generate_pptx Logical. Generate PowerPoint.
+#' @param pptx_file Optional PowerPoint output file.
+#' @param save_reproducibility Logical. Save reproducibility bundle.
+#' @param save_clean_inputs Logical. Save cleaned input tables.
+#' @param txtsize Base text size.
+#' @param seed Random seed.
 #'
-#' DEGgo can perform optional raw sample quality control, optional removal of
-#' flagged samples, marker-based biological validation, input preparation,
-#' sample matching, gene identifier cleaning, low-expression filtering,
-#' differential expression analysis, result annotation, PCA, heatmap and volcano
-#' visualization, Gene Ontology enrichment, reproducibility export, and automated
-#' HTML/PDF/PPTX report generation.
-#'
-#' The function supports either a single differential expression analysis or
-#' multiple pairwise contrasts. Pairwise mode currently uses DESeq2.
-#'
-#' @param counts Raw count table, data frame or matrix. Rows should represent
-#'   genes/features and columns should represent samples. If `prepare_input =
-#'   TRUE`, DEGgo attempts to detect gene and sample columns automatically using
-#'   `gene_col`, `feature_col`, and `sample_col`.
-#' @param metadata Sample metadata data frame. Must contain a sample identifier
-#'   column matching the count matrix sample names. For single analysis, it must
-#'   contain `condition` unless this is encoded in the design/contrast workflow.
-#'   For pairwise analysis, `condition` can be automatically generated from
-#'   `pairwise_group_cols`.
-#' @param gene_col Character vector of possible gene identifier column names.
-#'   Used during input preparation.
-#' @param feature_col Character vector of possible feature/gene symbol column
-#'   names. Used during input preparation and marker-based checks.
-#' @param sample_col Character vector of possible sample identifier column names
-#'   in `metadata`.
-#' @param prepare_input Logical. If `TRUE`, automatically prepares and matches
-#'   the count table and metadata using `prepare_counts_metadata()`. If `FALSE`,
-#'   `counts` must already be a numeric matrix with sample names matching
-#'   metadata row names or a sample column.
-#' @param raw_qc Logical. If `TRUE`, run exploratory raw sample QC before input
-#'   preparation and differential expression analysis using
-#'   `explore_bulk_rnaseq()`.
-#' @param remove_flagged Logical. If `TRUE`, remove samples flagged by the raw QC
-#'   table before continuing the workflow. Default is `FALSE` to keep sample
-#'   exclusion under user control.
-#' @param qc_markers Optional character vector of marker genes used during raw
-#'   and clean QC.
-#' @param marker_sets Optional named list of marker gene sets used for
-#'   marker-based biological validation with `marker_score_check()`.
-#' @param qc_sample_col Optional sample column used by `remove_flagged_samples()`.
-#'   If `NULL`, the first value of `sample_col` is used.
-#' @param qc_output_prefix Character prefix used for QC output directories.
-#' @param output_dir Output directory. If `NULL`, results are written to
-#'   `"DEGgo_results"`. A dated DEGgo subdirectory is created automatically.
-#' @param padj_cutoff Adjusted p-value cutoff used to define significant DEGs.
-#' @param logfc_cutoff Absolute log2 fold-change cutoff used to define
-#'   significant DEGs.
-#' @param top_n_heatmap Number of top genes to display in DEG heatmaps.
-#' @param top_n_labels Number of top genes to label in volcano plots.
-#' @param ontology Gene Ontology namespace. One of `"BP"`, `"MF"`, or `"CC"`.
-#' @param organism Organism used for gene annotation. One of `"human"`,
-#'   `"mouse"`, `"rat"`, or `"custom"`.
-#' @param orgdb Optional AnnotationDbi OrgDb object. Required when
-#'   `organism = "custom"`.
-#' @param method Differential expression method. One of `"DESeq2"`, `"edgeR"`,
-#'   or `"limma"`. Pairwise mode currently supports DESeq2 only.
-#' @param analysis_mode Analysis mode. `"single"` runs one differential
-#'   expression analysis. `"pairwise"` runs multiple pairwise DESeq2 contrasts.
-#' @param contrast Optional contrast passed to the differential expression
-#'   engine in single-analysis mode.
-#' @param design_formula Design formula used by the differential expression
-#'   engine, for example `~ condition` or `~ batch + condition`.
-#' @param pairwise_group_cols Character vector of metadata columns used to define
-#'   pairwise groups. Required when `analysis_mode = "pairwise"`.
-#' @param pairwise_contrast_col Name of the metadata column used to store or
-#'   generate pairwise contrast groups.
-#' @param pairwise_contrasts Optional named list of pairwise contrasts. If
-#'   provided, these contrasts are used instead of automatically generated
-#'   contrasts.
-#' @param filter_method Low-expression filtering method. One of `"count"`,
-#'   `"cpm"`, or `"none"`.
-#' @param pairwise_mode Pairwise comparison mode. One of `"all"`,
-#'   `"within_first"`, or `"within_second"`.
-#' @param min_count Minimum count threshold used by count-based filtering.
-#' @param min_samples Minimum number of samples required to pass the count/CPM
-#'   threshold.
-#' @param min_total Minimum total count required for a gene to be retained.
-#' @param generate_report Logical. If `TRUE`, generate DEGgo report files.
-#' @param report_formats Character vector of report formats, for example
-#'   `"html"`, `"pdf"`, or `c("html", "pdf")`.
-#' @param report_template Optional path to a custom R Markdown report template.
-#'   If `NULL`, the package DEGgo template is used.
-#' @param generate_pptx Logical. If `TRUE`, generate a PowerPoint report.
-#' @param pptx_file Optional path to the output PowerPoint file. If `NULL`,
-#'   `"DEGgo_Report.pptx"` is written inside `output_dir`.
-#' @param save_reproducibility Logical. If `TRUE`, save reproducibility files,
-#'   including run objects and session information.
-#' @param save_clean_inputs Logical. If `TRUE`, save cleaned count and metadata
-#'   tables after sample matching and filtering.
-#' @param txtsize Base text size used in DEGgo visualizations.
-#' @param seed Random seed for reproducibility.
-#'
-#' @return A named list containing differential expression results, significant
-#'   DEGs, summary tables, plots, GO enrichment results, QC outputs, cleaned
-#'   counts and metadata, report paths, PowerPoint path, output directories,
-#'   run parameters, manifest, and DEGgo version.
-#'
-#' @details
-#' In single mode, DEGgo runs one differential expression analysis using the
-#' selected method and design formula. In pairwise mode, DEGgo builds or uses
-#' predefined pairwise contrasts from metadata columns and runs DESeq2 for each
-#' contrast.
-#'
-#' The raw QC step is performed before input preparation and filtering. The
-#' sample QC step is performed after gene filtering and uses the final matched
-#' count matrix and metadata.
-#'
-#' Automatic sample removal is disabled by default because exclusion of samples
-#' should usually be reviewed by the analyst.
-#'
-#' @examples
-#' \dontrun{
-#' results <- run_deggo(
-#'   counts = counts,
-#'   metadata = metadata,
-#'   organism = "mouse",
-#'   method = "DESeq2",
-#'   analysis_mode = "single",
-#'   design_formula = ~ condition,
-#'   contrast = c("condition", "treated", "control"),
-#'   sample_col = "sample"
-#' )
-#'
-#' pairwise_results <- run_deggo(
-#'   counts = counts,
-#'   metadata = metadata,
-#'   organism = "mouse",
-#'   method = "DESeq2",
-#'   analysis_mode = "pairwise",
-#'   pairwise_group_cols = c("treatment", "sex", "tissue"),
-#'   pairwise_contrasts = pairwise_contrasts,
-#'   sample_col = "sample",
-#'   raw_qc = TRUE,
-#'   remove_flagged = FALSE
-#' )
-#' }
-#'
-#' @seealso
-#' `prepare_counts_metadata`,
-#' `explore_bulk_rnaseq`,
-#' `remove_flagged_samples`,
-#' `marker_score_check`,
-#' `run_de`,
-#' `run_deseq2_pairwise`,
-#' `run_go_enrichment`,
-#' `generate_deggo_report`,
-#' `generate_deggo_pptx`
+#' @return A DEGgo results object.
 #'
 #' @export
 #'
@@ -179,6 +78,13 @@ run_deggo <- function(
     logfc_cutoff = 0.25,
     top_n_heatmap = 50,
     top_n_labels = 10,
+    min_expr_count = 20,
+    min_expr_samples = 3,
+    min_prevalence = 0.6,
+    max_sample_fraction = 0.45,
+    min_group_mean = 10,
+    expr_filter_groups = "auto",
+    clean_deg_tables = TRUE,
     ontology = c("BP", "MF", "CC"),
     organism = c("human", "mouse", "rat", "custom"),
     orgdb = NULL,
@@ -219,174 +125,79 @@ run_deggo <- function(
 
   log("==== STARTING DEGgo ANALYSIS ====", type = "header")
 
-  if (is.null(output_dir)) {
-    output_dir <- "DEGgo_results"
-  }
+  # ---------------------------------------------------------- #
+  # 1. Initialize run
+  # ---------------------------------------------------------- #
 
-  output_dir <- file.path(
-    output_dir,
-    paste0("DEGgo_", format(Sys.Date(), "%Y_%m_%d"), "_", method, "_", analysis_mode)
+  cfg <- .deggo_initialize(
+    output_dir = output_dir,
+    method = method,
+    analysis_mode = analysis_mode,
+    organism = organism,
+    ontology = ontology,
+    report_template = report_template,
+    log = log
   )
 
-  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-  output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
-
-  dirs <- .deggo_dirs(output_dir, analysis_mode)
-
-  repro_dir <- file.path(output_dir, "reproducibility")
-  dir.create(repro_dir, recursive = TRUE, showWarnings = FALSE)
-
-  deggo_version <- tryCatch(
-    as.character(utils::packageVersion("DEGgo")),
-    error = function(e) "development"
-  )
+  output_dir <- cfg$output_dir
+  dirs <- cfg$dirs
+  repro_dir <- cfg$repro_dir
+  deggo_version <- cfg$deggo_version
+  report_template <- cfg$report_template
 
   metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
 
-  if (is.null(report_template)) {
+  # ---------------------------------------------------------- #
+  # 2. Raw QC
+  # ---------------------------------------------------------- #
 
-    candidates <- c(
-      system.file(
-        "rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd",
-        package = "DEGgo"
-      ),
-      file.path(
-        getwd(),
-        "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
-      ),
-      file.path(
-        dirname(getwd()),
-        "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
-      ),
-      file.path(
-        dirname(dirname(getwd())),
-        "inst/rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd"
-      )
-    )
+  qc <- .deggo_raw_qc(
+    counts = counts,
+    metadata = metadata,
+    raw_qc = raw_qc,
+    remove_flagged = remove_flagged,
+    gene_col = gene_col,
+    feature_col = feature_col,
+    sample_col = sample_col,
+    qc_markers = qc_markers,
+    qc_sample_col = qc_sample_col,
+    qc_output_prefix = qc_output_prefix,
+    output_dir = output_dir
+  )
 
-    candidates <- candidates[nzchar(candidates)]
-    candidates <- candidates[file.exists(candidates)]
+  counts <- qc$counts
+  metadata <- qc$metadata
 
-    if (!length(candidates)) {
-      warning(
-        "DEGgo report template not found. Report generation will be skipped."
-      )
-      report_template <- NULL
-    } else {
-      report_template <- candidates[1]
-    }
-  }
+  # ---------------------------------------------------------- #
+  # 3. Prepare inputs
+  # ---------------------------------------------------------- #
 
-  qc_raw <- NULL
-  qc_clean <- NULL
+  prep <- .deggo_prepare_inputs(
+    counts = counts,
+    metadata = metadata,
+    prepare_input = prepare_input,
+    gene_col = gene_col,
+    feature_col = feature_col,
+    sample_col = sample_col,
+    filter_method = filter_method,
+    min_count = min_count,
+    min_samples = min_samples,
+    min_total = min_total,
+    repro_dir = repro_dir,
+    save_clean_inputs = save_clean_inputs,
+    txtsize = txtsize,
+    dirs = dirs
+  )
+
+  counts <- prep$counts
+  metadata <- prep$metadata
+  sample_qc <- prep$sample_qc
+
+  # ---------------------------------------------------------- #
+  # 4. Marker validation
+  # ---------------------------------------------------------- #
+
   marker_check <- NULL
-
-  # ---------------------------------------------------------- #
-  # Raw QC
-  # ---------------------------------------------------------- #
-
-  if (isTRUE(raw_qc)) {
-
-    log("[QC] Raw sample quality control", type = "step")
-
-    qc_raw <- explore_bulk_rnaseq(
-      counts = counts,
-      metadata = metadata,
-      gene_col = gene_col,
-      feature_col = feature_col,
-      sample_col = sample_col,
-      markers = qc_markers,
-      output_dir = file.path(output_dir, paste0(qc_output_prefix, "_raw"))
-    )
-
-    if (isTRUE(remove_flagged)) {
-
-      log("[QC] Removing flagged samples", type = "step")
-
-      scol <- qc_sample_col %||% sample_col[1]
-
-      counts_for_removal <- .deggo_counts_with_gene_col(
-        counts = counts,
-        gene_col = gene_col
-      )
-
-      cleaned <- remove_flagged_samples(
-        counts = counts_for_removal,
-        metadata = metadata,
-        qc_table = qc_raw$qc,
-        sample_col = scol,
-        remove_col = "recommend_remove",
-        gene_cols = unique(c(gene_col, feature_col)),
-        verbose = TRUE
-      )
-
-      counts <- cleaned$counts
-      metadata <- cleaned$metadata
-
-      log("[QC] Re-running QC after sample removal", type = "step")
-
-      qc_clean <- explore_bulk_rnaseq(
-        counts = counts,
-        metadata = metadata,
-        gene_col = gene_col,
-        feature_col = feature_col,
-        sample_col = sample_col,
-        markers = qc_markers,
-        output_dir = file.path(output_dir, paste0(qc_output_prefix, "_clean"))
-      )
-    }
-  }
-
-  # ---------------------------------------------------------- #
-  # Input preparation
-  # ---------------------------------------------------------- #
-
-  log("[1/11] Matching counts and metadata", type = "step")
-
-  if (isTRUE(prepare_input)) {
-
-    counts_input <- .deggo_counts_with_gene_col(
-      counts = counts,
-      gene_col = gene_col
-    )
-
-    prep <- prepare_counts_metadata(
-      counts = counts_input,
-      metadata = metadata,
-      gene_col = gene_col,
-      feature_col = feature_col,
-      sample_col = sample_col,
-      verbose = FALSE
-    )
-
-    counts <- prep$counts
-    metadata <- prep$metadata
-
-  } else {
-
-    counts <- as.matrix(counts)
-    suppressWarnings(storage.mode(counts) <- "numeric")
-    counts <- round(counts)
-    storage.mode(counts) <- "integer"
-
-    scol <- sample_col[sample_col %in% colnames(metadata)][1]
-
-    if (!is.na(scol)) {
-      rownames(metadata) <- metadata[[scol]]
-    } else if ("sample" %in% colnames(metadata)) {
-      rownames(metadata) <- metadata$sample
-    } else {
-      stop("No sample column found in metadata.", call. = FALSE)
-    }
-  }
-
-  if (!is.matrix(counts)) {
-    stop("counts must be a matrix after input preparation.", call. = FALSE)
-  }
-
-  # ---------------------------------------------------------- #
-  # Marker validation
-  # ---------------------------------------------------------- #
 
   if (!is.null(marker_sets)) {
 
@@ -425,11 +236,19 @@ run_deggo <- function(
   }
 
   # ---------------------------------------------------------- #
-  # Annotation and validation
+  # 5. Annotation database
   # ---------------------------------------------------------- #
 
   log("[2/11] Loading annotation database", type = "step")
-  orgdb <- .get_orgdb(organism = organism, orgdb = orgdb)
+
+  orgdb <- .get_orgdb(
+    organism = organism,
+    orgdb = orgdb
+  )
+
+  # ---------------------------------------------------------- #
+  # 6. Validate analysis inputs
+  # ---------------------------------------------------------- #
 
   log("[3/11] Validating inputs", type = "step")
 
@@ -440,8 +259,14 @@ run_deggo <- function(
   }
 
   if (is.null(rownames(metadata)) || any(rownames(metadata) == "")) {
-    rownames(metadata) <- metadata[[sample_col_use]]
+    rownames(metadata) <- as.character(metadata[[sample_col_use]])
   }
+
+  sample_ids <- colnames(counts)
+
+  metadata <- metadata[match(sample_ids, rownames(metadata)), , drop = FALSE]
+  rownames(metadata) <- sample_ids
+  metadata[[sample_col_use]] <- sample_ids
 
   if (analysis_mode == "single") {
 
@@ -453,15 +278,15 @@ run_deggo <- function(
       stop("'contrast' is required in single mode.", call. = FALSE)
     }
 
-    required_metadata_cols <- unique(c(
+    required_cols <- unique(c(
       sample_col_use,
       all.vars(design_formula),
       contrast[1]
     ))
 
-    missing_cols <- setdiff(required_metadata_cols, colnames(metadata))
+    missing_cols <- setdiff(required_cols, colnames(metadata))
 
-    if (length(missing_cols) > 0) {
+    if (length(missing_cols)) {
       stop(
         "Metadata is missing required column(s) for single mode: ",
         paste(missing_cols, collapse = ", "),
@@ -474,7 +299,9 @@ run_deggo <- function(
 
     if (!all(contrast_levels %in% metadata[[contrast_var]])) {
       stop(
-        "Contrast levels not found in metadata column '", contrast_var, "': ",
+        "Contrast levels not found in metadata column '",
+        contrast_var,
+        "': ",
         paste(setdiff(contrast_levels, metadata[[contrast_var]]), collapse = ", "),
         call. = FALSE
       )
@@ -491,14 +318,14 @@ run_deggo <- function(
       stop("'pairwise_group_cols' is required for pairwise mode.", call. = FALSE)
     }
 
-    required_metadata_cols <- unique(c(
+    required_cols <- unique(c(
       sample_col_use,
       pairwise_group_cols
     ))
 
-    missing_cols <- setdiff(required_metadata_cols, colnames(metadata))
+    missing_cols <- setdiff(required_cols, colnames(metadata))
 
-    if (length(missing_cols) > 0) {
+    if (length(missing_cols)) {
       stop(
         "Metadata is missing required column(s) for pairwise mode: ",
         paste(missing_cols, collapse = ", "),
@@ -518,84 +345,11 @@ run_deggo <- function(
     )
   }
 
-  sample_ids <- colnames(counts)
-
-  metadata <- metadata[match(sample_ids, rownames(metadata)), , drop = FALSE]
-  rownames(metadata) <- sample_ids
-  metadata[[sample_col_use]] <- sample_ids
-
   # ---------------------------------------------------------- #
-  # Cleaning and filtering
+  # 7. Differential expression only
   # ---------------------------------------------------------- #
 
-  log("[4/11] Cleaning gene identifiers", type = "step")
-
-  counts <- clean_ensembl_ids(counts)
-
-  log("[5/11] Filtering low-expression genes", type = "step")
-
-  counts <- preprocess_counts(
-    counts = counts,
-    metadata = metadata,
-    filter_method = filter_method,
-    min_count = min_count,
-    min_samples = min_samples,
-    min_total = min_total
-  )
-
-  colnames(counts) <- sample_ids
-  rownames(metadata) <- sample_ids
-  metadata[[sample_col_use]] <- sample_ids
-
-  .save_clean_input_files(
-    counts = counts,
-    metadata = metadata,
-    repro_dir = repro_dir,
-    save_clean_inputs = save_clean_inputs
-  )
-
-  # ---------------------------------------------------------- #
-  # Sample QC after filtering
-  # ---------------------------------------------------------- #
-
-  log("[6/11] Sample quality control", type = "step")
-
-  sample_qc <- run_sample_qc(
-    counts = counts,
-    metadata = metadata,
-    txtsize = txtsize,
-    output_dir = dirs$qc,
-    annotation_cols = intersect(
-      c("condition", "treatment", "sex", "tissue"),
-      colnames(metadata)
-    )
-  )
-
-  # ---------------------------------------------------------- #
-  # Differential expression
-  # ---------------------------------------------------------- #
-
-  if (analysis_mode == "pairwise") {
-
-    de_results <- .run_deggo_pairwise(
-      counts = counts,
-      metadata = metadata,
-      orgdb = orgdb,
-      dirs = dirs,
-      ontology = ontology,
-      padj_cutoff = padj_cutoff,
-      logfc_cutoff = logfc_cutoff,
-      top_n_heatmap = top_n_heatmap,
-      top_n_labels = top_n_labels,
-      txtsize = txtsize,
-      pairwise_group_cols = pairwise_group_cols,
-      pairwise_contrast_col = pairwise_contrast_col,
-      pairwise_contrasts = pairwise_contrasts,
-      pairwise_mode = pairwise_mode,
-      log = log
-    )
-
-  } else {
+  if (analysis_mode == "single") {
 
     de_results <- .run_deggo_single(
       counts = counts,
@@ -604,19 +358,29 @@ run_deggo <- function(
       design_formula = design_formula,
       contrast = contrast,
       orgdb = orgdb,
-      dirs = dirs,
-      ontology = ontology,
       padj_cutoff = padj_cutoff,
       logfc_cutoff = logfc_cutoff,
-      top_n_heatmap = top_n_heatmap,
-      top_n_labels = top_n_labels,
-      txtsize = txtsize,
+      log = log
+    )
+
+  } else {
+
+    de_results <- .run_deggo_pairwise(
+      counts = counts,
+      metadata = metadata,
+      orgdb = orgdb,
+      pairwise_group_cols = pairwise_group_cols,
+      pairwise_contrast_col = pairwise_contrast_col,
+      pairwise_contrasts = pairwise_contrasts,
+      pairwise_mode = pairwise_mode,
+      padj_cutoff = padj_cutoff,
+      logfc_cutoff = logfc_cutoff,
       log = log
     )
   }
 
   # ---------------------------------------------------------- #
-  # Final metadata and report/PPTX compatibility
+  # 8. Attach run-level objects
   # ---------------------------------------------------------- #
 
   de_results$counts <- counts
@@ -625,15 +389,128 @@ run_deggo <- function(
   de_results$output_dirs <- dirs
   de_results$version <- deggo_version
   de_results$sample_qc <- sample_qc
-  de_results$qc_raw <- qc_raw
-  de_results$qc_clean <- qc_clean
+  de_results$qc_raw <- qc$qc_raw
+  de_results$qc_clean <- qc$qc_clean
   de_results$marker_check <- marker_check
 
-  if (is.null(de_results$summary)) {
-    stop("DEGgo internal error: summary table was not created.", call. = FALSE)
+  # ---------------------------------------------------------- #
+  # 9. Optional DEG cleaning
+  # ---------------------------------------------------------- #
+
+  if (isTRUE(clean_deg_tables)) {
+
+    log("[POST] Cleaning significant DEG tables", type = "step")
+
+    de_results <- .deggo_clean_deg_tables(
+      de_results = de_results,
+      counts = counts,
+      metadata = de_results$metadata,
+      min_expr_count = min_expr_count,
+      min_expr_samples = min_expr_samples,
+      min_prevalence = min_prevalence,
+      max_sample_fraction = max_sample_fraction,
+      min_group_mean = min_group_mean,
+      expr_filter_groups = expr_filter_groups,
+      log = log
+    )
+
+  } else {
+
+    de_results$sig_deg_clean <- de_results$sig_deg
   }
 
-  .write_session_info(output_dir)
+  de_results$summary <- .deggo_build_summary(
+    results = de_results$results,
+    sig_deg = de_results$sig_deg_clean,
+    go_results = NULL,
+    method = method,
+    padj_cutoff = padj_cutoff,
+    logfc_cutoff = logfc_cutoff
+  )
+
+
+  # ---------------------------------------------------------- #
+  # 10. PCA variables
+  # ---------------------------------------------------------- #
+
+  if (analysis_mode == "single") {
+    pca_vars <- unique(c(
+      all.vars(design_formula),
+      contrast[1]
+    ))
+  } else {
+    pca_vars <- unique(pairwise_group_cols)
+  }
+
+  pca_vars <- setdiff(pca_vars, sample_col_use)
+  pca_vars <- intersect(pca_vars, colnames(metadata))
+
+  # ---------------------------------------------------------- #
+  # 11. Visualizations
+  # ---------------------------------------------------------- #
+
+  if (analysis_mode == "single") {
+    plot_order_vars <- unique(c(
+      setdiff(all.vars(design_formula), contrast[1]),
+      contrast[1]
+    ))
+  } else {
+    plot_order_vars <- unique(pairwise_group_cols)
+  }
+
+  plot_order_vars <- intersect(plot_order_vars, colnames(metadata))
+
+
+  de_results <- .deggo_make_plots(
+    de_results = de_results,
+    counts = counts,
+    metadata = de_results$metadata,
+    dirs = dirs,
+    analysis_mode = analysis_mode,
+    method = method,
+    padj_cutoff = padj_cutoff,
+    logfc_cutoff = logfc_cutoff,
+    top_n_heatmap = top_n_heatmap,
+    top_n_labels = top_n_labels,
+    txtsize = txtsize,
+    log = log,
+    contrast = contrast,
+    pairwise_contrast_col = pairwise_contrast_col,
+    pairwise_contrasts = pairwise_contrasts,
+    sample_col = sample_col_use,
+    pca_vars = pca_vars,
+    plot_order_vars = plot_order_vars
+  )
+
+  # ---------------------------------------------------------- #
+  # 12. GO enrichment
+  # ---------------------------------------------------------- #
+
+  de_results <- .deggo_make_go(
+    de_results = de_results,
+    dirs = dirs,
+    ontology = ontology,
+    orgdb = orgdb,
+    txtsize = txtsize,
+    log = log
+  )
+
+  summary_go <- .deggo_build_summary(
+    results = de_results$results,
+    sig_deg = de_results$sig_deg_clean,
+    go_results = de_results$go_results,
+    method = method,
+    padj_cutoff = padj_cutoff,
+    logfc_cutoff = logfc_cutoff
+  )
+
+  de_results$summary$go_terms <- summary_go$go_terms[
+    match(de_results$summary$comparison, summary_go$comparison)
+  ]
+
+  # ---------------------------------------------------------- #
+  # 13. Run parameters
+  # ---------------------------------------------------------- #
 
   de_results$run_params <- .make_run_params(
     deggo_version = deggo_version,
@@ -662,37 +539,24 @@ run_deggo <- function(
     repro_dir = repro_dir
   )
 
-  .save_repro(
-    res = de_results,
+  # ---------------------------------------------------------- #
+  # 14. Export
+  # ---------------------------------------------------------- #
+
+  de_results <- .deggo_export_all(
+    de_results = de_results,
+    dirs = dirs,
+    output_dir = output_dir,
+    analysis_mode = analysis_mode,
     repro_dir = repro_dir,
     save_reproducibility = save_reproducibility
   )
-
-  # ---------------------------------------------------------- #
-  # Write run-level summary
-  # ---------------------------------------------------------- #
-
-  utils::write.table(
-    de_results$summary,
-    file.path(output_dir, paste0(analysis_mode, "_summary.tsv")),
-    sep = "\t",
-    quote = FALSE,
-    row.names = FALSE
-  )
-
-  # ---------------------------------------------------------- #
-  # Write output manifest
-  # ---------------------------------------------------------- #
 
   de_results$output_manifest <- .write_deggo_manifest(
     output_dir = output_dir,
     dirs = dirs,
     analysis_mode = analysis_mode
   )
-
-  # ---------------------------------------------------------- #
-  # Organize run-level files BEFORE report/PPTX
-  # ---------------------------------------------------------- #
 
   run_files <- .deggo_organize_run_files(
     output_dir = output_dir,
@@ -704,7 +568,7 @@ run_deggo <- function(
   de_results$manifest_file <- run_files$manifest_file
 
   # ---------------------------------------------------------- #
-  # Report
+  # 15. Report
   # ---------------------------------------------------------- #
 
   de_results$report_files <- NULL
@@ -720,11 +584,10 @@ run_deggo <- function(
       report_formats = report_formats,
       report_template = report_template
     )
-
   }
 
   # ---------------------------------------------------------- #
-  # PowerPoint
+  # 16. PowerPoint
   # ---------------------------------------------------------- #
 
   de_results$pptx_file <- NULL
@@ -742,9 +605,7 @@ run_deggo <- function(
       results = de_results,
       output_file = pptx_file
     )
-
   }
-
 
   log(
     paste0("==== DEGgo ", toupper(analysis_mode), " ANALYSIS COMPLETE ===="),

@@ -20,11 +20,13 @@ plot_heatmap(
   annotation_cols = c("condition", "treatment", "sex", "tissue"),
   annotation_colors = NULL,
   order_by = NULL,
+  order_levels = NULL,
   scale_rows = TRUE,
   cluster_rows = TRUE,
   cluster_cols = FALSE,
   fontsize_row = NULL,
   fontsize_col = NULL,
+  show_dendrogram = FALSE,
   width = NULL,
   height = NULL,
   show_rownames = NULL,
@@ -72,6 +74,9 @@ If \code{NULL}, colors are generated automatically by DEGgo.}
 \item{order_by}{Optional character vector of metadata columns used to order
 samples before plotting.}
 
+\item{order_levels}{Optional named list defining factor level order for
+metadata columns used in \code{order_by}.}
+
 \item{scale_rows}{Logical. If \code{TRUE}, scale expression values by gene.}
 
 \item{cluster_rows}{Logical. If \code{TRUE}, cluster genes. The dendrogram is
@@ -84,6 +89,9 @@ chosen automatically.}
 
 \item{fontsize_col}{Optional numeric. Column label font size. If \code{NULL}, it is
 chosen automatically.}
+
+\item{show_dendrogram}{Logical. If TRUE, display row/column dendrograms
+when clustering is enabled.}
 
 \item{width}{Optional numeric. Plot width in inches. If \code{NULL}, it is chosen
 automatically.}
