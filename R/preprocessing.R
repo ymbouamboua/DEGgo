@@ -1028,3 +1028,111 @@ run_sample_qc <- function(
     )
   ))
 }
+
+
+
+#' Ensure a gene identifier column is present
+#'
+#' Internal helper that guarantees a count table contains an explicit gene
+#' identifier column. If no recognized gene identifier column is found, the
+#' function converts the row names into a new `"gene_id"` column while
+#' preserving the original count data.
+#'
+#' This helper is primarily used before automatic input preparation and raw
+#' quality control to standardize user inputs originating from either matrices
+#' (gene IDs stored as row names) or data frames (gene IDs stored as columns).
+#'
+#' @param counts Count matrix or data frame.
+#' @param gene_col Character vector of acceptable gene identifier column names.
+#'
+#' @return
+#' A data frame containing an explicit gene identifier column. If one already
+#' exists, the input is returned unchanged (except for coercion to a data
+#' frame when necessary).
+#'
+#' @details
+#' If none of the columns specified in `gene_col` are found, the row names are
+#' used to create a new `"gene_id"` column. An error is thrown if neither a
+#' valid gene identifier column nor row names are available.
+#'
+#' @keywords internal
+#' @noRd
+.deggo_counts_with_gene_col <- function(counts, gene_col = "gene_id") {
+
+  if (!is.matrix(counts) && !is.data.frame(counts)) {
+    return(counts)
+  }
+
+  counts <- as.data.frame(counts, check.names = FALSE)
+
+  if (length(intersect(gene_col, colnames(counts))) > 0) {
+    return(counts)
+  }
+
+  gene_id <- rownames(counts)
+
+  if (is.null(gene_id) || all(is.na(gene_id)) || all(gene_id == "")) {
+    stop(
+      "No gene ID column found and row names are empty. ",
+      "Please provide a gene identifier column using 'gene_col'.",
+      call. = FALSE
+    )
+  }
+
+  rownames(counts) <- NULL
+
+  data.frame(
+    gene_id = gene_id,
+    counts,
+    check.names = FALSE
+  )
+}
+
+
+
+
+.deggo_qc_prepare <- function(
+    counts,
+    metadata,
+    gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
+    feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
+    sample_col = c("sample", "Sample", "SAMPLE")
+) {
+
+  counts <- .deggo_counts_with_gene_col(counts, gene_col = gene_col)
+  counts <- as.data.frame(counts, check.names = FALSE)
+  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+
+  gene_col <- gene_col[gene_col %in% colnames(counts)][1]
+  feature_col <- feature_col[feature_col %in% colnames(counts)][1]
+  sample_col <- sample_col[sample_col %in% colnames(metadata)][1]
+
+  if (is.na(gene_col)) stop("No gene ID column found.", call. = FALSE)
+  if (is.na(sample_col)) stop("No sample column found.", call. = FALSE)
+
+  rownames(metadata) <- as.character(metadata[[sample_col]])
+
+  drop_cols <- c(gene_col, feature_col)
+  drop_cols <- drop_cols[!is.na(drop_cols)]
+
+  sample_cols <- intersect(setdiff(colnames(counts), drop_cols), rownames(metadata))
+
+  if (!length(sample_cols)) {
+    stop("No matching samples between counts and metadata.", call. = FALSE)
+  }
+
+  mat <- as.matrix(counts[, sample_cols, drop = FALSE])
+  suppressWarnings(storage.mode(mat) <- "numeric")
+  rownames(mat) <- as.character(counts[[gene_col]])
+
+  metadata <- metadata[sample_cols, , drop = FALSE]
+
+  list(
+    mat = mat,
+    metadata = metadata,
+    counts_df = counts,
+    gene_col = gene_col,
+    feature_col = feature_col,
+    sample_col = sample_col
+  )
+}

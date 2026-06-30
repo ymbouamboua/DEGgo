@@ -1197,13 +1197,13 @@ plot_pca <- function(
     text = "Plot not available",
     width = 1200,
     height = 900
-  ) {
-    grDevices::png(file, width = width, height = height, res = 150)
-    graphics::plot.new()
-    graphics::text(0.5, 0.5, labels = text, cex = 1.2)
-    grDevices::dev.off()
-    invisible(file)
-  }
+) {
+  grDevices::png(file, width = width, height = height, res = 150)
+  graphics::plot.new()
+  graphics::text(0.5, 0.5, labels = text, cex = 1.2)
+  grDevices::dev.off()
+  invisible(file)
+}
 
 # ========================================================= #
 # HEATMAP
@@ -2359,15 +2359,15 @@ explore_bulk_rnaseq <- function(
 
   if (!is.null(markers) && length(markers) && exists("plot_gene_heatmap")) {
     marker_heatmap <- tryCatch(
-        plot_gene_heatmap(
-          counts = counts_df,
-          metadata = metadata,
-          genes = markers,
-          gene_col = gene_col,
-          feature_col = feature_col,
-          sample_col = sample_col,
-          ...
-        ),
+      plot_gene_heatmap(
+        counts = counts_df,
+        metadata = metadata,
+        genes = markers,
+        gene_col = gene_col,
+        feature_col = feature_col,
+        sample_col = sample_col,
+        ...
+      ),
       error = function(e) NULL
     )
   }
@@ -2964,4 +2964,3 @@ plot_all_go_terms <- function(
 
   plots
 }
-
