@@ -13,6 +13,7 @@ plot_heatmap(
   metadata_filter = NULL,
   top_n_heatmap = 20,
   padj_cutoff = 0.05,
+  logfc_cutoff = 0.25,
   main = "Top Differentially Expressed Genes",
   output_dir = "DEGgo_out",
   filename = "Heatmap",

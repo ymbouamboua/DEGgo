@@ -2432,6 +2432,7 @@ plot_heatmap <- function(
     metadata_filter = NULL,
     top_n_heatmap = 20,
     padj_cutoff = 0.05,
+    logfc_cutoff = 0.25,
     main = "Top Differentially Expressed Genes",
     output_dir = "DEGgo_out",
     filename = "Heatmap",
@@ -2745,7 +2746,8 @@ plot_heatmap <- function(
   top <- res_df[
     !is.na(res_df$padj) &
       !is.na(res_df$log2FoldChange) &
-      res_df$padj < padj_cutoff,
+      res_df$padj < padj_cutoff &
+      abs(res_df$log2FoldChange) >= logfc_cutoff,
     ,
     drop = FALSE
   ]
@@ -4722,6 +4724,7 @@ plot_all_go_terms <- function(
               main = nm,
               top_n_heatmap = top_n_heatmap,
               padj_cutoff = padj_cutoff,
+              logfc_cutoff = logfc_cutoff,
               cluster_rows = TRUE,
               cluster_cols = FALSE,
               show_dendrogram = FALSE,

@@ -29,6 +29,7 @@
 #' @param min_expr_samples Minimum samples passing expression threshold.
 #' @param min_prevalence Minimum prevalence for clean DEG filtering.
 #' @param max_sample_fraction Maximum single-sample fraction.
+#' @param max_group_sample_fraction Maximum fraction of group expression contributed by a single sample.
 #' @param min_group_mean Minimum group mean expression.
 #' @param expr_filter_groups Grouping variables for expression filtering.
 #' @param clean_deg_tables Logical. Apply post-DEG expression cleaning.
@@ -65,8 +66,14 @@ run_deggo <- function(
     counts,
     metadata,
     project_name = NULL,
-    gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
-    feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
+    gene_col = c(
+      "gene_id", "GeneID", "gene", "Gene",
+      "ENSEMBL", "ensembl", "ensembl_id"
+    ),
+    feature_col = c(
+      "gene_name", "SYMBOL", "symbol",
+      "gene_symbol", "external_gene_name"
+    ),
     sample_col = c("sample", "Sample", "SAMPLE"),
     prepare_input = TRUE,
     raw_qc = TRUE,
@@ -84,6 +91,7 @@ run_deggo <- function(
     min_expr_samples = 3,
     min_prevalence = 0.6,
     max_sample_fraction = 0.45,
+    max_group_sample_fraction = 0.45,
     min_group_mean = 10,
     min_group_median = 20,
     max_group_cv = NULL,
@@ -116,7 +124,6 @@ run_deggo <- function(
     palette = "default",
     seed = 123
 ) {
-
   set.seed(seed)
 
   method <- match.arg(method)

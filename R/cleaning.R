@@ -863,12 +863,16 @@
   names(de_results$sig_deg_clean) <-
     names(de_results$sig_deg)
 
-  is_pairwise <- !is.null(de_results$pairwise_contrasts) ||
-    !is.null(de_results$contrast_list)
+  contrast_list <-
+    de_results$pairwise_contrasts %||%
+    de_results$contrast_list
+
+  is_pairwise <- !is.null(contrast_list)
 
   for (nm in names(de_results$sig_deg)) {
 
     sample_subset <- NULL
+    group_col_use <- expr_filter_groups
 
     if (
       !is.null(de_results$samples) &&
@@ -894,6 +898,23 @@
       )
     }
 
+    # Use the actual DESeq2 contrast variable
+    if (
+      identical(expr_filter_groups, "auto") &&
+      !is.null(contrast_list) &&
+      nm %in% names(contrast_list)
+    ) {
+      current_contrast <- contrast_list[[nm]]
+
+      if (length(current_contrast) >= 3L) {
+        candidate_group_col <- current_contrast[1]
+
+        if (candidate_group_col %in% colnames(metadata)) {
+          group_col_use <- candidate_group_col
+        }
+      }
+    }
+
     clean <- .deggo_clean_deg_table(
       res_df = de_results$sig_deg[[nm]],
       counts = counts,
@@ -908,7 +929,7 @@
       min_group_mean = min_group_mean,
       min_group_median = min_group_median,
       max_group_cv = max_group_cv,
-      expr_filter_groups = expr_filter_groups
+      expr_filter_groups = group_col_use
     )
 
     de_results$sig_deg_clean[[nm]] <- clean
@@ -922,14 +943,9 @@
           "/",
           nrow(de_results$sig_deg[[nm]]),
           " retained using ",
-          if (is.null(sample_subset)) {
-            "all matched samples"
-          } else {
-            paste0(
-              length(sample_subset),
-              " contrast-specific samples"
-            )
-          }
+          length(sample_subset),
+          " contrast-specific samples; grouping variable: ",
+          group_col_use
         ),
         type = "info"
       )
@@ -938,8 +954,6 @@
 
   de_results
 }
-
-
 
 
 #' Export cleaned DEG tables

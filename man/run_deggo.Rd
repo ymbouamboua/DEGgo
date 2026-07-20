@@ -27,6 +27,7 @@ run_deggo(
   min_expr_samples = 3,
   min_prevalence = 0.6,
   max_sample_fraction = 0.45,
+  max_group_sample_fraction = 0.45,
   min_group_mean = 10,
   min_group_median = 20,
   max_group_cv = NULL,
@@ -104,6 +105,8 @@ run_deggo(
 \item{min_prevalence}{Minimum prevalence for clean DEG filtering.}
 
 \item{max_sample_fraction}{Maximum single-sample fraction.}
+
+\item{max_group_sample_fraction}{Maximum fraction of group expression contributed by a single sample.}
 
 \item{min_group_mean}{Minimum group mean expression.}
 
