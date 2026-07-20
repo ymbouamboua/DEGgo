@@ -1,6 +1,6 @@
 Package: DEGgo
 Title: Differential Expression and Gene Ontology enrichment analysis for bulk RNA-seq data
-Version: 0.1.2
+Version: 1.0.0
 Authors@R:
     person(
       given = "Yvon",
