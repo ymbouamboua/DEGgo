@@ -65,12 +65,15 @@ generate_deggo_report <- function(
         output_file = output_file,
         output_dir = output_dir,
         params = list(
-          results = results,
-          sig_deg = results$sig_deg %||% NULL,
-          go_results = results$go_results %||% NULL,
-          summary = results$summary %||% NULL,
-          metadata = results$metadata %||% NULL,
-          output_dir = output_dir
+          results = res,
+          sig_deg = res$sig_deg,
+          go_results = res$go_results,
+          summary = res$summary,
+          metadata = res$metadata,
+          output_dir = output_dir,
+          project_name = res$project_name %||%
+            res$run_params$project_name %||%
+            "DEGgo RNA-seq analysis"
         ),
         envir = new.env(parent = globalenv()),
         knit_root_dir = output_dir,
@@ -118,6 +121,7 @@ generate_deggo_report <- function(
 generate_deggo_pptx <- function(
     results,
     output_file = "DEGgo_Report.pptx",
+    project_name = NULL,
     title = "DEGgo RNA-seq report",
     subtitle = "Differential expression, visualization and Gene Ontology summary"
 ) {
@@ -125,6 +129,13 @@ generate_deggo_pptx <- function(
   `%||%` <- function(x, y) {
     if (is.null(x)) y else x
   }
+
+  project_name <- project_name %||%
+    results$project_name %||%
+    results$run_params$project_name %||%
+    "DEGgo RNA-seq analysis"
+
+  pptx <- officer::read_pptx()
 
   if (!requireNamespace("officer", quietly = TRUE)) {
     stop("Package 'officer' is required.")
@@ -190,6 +201,7 @@ generate_deggo_pptx <- function(
     )
   }
 
+
   add_title_slide <- function(ppt) {
     ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
 
@@ -197,14 +209,14 @@ generate_deggo_pptx <- function(
       ppt,
       officer::fpar(
         officer::ftext(
-          title,
+          project_name,
           officer::fp_text(font.size = 30, bold = TRUE, color = COL_TITLE)
         ),
         fp_p = officer::fp_par(text.align = "center")
       ),
       location = officer::ph_location(
         left = 0.8,
-        top = 2.35,
+        top = 2.25,
         width = 8.4,
         height = 0.8
       )
@@ -221,16 +233,33 @@ generate_deggo_pptx <- function(
       ),
       location = officer::ph_location(
         left = 0.9,
-        top = 3.25,
+        top = 3.15,
         width = 8.2,
         height = 0.5
+      )
+    )
+
+    ppt <- officer::ph_with(
+      ppt,
+      officer::fpar(
+        officer::ftext(
+          paste0("Generated: ", Sys.Date()),
+          officer::fp_text(font.size = 11, color = "#666666")
+        ),
+        fp_p = officer::fp_par(text.align = "center")
+      ),
+      location = officer::ph_location(
+        left = 0.9,
+        top = 3.85,
+        width = 8.2,
+        height = 0.35
       )
     )
 
     add_slide_number(ppt)
   }
 
-  add_img_slide <- function(ppt, slide_title, img, note = NULL) {
+  add_img_slide <- function(pptx, slide_title, img, note = NULL) {
 
     info <- png::readPNG(img, info = TRUE)
     dim  <- attr(info, "dim")
@@ -250,11 +279,11 @@ generate_deggo_pptx <- function(
 
     left <- (slide_w - w) / 2
 
-    ppt <- officer::add_slide(ppt, layout = "Blank", master = "Office Theme")
-    ppt <- add_slide_title(ppt, slide_title)
+    pptx <- officer::add_slide(pptx, layout = "Blank", master = "Office Theme")
+    pptx <- add_slide_title(pptx, slide_title)
 
-    ppt <- officer::ph_with(
-      ppt,
+    pptx <- officer::ph_with(
+      pptx,
       officer::external_img(img),
       location = officer::ph_location(
         left = left,
@@ -265,8 +294,8 @@ generate_deggo_pptx <- function(
     )
 
     if (!is.null(note)) {
-      ppt <- officer::ph_with(
-        ppt,
+      pptx <- officer::ph_with(
+        pptx,
         officer::fpar(
           officer::ftext(
             note,
@@ -282,7 +311,7 @@ generate_deggo_pptx <- function(
       )
     }
 
-    add_slide_number(ppt)
+    add_slide_number(pptx)
   }
 
   add_text_slide <- function(ppt, slide_title, bullets, fontsize = 16) {
@@ -370,11 +399,10 @@ generate_deggo_pptx <- function(
     )
   }
 
-  ppt <- officer::read_pptx()
-  ppt <- add_title_slide(ppt)
+  pptx <- add_title_slide(pptx)
 
   if (!is.null(results$summary)) {
-    ppt <- add_summary_table_slide(ppt, results$summary)
+    pptx <- add_summary_table_slide(pptx, results$summary)
   }
 
   plot_dirs <- c(
@@ -395,16 +423,16 @@ generate_deggo_pptx <- function(
 
   if (length(plot_files) > 0) {
     for (img in plot_files) {
-      ppt <- add_img_slide(
-        ppt,
+      pptx <- add_img_slide(
+        pptx,
         slide_title = clean_title(img),
         img = img
       )
     }
   }
 
-  ppt <- add_text_slide(
-    ppt,
+  pptx <- add_text_slide(
+    pptx,
     "Key findings",
     c(
       "DEGgo generated a structured bulk RNA-seq downstream analysis report.",
@@ -415,7 +443,7 @@ generate_deggo_pptx <- function(
     fontsize = 17
   )
 
-  print(ppt, target = output_file)
+  print(pptx, target = output_file)
 
   invisible(output_file)
 }

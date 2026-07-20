@@ -16,6 +16,7 @@ plot_volcano(
   top_n_labels = 40,
   genes_highlight = NULL,
   colors = c(Up = "#740001", Down = "#6497b1", Ns = "gray70"),
+  palette = "default",
   point_size = 1.5,
   alpha = 0.65,
   title = "Volcano Plot",

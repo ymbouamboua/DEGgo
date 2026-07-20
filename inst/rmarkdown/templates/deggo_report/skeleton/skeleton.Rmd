@@ -27,6 +27,7 @@ params:
   summary: NULL
   metadata: NULL
   output_dir: NULL
+  project_name: "DEGgo RNA-seq analysis"
 ---
 
 ```{r setup, include=FALSE}
@@ -42,6 +43,11 @@ deggo_version <- tryCatch(
   as.character(utils::packageVersion("DEGgo")),
   error = function(e) res$version %||% "development"
 )
+
+project_name <- params$project_name %||%
+  res$project_name %||%
+  res$run_params$project_name %||%
+  "DEGgo RNA-seq analysis"
 
 deggo_citation <- paste0(
   "Yvon Mbouamboua, Vincent Prevot and Paolo Giacobini. ",
@@ -131,6 +137,22 @@ sumtab <- params$summary %||%
   res$summary %||%
   summary_tbl
 
+
+if (!is.null(sumtab)) {
+  sumtab <- as.data.frame(sumtab, stringsAsFactors = FALSE)
+
+  if ("significant" %in% names(sumtab) && !"significant_genes" %in% names(sumtab)) {
+    sumtab$significant_genes <- sumtab$significant
+  }
+
+  if ("up" %in% names(sumtab) && !"upregulated" %in% names(sumtab)) {
+    sumtab$upregulated <- sumtab$up
+  }
+
+  if ("down" %in% names(sumtab) && !"downregulated" %in% names(sumtab)) {
+    sumtab$downregulated <- sumtab$down
+  }
+}
 
 
 
@@ -790,14 +812,18 @@ code {
 
 # Overview
 
+
+Et dans le bloc **Overview**, sécurise aussi ceci :
+
+
 ```{r overview, results='asis'}
 
 # Add in Overview
 metric_grid(list(
-  list(title = "Samples", value = nrow(md)),
-  list(title = "Genes analyzed", value = format(res$summary$total_genes[1], big.mark = ",")),
-  list(title = "Significant DEGs", value = format(sum(sumtab$significant), big.mark = ",")),
-  list(title = "Comparisons", value = nrow(sumtab))
+  list(title = "Samples", value = if (!is.null(md)) nrow(md) else "NA"),
+  list(title = "Genes analyzed", value = if (!is.null(sumtab) && "total_genes" %in% colnames(sumtab)) format(sumtab$total_genes[1], big.mark = ",") else "NA"),
+  list(title = "Significant DEGs", value = if (!is.null(sumtab) && "significant_genes" %in% colnames(sumtab)) format(sum(sumtab$significant_genes, na.rm = TRUE), big.mark = ",") else "NA"),
+  list(title = "Comparisons", value = if (!is.null(sumtab)) nrow(sumtab) else "NA")
 ))
 
 
@@ -822,19 +848,25 @@ analysis_label <- ifelse(
   "a differential expression analysis"
 )
 
-cat(
-  sprintf(
-    "<p>This report summarizes %s performed with <strong>DEGgo</strong>.</p>",
-    analysis_label
-  )
+# cat(
+#   sprintf(
+#     "<p>This report summarizes %s performed with <strong>DEGgo</strong>.</p>",
+#     analysis_label
+#   )
+# )
+
+info_box(
+  "Project",
+  html_escape(project_name)
 )
 
 metric_grid(list(
+  list(title = "Project", value = project_name),
   list(title = "Analysis mode", value = analysis_mode),
   list(title = "Method", value = res$run_params$method %||% "NA"),
-  list(title = "Organism", value = res$run_params$organism %||% "NA"),
-  list(title = "DEGgo version", value = deggo_version)
+  list(title = "Organism", value = res$run_params$organism %||% "NA")
 ))
+
 ```
 
 
@@ -1216,14 +1248,14 @@ if (!is.null(sumtab)) {
 
   metric_grid(list(
     list(title = "Comparisons", value = nrow(s)),
-    list(title = "Significant DEGs", value = format(sum(s$significant, na.rm = TRUE), big.mark = ",")),
-    list(title = "Upregulated", value = format(sum(s$up, na.rm = TRUE), big.mark = ",")),
-    list(title = "Downregulated", value = format(sum(s$down, na.rm = TRUE), big.mark = ","))
+    list(title = "Significant DEGs", value = format(sum(s$significant_genes, na.rm = TRUE), big.mark = ",")),
+    list(title = "Upregulated", value = format(sum(s$upregulated, na.rm = TRUE), big.mark = ",")),
+    list(title = "Downregulated", value = format(sum(s$downregulated, na.rm = TRUE), big.mark = ","))
   ))
 
   show_table(s, n = nrow(s))
 
-  ndeg <- sum(s$significant, na.rm = TRUE)
+  ndeg <- sum(s$significant_genes, na.rm = TRUE)
 
   success_box(
     "Key finding",
@@ -1240,15 +1272,36 @@ if (!is.null(sumtab)) {
 ```
 
 
-## DE summary table
 
+## DE summary table
 
 ```{r analysis-summary}
 
-summary_df <- params$summary %||% results$summary
+summary_df <- sumtab
 
 if (!is.null(summary_df) && nrow(summary_df) > 0) {
-  summary_df <- as.data.frame(summary_df)
+  summary_df <- as.data.frame(summary_df, stringsAsFactors = FALSE)
+
+  if ("significant" %in% colnames(summary_df) &&
+      !"significant_genes" %in% colnames(summary_df)) {
+    summary_df$significant_genes <- summary_df$significant
+  }
+
+  if ("significant_genes" %in% colnames(summary_df) &&
+      !"significant" %in% colnames(summary_df)) {
+    summary_df$significant <- summary_df$significant_genes
+  }
+
+  if ("up" %in% colnames(summary_df) &&
+      !"upregulated" %in% colnames(summary_df)) {
+    summary_df$upregulated <- summary_df$up
+  }
+
+  if ("down" %in% colnames(summary_df) &&
+      !"downregulated" %in% colnames(summary_df)) {
+    summary_df$downregulated <- summary_df$down
+  }
+
   summary_df$comparison <- as.character(summary_df$comparison)
 
   comp_levels <- unique(summary_df$comparison)
@@ -1258,7 +1311,7 @@ if (!is.null(summary_df) && nrow(summary_df) > 0) {
     palette = "Set 3"
   )
 
-  DT::datatable(
+  dt <- DT::datatable(
     summary_df,
     rownames = FALSE,
     options = list(pageLength = 10, scrollX = TRUE, dom = "tip")
@@ -1268,16 +1321,31 @@ if (!is.null(summary_df) && nrow(summary_df) > 0) {
       backgroundColor = DT::styleEqual(comp_levels, comparison_cols),
       color = "#333333",
       fontWeight = "bold"
-    ) %>%
-    DT::formatStyle(
-      "significant",
-      background = DT::styleColorBar(summary_df$significant, "#DCE3EC"),
-      backgroundSize = "98% 88%",
-      backgroundRepeat = "no-repeat",
-      backgroundPosition = "center"
-    ) %>%
-    DT::formatStyle("up", color = "#740001", fontWeight = "bold") %>%
-    DT::formatStyle("down", color = "#6497B1", fontWeight = "bold")
+    )
+
+  if ("significant_genes" %in% colnames(summary_df)) {
+    dt <- dt %>%
+      DT::formatStyle(
+        "significant_genes",
+        background = DT::styleColorBar(summary_df$significant_genes, "#DCE3EC"),
+        backgroundSize = "98% 88%",
+        backgroundRepeat = "no-repeat",
+        backgroundPosition = "center"
+      )
+  }
+
+  if ("upregulated" %in% colnames(summary_df)) {
+    dt <- dt %>%
+      DT::formatStyle("upregulated", color = "#740001", fontWeight = "bold")
+  }
+
+  if ("downregulated" %in% colnames(summary_df)) {
+    dt <- dt %>%
+      DT::formatStyle("downregulated", color = "#6497B1", fontWeight = "bold")
+  }
+
+  dt
+
 } else {
   cat("No summary table available.")
 }
@@ -1292,12 +1360,12 @@ if (!is.null(summary_df) && nrow(summary_df) > 0) {
 if (!is.null(sumtab)) {
   s <- as.data.frame(sumtab)
 
-  if (all(c("comparison", "up", "down") %in% colnames(s))) {
+  if (all(c("comparison", "upregulated", "downregulated") %in% colnames(s))) {
     plot_df <- rbind(
-      data.frame(comparison = s$comparison, count = s$up, regulation = "Up"),
-      data.frame(comparison = s$comparison, count = s$down, regulation = "Down")
+      data.frame(comparison = s$comparison, count = s$upregulated, regulation = "Up"),
+      data.frame(comparison = s$comparison, count = s$downregulated, regulation = "Down")
     )
-
+    
     ggplot2::ggplot(
       plot_df,
       ggplot2::aes(

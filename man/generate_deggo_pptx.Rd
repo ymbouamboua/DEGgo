@@ -7,6 +7,7 @@
 generate_deggo_pptx(
   results,
   output_file = "DEGgo_Report.pptx",
+  project_name = NULL,
   title = "DEGgo RNA-seq report",
   subtitle = "Differential expression, visualization and Gene Ontology summary"
 )

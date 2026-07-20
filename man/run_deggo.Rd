@@ -7,6 +7,7 @@
 run_deggo(
   counts,
   metadata,
+  project_name = NULL,
   gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
   feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
   sample_col = c("sample", "Sample", "SAMPLE"),
@@ -27,6 +28,8 @@ run_deggo(
   min_prevalence = 0.6,
   max_sample_fraction = 0.45,
   min_group_mean = 10,
+  min_group_median = 20,
+  max_group_cv = NULL,
   expr_filter_groups = "auto",
   clean_deg_tables = TRUE,
   ontology = c("BP", "MF", "CC"),
@@ -37,7 +40,7 @@ run_deggo(
   contrast = NULL,
   design_formula = ~condition,
   pairwise_group_cols = NULL,
-  pairwise_contrast_col = "comparison_group",
+  pairwise_contrast_col = "group",
   pairwise_contrasts = NULL,
   filter_method = c("count", "cpm", "none"),
   pairwise_mode = c("all", "within_first", "within_second"),
@@ -52,6 +55,8 @@ run_deggo(
   save_reproducibility = TRUE,
   save_clean_inputs = TRUE,
   txtsize = 12,
+  heatmap_annotation_cols = "auto",
+  palette = "default",
   seed = 123
 )
 }
@@ -59,6 +64,8 @@ run_deggo(
 \item{counts}{Raw count matrix or data frame.}
 
 \item{metadata}{Sample metadata data frame.}
+
+\item{project_name}{Optional project name shown in HTML, PDF and PowerPoint reports.}
 
 \item{gene_col}{Candidate gene identifier column names.}
 

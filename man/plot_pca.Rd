@@ -17,7 +17,8 @@ plot_pca(
   height = 6,
   dpi = 300,
   style = "classic",
-  txtsize = 12
+  txtsize = 12,
+  palette = "default"
 )
 }
 \arguments{

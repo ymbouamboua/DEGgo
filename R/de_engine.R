@@ -381,7 +381,7 @@ run_de <- function(
 make_pairwise_contrasts <- function(
     metadata,
     group_cols,
-    contrast_col = "comparison_group",
+    contrast_col = "group",
     mode = c("all", "within_first", "within_second")
 ) {
 
@@ -511,7 +511,7 @@ run_deseq2_pairwise <- function(
     counts,
     metadata,
     group_cols,
-    contrast_col = "comparison_group",
+    contrast_col = "group",
     contrast_list = NULL,
     design_formula = NULL,
     pairwise_mode = c("all", "within_first", "within_second")

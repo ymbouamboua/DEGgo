@@ -555,7 +555,8 @@ extract_expression <- function(
     output_dir,
     generate_report = TRUE,
     report_formats = "html",
-    report_template = NULL
+    report_template = NULL,
+    project_name = NULL
 ) {
 
   log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
@@ -626,7 +627,8 @@ extract_expression <- function(
           go_results = res$go_results,
           summary = res$summary,
           metadata = res$metadata,
-          output_dir = output_dir
+          output_dir = output_dir,
+          project_name = project_name %||% res$project_name %||% "DEGgo RNA-seq analysis"
         ),
         envir = new.env(parent = globalenv()),
         quiet = TRUE
@@ -667,6 +669,7 @@ extract_expression <- function(
 #' @noRd
 .make_run_params <- function(
     deggo_version,
+    project_name = NULL,
     organism,
     method,
     analysis_mode,
@@ -695,8 +698,10 @@ extract_expression <- function(
 
   list(
     deggo_version = deggo_version,
+    project_name = project_name,
     date = as.character(Sys.Date()),
     organism = organism,
+    project_name = project_name,
     method = method,
     analysis_mode = analysis_mode,
     ontology = ontology,

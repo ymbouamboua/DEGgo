@@ -9,6 +9,7 @@
 #' GO enrichment, reporting, and reproducibility exports.
 #' @param counts Raw count matrix or data frame.
 #' @param metadata Sample metadata data frame.
+#' @param project_name Optional project name shown in HTML, PDF and PowerPoint reports.
 #' @param gene_col Candidate gene identifier column names.
 #' @param feature_col Candidate gene symbol/name column names.
 #' @param sample_col Candidate sample identifier column names.
@@ -63,6 +64,7 @@
 run_deggo <- function(
     counts,
     metadata,
+    project_name = NULL,
     gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
     feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
     sample_col = c("sample", "Sample", "SAMPLE"),
@@ -83,6 +85,8 @@ run_deggo <- function(
     min_prevalence = 0.6,
     max_sample_fraction = 0.45,
     min_group_mean = 10,
+    min_group_median = 20,
+    max_group_cv = NULL,
     expr_filter_groups = "auto",
     clean_deg_tables = TRUE,
     ontology = c("BP", "MF", "CC"),
@@ -93,7 +97,7 @@ run_deggo <- function(
     contrast = NULL,
     design_formula = ~ condition,
     pairwise_group_cols = NULL,
-    pairwise_contrast_col = "comparison_group",
+    pairwise_contrast_col = "group",
     pairwise_contrasts = NULL,
     filter_method = c("count", "cpm", "none"),
     pairwise_mode = c("all", "within_first", "within_second"),
@@ -108,6 +112,8 @@ run_deggo <- function(
     save_reproducibility = TRUE,
     save_clean_inputs = TRUE,
     txtsize = 12,
+    heatmap_annotation_cols = "auto",
+    palette = "default",
     seed = 123
 ) {
 
@@ -119,6 +125,18 @@ run_deggo <- function(
   analysis_mode <- match.arg(analysis_mode)
   pairwise_mode <- match.arg(pairwise_mode)
   ontology <- match.arg(ontology)
+  palette <- match.arg(
+    palette,
+    choices = c(
+      "default",
+      "nature",
+      "jama",
+      "nejm",
+      "lancet",
+      "viridis",
+      "okabe"
+    )
+  )
 
   log <- .deggo_msg(verbose = TRUE, prefix = "DEGgo")
   t_start <- Sys.time()
@@ -138,6 +156,9 @@ run_deggo <- function(
     report_template = report_template,
     log = log
   )
+
+  project_name <- project_name %||% "DEGgo RNA-seq analysis"
+  project_name <- as.character(project_name)[1]
 
   output_dir <- cfg$output_dir
   dirs <- cfg$dirs
@@ -385,6 +406,7 @@ run_deggo <- function(
 
   de_results$counts <- counts
   de_results$metadata <- de_results$metadata %||% metadata
+  de_results$project_name <- project_name
   de_results$output_dir <- output_dir
   de_results$output_dirs <- dirs
   de_results$version <- deggo_version
@@ -409,7 +431,10 @@ run_deggo <- function(
       min_expr_samples = min_expr_samples,
       min_prevalence = min_prevalence,
       max_sample_fraction = max_sample_fraction,
+      max_group_sample_fraction = max_group_sample_fraction,
       min_group_mean = min_group_mean,
+      min_group_median = min_group_median,
+      max_group_cv = max_group_cv,
       expr_filter_groups = expr_filter_groups,
       log = log
     )
@@ -460,7 +485,6 @@ run_deggo <- function(
 
   plot_order_vars <- intersect(plot_order_vars, colnames(metadata))
 
-
   de_results <- .deggo_make_plots(
     de_results = de_results,
     counts = counts,
@@ -479,7 +503,11 @@ run_deggo <- function(
     pairwise_contrasts = pairwise_contrasts,
     sample_col = sample_col_use,
     pca_vars = pca_vars,
-    plot_order_vars = plot_order_vars
+    plot_order_vars = plot_order_vars,
+    design_formula = design_formula,
+    pairwise_group_cols = pairwise_group_cols,
+    heatmap_annotation_cols = heatmap_annotation_cols,
+    palette = palette
   )
 
   # ---------------------------------------------------------- #
@@ -514,6 +542,7 @@ run_deggo <- function(
 
   de_results$run_params <- .make_run_params(
     deggo_version = deggo_version,
+    project_name = project_name,
     organism = organism,
     method = method,
     analysis_mode = analysis_mode,
@@ -582,7 +611,8 @@ run_deggo <- function(
       output_dir = output_dir,
       generate_report = generate_report,
       report_formats = report_formats,
-      report_template = report_template
+      report_template = report_template,
+      project_name = project_name
     )
   }
 
@@ -603,7 +633,8 @@ run_deggo <- function(
 
     de_results$pptx_file <- generate_deggo_pptx(
       results = de_results,
-      output_file = pptx_file
+      output_file = pptx_file,
+      project_name = project_name
     )
   }
 
