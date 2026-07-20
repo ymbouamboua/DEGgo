@@ -20,6 +20,7 @@ reproducible reporting.
 <a href="https://doi.org/10.5281/zenodo.20785178">
 <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg">
 <img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social">
+<img ![GitHub release](https://img.shields.io/github/v/release/ymbouamboua/DEGgo)>
 </a>
 </p>
 
