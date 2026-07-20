@@ -9,102 +9,318 @@
 #'
 #' @return Invisibly returns generated report paths.
 #' @export
+# generate_deggo_report <- function(
+#     results,
+#     output_dir = results$output_dir,
+#     formats = "html",
+#     report_template = NULL
+# ) {
+#
+#   `%||%` <- function(x, y) if (is.null(x)) y else x
+#
+#   if (!requireNamespace("rmarkdown", quietly = TRUE)) {
+#     stop("Package 'rmarkdown' is required.", call. = FALSE)
+#   }
+#
+#   formats <- match.arg(
+#     formats,
+#     choices = c("html", "pdf"),
+#     several.ok = TRUE
+#   )
+#
+#   if (is.null(report_template)) {
+#     report_template <- system.file(
+#       "rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd",
+#       package = "DEGgo"
+#     )
+#   }
+#
+#   if (!nzchar(report_template) || !file.exists(report_template)) {
+#     stop("Report template not found: ", report_template, call. = FALSE)
+#   }
+#
+#   output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
+#   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+#
+#   out_files <- character()
+#
+#   for (fmt in formats) {
+#
+#     output_file <- switch(
+#       fmt,
+#       html = "DEGgo_Report.html",
+#       pdf  = "DEGgo_Report.pdf"
+#     )
+#
+#     output_format <- switch(
+#       fmt,
+#       html = "html_document",
+#       pdf  = "pdf_document"
+#     )
+#
+#     rendered <- tryCatch(
+#       rmarkdown::render(
+#         input = report_template,
+#         output_format = output_format,
+#         output_file = output_file,
+#         output_dir = output_dir,
+#         params = list(
+#           results = res,
+#           sig_deg = res$sig_deg,
+#           go_results = res$go_results,
+#           summary = res$summary,
+#           metadata = res$metadata,
+#           output_dir = output_dir,
+#           project_name = res$project_name %||%
+#             res$run_params$project_name %||%
+#             "DEGgo RNA-seq analysis"
+#         ),
+#         envir = new.env(parent = globalenv()),
+#         knit_root_dir = output_dir,
+#         quiet = TRUE
+#       ),
+#       error = function(e) {
+#         warning(
+#           "Report generation failed for format '",
+#           fmt,
+#           "': ",
+#           conditionMessage(e),
+#           call. = FALSE
+#         )
+#         NULL
+#       }
+#     )
+#
+#     if (!is.null(rendered) && file.exists(rendered)) {
+#       out_files <- c(out_files, rendered)
+#     } else {
+#       warning("Report file was not generated for format: ", fmt, call. = FALSE)
+#     }
+#   }
+#
+#   if (!length(out_files)) {
+#     stop("No DEGgo report was generated.", call. = FALSE)
+#   }
+#
+#   message("[INFO] DEGgo report generation completed.")
+#
+#   invisible(out_files)
+# }
+#' Generate a DEGgo report
+#'
+#' @param results DEGgo results object.
+#' @param output_dir Output directory.
+#' @param formats Report formats: `"html"`, `"pdf"`, or both.
+#' @param report_template Optional custom R Markdown template.
+#' @param project_name Optional project name.
+#'
+#' @return Character vector containing generated report paths.
+#'
+#' @export
 generate_deggo_report <- function(
     results,
-    output_dir = results$output_dir,
+    output_dir,
     formats = "html",
-    report_template = NULL
+    report_template = NULL,
+    project_name = NULL
 ) {
 
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-
   if (!requireNamespace("rmarkdown", quietly = TRUE)) {
-    stop("Package 'rmarkdown' is required.", call. = FALSE)
+    stop(
+      "Package 'rmarkdown' is required.",
+      call. = FALSE
+    )
   }
 
-  formats <- match.arg(
+  if (!rmarkdown::pandoc_available()) {
+    stop(
+      "Pandoc is required to generate DEGgo reports.",
+      call. = FALSE
+    )
+  }
+
+  formats <- unique(
+    tolower(as.character(formats))
+  )
+
+  formats <- switch(
+    length(formats),
     formats,
-    choices = c("html", "pdf"),
-    several.ok = TRUE
+    formats
+  )
+
+  formats[formats == "html_document"] <- "html"
+  formats[formats == "pdf_document"]  <- "pdf"
+
+  invalid <- setdiff(formats, c("html","pdf"))
+
+  if (length(invalid)) {
+    stop(
+      "Unsupported report format(s): ",
+      paste(invalid, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+
+  if ("pdf" %in% formats &&
+      !nzchar(Sys.which("pdflatex"))) {
+    stop(
+      paste0(
+        "PDF report generation requires a LaTeX engine. ",
+        "Install TinyTeX or another LaTeX distribution."
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (
+    missing(results) ||
+    is.null(results)
+  ) {
+    stop(
+      "`results` cannot be NULL.",
+      call. = FALSE
+    )
+  }
+
+  dir.create(
+    output_dir,
+    recursive = TRUE,
+    showWarnings = FALSE
   )
 
   if (is.null(report_template)) {
+
     report_template <- system.file(
-      "rmarkdown/templates/deggo_report/skeleton/skeleton.Rmd",
+      "rmarkdown",
+      "templates",
+      "deggo_report",
+      "skeleton",
+      "skeleton.Rmd",
       package = "DEGgo"
     )
   }
 
-  if (!nzchar(report_template) || !file.exists(report_template)) {
-    stop("Report template not found: ", report_template, call. = FALSE)
+  if (
+    !length(report_template) ||
+    !nzchar(report_template) ||
+    !file.exists(report_template)
+  ) {
+    stop(
+      "DEGgo report template was not found.",
+      call. = FALSE
+    )
   }
 
-  output_dir <- normalizePath(output_dir, winslash = "/", mustWork = FALSE)
-  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  render_input <- tempfile(
+    pattern = "deggo_report_",
+    fileext = ".Rmd"
+  )
 
-  out_files <- character()
+  if (!file.copy(
+    report_template,
+    render_input,
+    overwrite = TRUE
+  )) {
+    stop(
+      "Unable to copy the report template.",
+      call. = FALSE
+    )
+  }
+
+  project_name <- project_name %||%
+    results$project_name %||%
+    "DEGgo RNA-seq analysis"
+
+  params <- list(
+    results = results,
+    project_name = project_name
+  )
+
+  generated_files <- character(0)
+  render_errors <- character(0)
 
   for (fmt in formats) {
-
-    output_file <- switch(
-      fmt,
-      html = "DEGgo_Report.html",
-      pdf  = "DEGgo_Report.pdf"
-    )
 
     output_format <- switch(
       fmt,
       html = "html_document",
-      pdf  = "pdf_document"
+      pdf = "pdf_document"
+    )
+
+    output_file <- paste0(
+      "DEGgo_Report.",
+      fmt
     )
 
     rendered <- tryCatch(
       rmarkdown::render(
-        input = report_template,
+        input = render_input,
         output_format = output_format,
         output_file = output_file,
         output_dir = output_dir,
-        params = list(
-          results = res,
-          sig_deg = res$sig_deg,
-          go_results = res$go_results,
-          summary = res$summary,
-          metadata = res$metadata,
-          output_dir = output_dir,
-          project_name = res$project_name %||%
-            res$run_params$project_name %||%
-            "DEGgo RNA-seq analysis"
+        params = params,
+        envir = new.env(
+          parent = globalenv()
         ),
-        envir = new.env(parent = globalenv()),
-        knit_root_dir = output_dir,
-        quiet = TRUE
+        quiet = FALSE
       ),
       error = function(e) {
-        warning(
-          "Report generation failed for format '",
-          fmt,
-          "': ",
-          conditionMessage(e),
-          call. = FALSE
+
+        render_errors <<- c(
+          render_errors,
+          paste0(
+            fmt,
+            ": ",
+            conditionMessage(e)
+          )
         )
+
         NULL
       }
     )
 
-    if (!is.null(rendered) && file.exists(rendered)) {
-      out_files <- c(out_files, rendered)
-    } else {
-      warning("Report file was not generated for format: ", fmt, call. = FALSE)
+    if (
+      !is.null(rendered) &&
+      length(rendered) == 1L &&
+      file.exists(rendered)
+    ) {
+      generated_files <- c(
+        generated_files,
+        normalizePath(
+          rendered,
+          winslash = "/",
+          mustWork = TRUE
+        )
+      )
     }
   }
 
-  if (!length(out_files)) {
-    stop("No DEGgo report was generated.", call. = FALSE)
+  unlink(
+    render_input,
+    force = TRUE
+  )
+
+  if (!length(generated_files)) {
+
+    error_detail <- if (length(render_errors)) {
+      paste(
+        render_errors,
+        collapse = "\n"
+      )
+    } else {
+      "No output file was returned by rmarkdown::render()."
+    }
+
+    stop(
+      "No DEGgo report was generated.\n",
+      error_detail,
+      call. = FALSE
+    )
   }
 
-  message("[INFO] DEGgo report generation completed.")
-
-  invisible(out_files)
+  unique(generated_files)
 }
 
 

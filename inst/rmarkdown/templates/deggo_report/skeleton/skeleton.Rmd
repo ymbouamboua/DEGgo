@@ -1625,40 +1625,274 @@ if (length(output_items) > 0) {
 
 # Reproducibility
 
+
+```{r }
+
+# section_note(
+#   "DEGgo automatically records all analysis parameters, software versions, package dependencies, and session information to ensure computational reproducibility and facilitate future re-analysis."
+# )
+# 
+# repro_dir <- file.path(outdir, "reproducibility")
+# run_params <- file.path(repro_dir, "run_parameters.tsv")
+# 
+# if (file.exists(run_params)) {
+#   cat("## Run parameters\n\n")
+#    knitr::kable(
+#     read.delim(run_params, stringsAsFactors = FALSE), 
+#     format = "html",
+#     row.names = FALSE,
+#     align = c("l", "l"),
+#     caption = "DEGgo reproducibility",
+#     table.attr = "class='table table-striped table-hover table-condensed output-table'"
+#   )
+# }
+# 
+# #session_file <- file.path(outdir, "sessionInfo.txt")
+# session_file <- file.path(params$output_dir, "reproducibility", "sessionInfo.txt")
+# if (!file.exists(session_file)) {
+#   session_file <- file.path(params$output_dir, "sessionInfo.txt")
+# }
+# 
+# if (file.exists(session_file)) {
+#   cat("\n\n## Session info\n\n")
+#   cat("<details><summary>Show session info</summary><pre>")
+#   cat(html_escape(paste(readLines(session_file), collapse = "\n")))
+#   cat("</pre></details>")
+# }
+```
+
+
 ```{r reproducibility, results='asis'}
 
 section_note(
-  "DEGgo automatically records all analysis parameters, software versions, package dependencies, and session information to ensure computational reproducibility and facilitate future re-analysis."
+  paste0(
+    "DEGgo automatically records all analysis parameters, ",
+    "software versions, package dependencies, and session ",
+    "information to ensure computational reproducibility and ",
+    "facilitate future re-analysis."
+  )
 )
 
-repro_dir <- file.path(outdir, "reproducibility")
-run_params <- file.path(repro_dir, "run_parameters.tsv")
+# ------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------
 
-if (file.exists(run_params)) {
-  cat("## Run parameters\n\n")
-   knitr::kable(
-    read.delim(run_params, stringsAsFactors = FALSE), 
-    format = "html",
-    row.names = FALSE,
-    align = c("l", "l"),
-    caption = "DEGgo reproducibility",
-    table.attr = "class='table table-striped table-hover table-condensed output-table'"
+.scalar_path <- function(x, default = NULL) {
+
+  if (
+    is.null(x) ||
+    !length(x) ||
+    all(is.na(x))
+  ) {
+    return(default)
+  }
+
+  x <- as.character(x)[1]
+
+  if (
+    is.na(x) ||
+    !nzchar(x)
+  ) {
+    return(default)
+  }
+
+  x
+}
+
+.existing_file <- function(x) {
+
+  x <- .scalar_path(x)
+
+  !is.null(x) &&
+    length(x) == 1L &&
+    file.exists(x)
+}
+
+# ------------------------------------------------------------
+# Resolve output directory safely
+# ------------------------------------------------------------
+
+report_output_dir <- .scalar_path(
+  params$output_dir,
+  default = .scalar_path(
+    outdir,
+    default = getwd()
+  )
+)
+
+# Prefer the existing `outdir` object when it is valid.
+outdir_use <- .scalar_path(
+  outdir,
+  default = report_output_dir
+)
+
+# ------------------------------------------------------------
+# Run parameters
+# ------------------------------------------------------------
+
+run_parameter_candidates <- c(
+  file.path(
+    outdir_use,
+    "reproducibility",
+    "run_parameters.tsv"
+  ),
+  file.path(
+    report_output_dir,
+    "reproducibility",
+    "run_parameters.tsv"
+  ),
+  file.path(
+    outdir_use,
+    "run_parameters.tsv"
+  )
+)
+
+run_parameter_candidates <- unique(
+  run_parameter_candidates[
+    !is.na(run_parameter_candidates) &
+      nzchar(run_parameter_candidates)
+  ]
+)
+
+run_params_file <- run_parameter_candidates[
+  file.exists(run_parameter_candidates)
+][1]
+
+if (
+  length(run_params_file) == 1L &&
+  !is.na(run_params_file) &&
+  nzchar(run_params_file)
+) {
+
+  run_params_table <- tryCatch(
+    utils::read.delim(
+      run_params_file,
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    ),
+    error = function(e) NULL
+  )
+
+  if (
+    !is.null(run_params_table) &&
+    is.data.frame(run_params_table) &&
+    nrow(run_params_table) > 0L
+  ) {
+
+    cat("## Run parameters\n\n")
+
+    print(
+      knitr::kable(
+        run_params_table,
+        row.names = FALSE,
+        align = rep(
+          "l",
+          ncol(run_params_table)
+        ),
+        caption = "DEGgo reproducibility",
+        table.attr = paste0(
+          "class='table table-striped table-hover ",
+          "table-condensed output-table'"
+        )
+      )
+    )
+
+    cat("\n\n")
+  }
+}
+
+# ------------------------------------------------------------
+# Session information
+# ------------------------------------------------------------
+
+session_candidates <- c(
+  file.path(
+    report_output_dir,
+    "reproducibility",
+    "sessionInfo.txt"
+  ),
+  file.path(
+    outdir_use,
+    "reproducibility",
+    "sessionInfo.txt"
+  ),
+  file.path(
+    report_output_dir,
+    "sessionInfo.txt"
+  ),
+  file.path(
+    outdir_use,
+    "sessionInfo.txt"
+  )
+)
+
+session_candidates <- unique(
+  session_candidates[
+    !is.na(session_candidates) &
+      nzchar(session_candidates)
+  ]
+)
+
+session_file <- session_candidates[
+  file.exists(session_candidates)
+][1]
+
+cat("## Session info\n\n")
+
+if (
+  length(session_file) == 1L &&
+  !is.na(session_file) &&
+  nzchar(session_file)
+) {
+
+  session_lines <- tryCatch(
+    readLines(
+      session_file,
+      warn = FALSE
+    ),
+    error = function(e) character(0)
+  )
+
+} else {
+
+  # Useful fallback for tests or incomplete DEGgo objects.
+  session_lines <- utils::capture.output(
+    utils::sessionInfo()
   )
 }
 
-#session_file <- file.path(outdir, "sessionInfo.txt")
-session_file <- file.path(params$output_dir, "reproducibility", "sessionInfo.txt")
-if (!file.exists(session_file)) {
-  session_file <- file.path(params$output_dir, "sessionInfo.txt")
+if (!length(session_lines)) {
+  session_lines <- "Session information was not available."
 }
 
-if (file.exists(session_file)) {
-  cat("\n\n## Session info\n\n")
+# HTML output supports collapsible details.
+if (knitr::is_html_output()) {
+
   cat("<details><summary>Show session info</summary><pre>")
-  cat(html_escape(paste(readLines(session_file), collapse = "\n")))
-  cat("</pre></details>")
+  cat(
+    html_escape(
+      paste(
+        session_lines,
+        collapse = "\n"
+      )
+    )
+  )
+  cat("</pre></details>\n")
+
+} else {
+
+  # PDF and other non-HTML formats.
+  cat("```text\n")
+  cat(
+    paste(
+      session_lines,
+      collapse = "\n"
+    )
+  )
+  cat("\n```\n")
 }
 ```
+
 
 
 

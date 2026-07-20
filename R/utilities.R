@@ -1072,3 +1072,34 @@ extract_expression <- function(
 
   do.call(rbind, out)
 }
+
+
+#' Normalize report formats
+#'
+#' @keywords internal
+#' @noRd
+.normalize_report_formats <- function(formats) {
+
+  formats <- unique(
+    tolower(as.character(formats))
+  )
+
+  aliases <- c(
+    html = "html",
+    html_document = "html",
+    pdf = "pdf",
+    pdf_document = "pdf"
+  )
+
+  invalid <- setdiff(formats, names(aliases))
+
+  if (length(invalid)) {
+    stop(
+      "Unsupported report format(s): ",
+      paste(invalid, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  unname(aliases[formats])
+}
