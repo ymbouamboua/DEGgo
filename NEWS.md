@@ -31,6 +31,23 @@
 
 ---
 
+# DEGgo 1.0.0
+
+## New features
+
+- Initial stable release
+- DESeq2, edgeR and limma support
+- Single and pairwise differential expression workflows
+- Automatic quality control
+- Publication-ready PCA, volcano plots and heatmaps
+- GO enrichment analysis
+- HTML report generation
+- PowerPoint export
+- Reproducibility reports
+- Example datasets and tutorials
+
+---
+
 # DEGgo 0.1.0
 
 ## Initial public release
