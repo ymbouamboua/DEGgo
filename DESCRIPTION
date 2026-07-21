@@ -32,7 +32,8 @@ Imports:
     clusterProfiler,
     rmarkdown,
     biomaRt,
-    tibble
+    tibble,
+    MetaCycle
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Suggests: 
@@ -43,6 +44,8 @@ Suggests:
     officer,
     flextable,
     png,
+    cosinor,
+    cosinor2,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr

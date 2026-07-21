@@ -48,6 +48,24 @@
 #' @param min_count Minimum count threshold.
 #' @param min_samples Minimum number of samples passing `min_count`.
 #' @param min_total Minimum total count.
+#' @param rhythmicity_analysis Logical. Run MetaCycle + cosinor rhythmicity
+#'   analysis on the fitted `dds` object (see [run_deggo_rhythmicity()]).
+#'   Disabled by default; requires a numeric time column in `metadata`.
+#' @param rhythmicity_time_col Metadata column with numeric time (e.g. ZT
+#'   hours) used for rhythmicity analysis.
+#' @param rhythmicity_group_col Optional metadata column defining exactly
+#'   two groups for the differential rhythmicity test.
+#' @param rhythmicity_assay Assay extracted from `dds` for rhythmicity
+#'   analysis. One of `"vst"`, `"normalized"`, `"log2_normalized"`, `"raw"`.
+#' @param rhythmicity_methods Rhythmicity methods to run: `"meta2d"`,
+#'   `"cosinor"`, or both.
+#' @param rhythmicity_period_range MetaCycle period search window.
+#' @param rhythmicity_cycle_length Assumed period for the cosinor fit.
+#' @param rhythmicity_cycMethod MetaCycle methods to combine.
+#' @param cosinor_engine Cosinor fitting engine: `"auto"`, `"package"`
+#'   (`cosinor`/`cosinor2`), or `"manual"` (dependency-free `lm()` fallback).
+#' @param rhythmicity_plots Logical. Generate rhythmicity diagnostic plots.
+#' @param rhythmicity_n_top_plots Number of top rhythmic genes to plot.
 #' @param generate_report Logical. Generate report.
 #' @param report_formats Report formats.
 #' @param report_template Optional report template path.
@@ -55,6 +73,14 @@
 #' @param pptx_file Optional PowerPoint output file.
 #' @param save_reproducibility Logical. Save reproducibility bundle.
 #' @param save_clean_inputs Logical. Save cleaned input tables.
+#' @param min_group_median Optional minimum median expression required in at
+#'   least one comparison group during post-DE filtering.
+#' @param max_group_cv Optional maximum within-group coefficient of variation
+#'   used during post-DE filtering.
+#' @param heatmap_annotation_cols Character vector of metadata columns used as
+#'   heatmap annotations, or `"auto"` for automatic selection.
+#' @param palette Optional color palette used by DEGgo plots. Can be a named
+#'   DEGgo palette or a character vector of colors.
 #' @param txtsize Base text size.
 #' @param seed Random seed.
 #'
@@ -112,6 +138,17 @@ run_deggo <- function(
     min_count = 5,
     min_samples = 2,
     min_total = 10,
+    rhythmicity_analysis = FALSE,
+    rhythmicity_time_col = "time",
+    rhythmicity_group_col = NULL,
+    rhythmicity_assay = c("vst", "normalized", "log2_normalized", "raw"),
+    rhythmicity_methods = c("meta2d", "cosinor"),
+    rhythmicity_period_range = c(20, 28),
+    rhythmicity_cycle_length = 24,
+    rhythmicity_cycMethod = c("ARS", "JTK", "LS"),
+    cosinor_engine = c("auto", "package", "manual"),
+    rhythmicity_plots = TRUE,
+    rhythmicity_n_top_plots = 20,
     generate_report = TRUE,
     report_formats = "html",
     report_template = NULL,
@@ -132,6 +169,13 @@ run_deggo <- function(
   analysis_mode <- match.arg(analysis_mode)
   pairwise_mode <- match.arg(pairwise_mode)
   ontology <- match.arg(ontology)
+  rhythmicity_assay <- match.arg(rhythmicity_assay)
+  rhythmicity_methods <- match.arg(
+    rhythmicity_methods,
+    choices = c("meta2d", "cosinor"),
+    several.ok = TRUE
+  )
+  cosinor_engine <- match.arg(cosinor_engine)
   palette <- match.arg(
     palette,
     choices = c(
@@ -544,6 +588,32 @@ run_deggo <- function(
   ]
 
   # ---------------------------------------------------------- #
+  # 12b. Rhythmicity analysis (optional)
+  # ---------------------------------------------------------- #
+
+  if (isTRUE(rhythmicity_analysis)) {
+
+    de_results <- .deggo_make_rhythmicity(
+      de_results = de_results,
+      output_dir = output_dir,
+      analysis_mode = analysis_mode,
+      time_col = rhythmicity_time_col,
+      group_col = rhythmicity_group_col,
+      assay = rhythmicity_assay,
+      methods = rhythmicity_methods,
+      period_range = rhythmicity_period_range,
+      cycle_length = rhythmicity_cycle_length,
+      cycMethod = rhythmicity_cycMethod,
+      padj_cutoff = padj_cutoff,
+      cosinor_engine = cosinor_engine,
+      generate_plots = rhythmicity_plots,
+      n_top_plots = rhythmicity_n_top_plots,
+      project_name = project_name,
+      log = log
+    )
+  }
+
+  # ---------------------------------------------------------- #
   # 13. Run parameters
   # ---------------------------------------------------------- #
 
@@ -571,6 +641,7 @@ run_deggo <- function(
     pairwise_group_cols = pairwise_group_cols,
     pairwise_contrast_col = pairwise_contrast_col,
     pairwise_mode = pairwise_mode,
+    rhythmicity_analysis = rhythmicity_analysis,
     output_dir = output_dir,
     repro_dir = repro_dir
   )
@@ -591,7 +662,8 @@ run_deggo <- function(
   de_results$output_manifest <- .write_deggo_manifest(
     output_dir = output_dir,
     dirs = dirs,
-    analysis_mode = analysis_mode
+    analysis_mode = analysis_mode,
+    rhythmicity_dir = de_results$rhythmicity$output_dir
   )
 
   run_files <- .deggo_organize_run_files(

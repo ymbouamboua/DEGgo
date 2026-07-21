@@ -26,3 +26,33 @@ make_toy_metadata <- function() {
     stringsAsFactors = FALSE
   )
 }
+make_toy_timecourse <- function(seed = 8542) {
+  set.seed(seed)
+
+  time <- rep(seq(0, 44, by = 4), 2)
+  group <- rep(c("A", "B"), each = length(time) / 2)
+  n <- length(time)
+
+  # Rhythmic gene, same phase/amplitude in both groups
+  rhy_shared <- 10 + 3 * cos(2 * pi * time / 24 - 1) + rnorm(n, sd = 0.3)
+
+  # Rhythmic gene with a phase shift between groups (differential rhythmicity)
+  acro <- ifelse(group == "A", -pi / 2, pi / 2)
+  rhy_diff <- 10 + 3 * cos(2 * pi * time / 24 + acro) + rnorm(n, sd = 0.3)
+
+  # Flat, non-rhythmic gene
+  flat <- 10 + rnorm(n, sd = 0.3)
+
+  mat <- rbind(rhy_shared, rhy_diff, flat)
+  rownames(mat) <- c("RHY_SHARED", "RHY_DIFF", "FLAT")
+  colnames(mat) <- paste0("S", seq_len(n))
+
+  metadata <- data.frame(
+    sample = colnames(mat),
+    time = time,
+    group = group,
+    stringsAsFactors = FALSE
+  )
+
+  list(mat = mat, metadata = metadata)
+}

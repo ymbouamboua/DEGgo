@@ -65,6 +65,10 @@ automatically tries \code{"SYMBOL"}, \code{"gene"}, then \code{"ENSEMBL"}.}
 \item{colors}{Named vector of colors for \code{Up},
 \code{Down}, and \code{Ns}.}
 
+\item{palette}{Optional color palette used for regulation classes. It may
+be a named DEGgo palette or a named character vector defining colors for
+\code{"Up"}, \code{"Down"}, and \code{"NS"}.}
+
 \item{point_size}{Point size.}
 
 \item{alpha}{Point transparency.}

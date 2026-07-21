@@ -1578,6 +1578,82 @@ plot_gallery(go_files, badge = "GO", empty = "No GO plots found.")
 ```
 
 
+# Rhythmicity analysis
+
+```{r rhythmicity-summary, results='asis'}
+
+rhythm <- res$rhythmicity
+
+if (is.null(rhythm) || is.null(rhythm$summary) || !nrow(rhythm$summary)) {
+
+  cat("<p><em>Rhythmicity analysis was not run for this project.</em></p>")
+
+} else {
+
+  section_note(
+    "Rhythmicity (circadian) analysis",
+    "This section summarizes MetaCycle and/or cosinor-based rhythmicity detection, including differential rhythmicity between groups when applicable."
+  )
+
+  info_box(
+    "How to interpret rhythmicity results",
+    paste(
+      "MetaCycle combines JTK_CYCLE, ARSER and/or Lomb-Scargle to detect periodic genes,",
+      "while the cosinor method fits a single-component sinusoidal model per gene.",
+      "Genes flagged by both methods (rhythmic_by = 'both') are the most confidently rhythmic."
+    )
+  )
+
+  rs <- rhythm$summary
+  padj_cut <- rhythm$params$padj_cutoff %||% 0.05
+
+  n_metacycle <- if ("rhythmic_metacycle" %in% colnames(rs)) sum(rs$rhythmic_metacycle, na.rm = TRUE) else NA
+  n_cosinor <- if ("rhythmic_cosinor" %in% colnames(rs)) sum(rs$rhythmic_cosinor, na.rm = TRUE) else NA
+  n_both <- if ("rhythmic_by" %in% colnames(rs)) sum(rs$rhythmic_by == "both", na.rm = TRUE) else NA
+  n_diff <- if ("diff_rhythm_padj" %in% colnames(rs)) sum(rs$diff_rhythm_padj < padj_cut, na.rm = TRUE) else NA
+
+  metric_grid(list(
+    list(title = "Genes tested", value = format(nrow(rs), big.mark = ",")),
+    list(title = "Rhythmic (MetaCycle)", value = if (is.na(n_metacycle)) "NA" else format(n_metacycle, big.mark = ",")),
+    list(title = "Rhythmic (cosinor)", value = if (is.na(n_cosinor)) "NA" else format(n_cosinor, big.mark = ",")),
+    list(title = "Rhythmic (both methods)", value = if (is.na(n_both)) "NA" else format(n_both, big.mark = ",")),
+    list(title = "Differentially rhythmic", value = if (is.na(n_diff)) "NA" else format(n_diff, big.mark = ","))
+  ))
+
+  cat("<h3>Top rhythmic genes</h3>")
+
+  order_col <- intersect(c("metacycle_padj", "cosinor_padj"), colnames(rs))
+  rs_top <- if (length(order_col)) rs[order(rs[[order_col[1]]], na.last = TRUE), , drop = FALSE] else rs
+
+  show_table(rs_top, n = 20, caption = "Top rhythmic genes (by adjusted p-value)")
+
+}
+
+```
+
+
+## Rhythmicity plots
+
+```{r rhythmicity-gallery, results='asis'}
+
+if (!is.null(rhythm)) {
+
+  rhythm_dir <- rhythm$output_dirs$plots %||%
+    get_output_dir("rhythmicity_plots", c("rhythmicity_plots"))
+
+  rhythm_files <- find_png(rhythm_dir)
+
+  plot_gallery(rhythm_files, badge = "Rhythm", empty = "No rhythmicity plots found.")
+
+} else {
+
+  cat("<p><em>No rhythmicity plots available.</em></p>")
+
+}
+
+```
+
+
 # Output files
 
 ```{r output-files, results='asis'}

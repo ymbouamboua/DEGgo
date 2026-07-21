@@ -17,6 +17,8 @@ generate_deggo_pptx(
 
 \item{output_file}{Output PPTX file.}
 
+\item{project_name}{Optional project name displayed in the PowerPoint report.}
+
 \item{title}{Report title.}
 
 \item{subtitle}{Report subtitle.}

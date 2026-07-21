@@ -47,6 +47,9 @@ plot_pca(
 \item{style}{Plot style passed to \code{.deggo_theme()}.}
 
 \item{txtsize}{Base text size.}
+
+\item{palette}{Optional color palette. Can be a named palette supported by
+DEGgo or a character vector of colors.}
 }
 \value{
 A list containing the VST object, PCA data, and plot.

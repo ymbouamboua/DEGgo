@@ -377,6 +377,8 @@ extract_expression <- function(
 #' @param output_dir DEGgo output directory.
 #' @param analysis_mode Analysis mode: "single" or "pairwise".
 #' @param method Differential expression method.
+#' @param rhythmicity_dir Optional path to a rhythmicity output directory,
+#'   added to the manifest when rhythmicity analysis was run.
 #'
 #' @return Invisibly returns a data frame.
 #'
@@ -385,7 +387,8 @@ extract_expression <- function(
 .write_deggo_manifest <- function(
     output_dir,
     dirs,
-    analysis_mode = c("single", "pairwise")
+    analysis_mode = c("single", "pairwise"),
+    rhythmicity_dir = NULL
 ) {
 
   analysis_mode <- match.arg(analysis_mode)
@@ -415,6 +418,17 @@ extract_expression <- function(
     ),
     stringsAsFactors = FALSE
   )
+
+  if (!is.null(rhythmicity_dir) && dir.exists(rhythmicity_dir)) {
+    manifest <- rbind(
+      manifest,
+      data.frame(
+        Folder = basename(rhythmicity_dir),
+        Content = "MetaCycle/cosinor rhythmicity results and diagnostic plots",
+        stringsAsFactors = FALSE
+      )
+    )
+  }
 
   utils::write.table(
     manifest,
@@ -692,7 +706,8 @@ extract_expression <- function(
     pairwise_contrast_col,
     pairwise_mode,
     output_dir,
-    repro_dir
+    repro_dir,
+    rhythmicity_analysis = FALSE
 ) {
   `%||%` <- function(x, y) if (is.null(x)) y else x
 
@@ -722,6 +737,7 @@ extract_expression <- function(
     pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
     pairwise_contrast_col = pairwise_contrast_col,
     pairwise_mode = pairwise_mode,
+    rhythmicity_analysis = rhythmicity_analysis,
     output_dir = output_dir,
     reproducibility_dir = repro_dir
   )

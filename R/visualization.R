@@ -1380,6 +1380,9 @@ plot_gene_expression <- function(
 #' @param genes_highlight Optional character vector of genes to highlight.
 #' @param colors Named vector of colors for \code{Up},
 #'   \code{Down}, and \code{Ns}.
+#' @param palette Optional color palette used for regulation classes. It may
+#'   be a named DEGgo palette or a named character vector defining colors for
+#'   `"Up"`, `"Down"`, and `"NS"`.
 #' @param point_size Point size.
 #' @param alpha Point transparency.
 #' @param title Plot title.
@@ -1719,6 +1722,8 @@ plot_volcano <- function(
 #' @param dpi Plot resolution.
 #' @param style Plot style passed to \code{.deggo_theme()}.
 #' @param txtsize Base text size.
+#' @param palette Optional color palette. Can be a named palette supported by
+#'   DEGgo or a character vector of colors.
 #'
 #' @return A list containing the VST object, PCA data, and plot.
 #' @export
@@ -2400,6 +2405,8 @@ plot_pca <- function(
 #' @param metadata_filter Optional named metadata filtering list.
 #' @param top_n_heatmap Number of genes displayed.
 #' @param padj_cutoff Adjusted P-value cutoff.
+#' @param logfc_cutoff Absolute log2 fold-change cutoff used when selecting
+#'   significant genes for the heatmap.
 #' @param main Heatmap title.
 #' @param output_dir Output directory.
 #' @param filename Output filename without extension.
@@ -3984,6 +3991,7 @@ explore_bulk_rnaseq <- function(
 #' @param color_values Named colors for Up and Down.
 #' @param size_range Point size range.
 #' @param style Theme style passed to \code{.deggo_theme()}.
+#' @param palette Optional color palette used for GO-term visualization.
 #' @param x_angle X-axis text angle.
 #' @param txtsize Base font size.
 #'

@@ -186,3 +186,33 @@ deggo_extract_deg_genes <- function(results, genes) {
 
 
 
+# ========================================================= #
+# EXTRACT RHYTHMIC GENES
+# ========================================================= #
+#' Extract selected genes from DEGgo rhythmicity results
+#'
+#' @param results A `deggo_rhythm_results` object returned by
+#'   [run_deggo_rhythmicity()].
+#' @param genes Character vector of gene identifiers.
+#'
+#' @return A data.frame.
+#' @export
+deggo_extract_rhythmic_genes <- function(results, genes) {
+
+  if (is.null(results$summary)) {
+    stop("results must contain results$summary.", call. = FALSE)
+  }
+
+  summary <- results$summary
+
+  if (!is.data.frame(summary) || nrow(summary) == 0) {
+    return(data.frame())
+  }
+
+  keep <- summary$gene %in% genes
+  if (!any(keep)) return(data.frame())
+
+  out <- summary[keep, , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}

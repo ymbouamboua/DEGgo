@@ -45,6 +45,8 @@ plot_go_terms(
 
 \item{color_values}{Named colors for Up and Down.}
 
+\item{palette}{Optional color palette used for GO-term visualization.}
+
 \item{size_range}{Point size range.}
 
 \item{style}{Theme style passed to \code{.deggo_theme()}.}

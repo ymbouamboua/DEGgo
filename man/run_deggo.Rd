@@ -48,6 +48,17 @@ run_deggo(
   min_count = 5,
   min_samples = 2,
   min_total = 10,
+  rhythmicity_analysis = FALSE,
+  rhythmicity_time_col = "time",
+  rhythmicity_group_col = NULL,
+  rhythmicity_assay = c("vst", "normalized", "log2_normalized", "raw"),
+  rhythmicity_methods = c("meta2d", "cosinor"),
+  rhythmicity_period_range = c(20, 28),
+  rhythmicity_cycle_length = 24,
+  rhythmicity_cycMethod = c("ARS", "JTK", "LS"),
+  cosinor_engine = c("auto", "package", "manual"),
+  rhythmicity_plots = TRUE,
+  rhythmicity_n_top_plots = 20,
   generate_report = TRUE,
   report_formats = "html",
   report_template = NULL,
@@ -110,6 +121,12 @@ run_deggo(
 
 \item{min_group_mean}{Minimum group mean expression.}
 
+\item{min_group_median}{Optional minimum median expression required in at
+least one comparison group during post-DE filtering.}
+
+\item{max_group_cv}{Optional maximum within-group coefficient of variation
+used during post-DE filtering.}
+
 \item{expr_filter_groups}{Grouping variables for expression filtering.}
 
 \item{clean_deg_tables}{Logical. Apply post-DEG expression cleaning.}
@@ -144,6 +161,35 @@ run_deggo(
 
 \item{min_total}{Minimum total count.}
 
+\item{rhythmicity_analysis}{Logical. Run MetaCycle + cosinor rhythmicity
+analysis on the fitted \code{dds} object (see \code{\link[=run_deggo_rhythmicity]{run_deggo_rhythmicity()}}).
+Disabled by default; requires a numeric time column in \code{metadata}.}
+
+\item{rhythmicity_time_col}{Metadata column with numeric time (e.g. ZT
+hours) used for rhythmicity analysis.}
+
+\item{rhythmicity_group_col}{Optional metadata column defining exactly
+two groups for the differential rhythmicity test.}
+
+\item{rhythmicity_assay}{Assay extracted from \code{dds} for rhythmicity
+analysis. One of \code{"vst"}, \code{"normalized"}, \code{"log2_normalized"}, \code{"raw"}.}
+
+\item{rhythmicity_methods}{Rhythmicity methods to run: \code{"meta2d"},
+\code{"cosinor"}, or both.}
+
+\item{rhythmicity_period_range}{MetaCycle period search window.}
+
+\item{rhythmicity_cycle_length}{Assumed period for the cosinor fit.}
+
+\item{rhythmicity_cycMethod}{MetaCycle methods to combine.}
+
+\item{cosinor_engine}{Cosinor fitting engine: \code{"auto"}, \code{"package"}
+(\code{cosinor}/\code{cosinor2}), or \code{"manual"} (dependency-free \code{lm()} fallback).}
+
+\item{rhythmicity_plots}{Logical. Generate rhythmicity diagnostic plots.}
+
+\item{rhythmicity_n_top_plots}{Number of top rhythmic genes to plot.}
+
 \item{generate_report}{Logical. Generate report.}
 
 \item{report_formats}{Report formats.}
@@ -159,6 +205,12 @@ run_deggo(
 \item{save_clean_inputs}{Logical. Save cleaned input tables.}
 
 \item{txtsize}{Base text size.}
+
+\item{heatmap_annotation_cols}{Character vector of metadata columns used as
+heatmap annotations, or \code{"auto"} for automatic selection.}
+
+\item{palette}{Optional color palette used by DEGgo plots. Can be a named
+DEGgo palette or a character vector of colors.}
 
 \item{seed}{Random seed.}
 }

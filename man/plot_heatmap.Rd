@@ -53,6 +53,9 @@ from \code{de_results$sig_deg_clean}.}
 
 \item{padj_cutoff}{Adjusted P-value cutoff.}
 
+\item{logfc_cutoff}{Absolute log2 fold-change cutoff used when selecting
+significant genes for the heatmap.}
+
 \item{main}{Heatmap title.}
 
 \item{output_dir}{Output directory.}
