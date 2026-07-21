@@ -120,17 +120,17 @@ results$summary
 
 pairwise_contrasts <- list(
   TreatmentA_vs_Control_Male = c(
-    "comparison_group",
+    "group",
     "TreatmentA_Male",
     "Control_Male"
   ),
   TreatmentA_vs_Control_Female = c(
-    "comparison_group",
+    "group",
     "TreatmentA_Female",
     "Control_Female"
   ),
   Male_vs_Female_Control = c(
-    "comparison_group",
+    "group",
     "Control_Male",
     "Control_Female"
   )
