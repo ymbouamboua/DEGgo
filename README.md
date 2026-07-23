@@ -118,8 +118,7 @@ implementation.
 
 ## Quick start
 
-The package includes a ready-to-use RNA-seq dataset derived from the
-Bioconductor **airway** experiment.
+The package includes a ready-to-use RNA-seq dataset derived from the Bioconductor **[airway](https://bioconductor.org/packages/airway/)** package (Himes *et al.*), providing a reproducible example for testing and learning the complete DEGgo workflow.
 
 ``` r
 counts <- read.delim(
