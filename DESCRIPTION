@@ -24,6 +24,7 @@ Imports:
     ggpubr,
     reshape2,
     grid,
+    scales,
     ggrepel,
     SummarizedExperiment,
     forcats,
@@ -44,6 +45,7 @@ Suggests:
     officer,
     flextable,
     png,
+    GEOquery,
     cosinor,
     cosinor2,
     testthat (>= 3.0.0)

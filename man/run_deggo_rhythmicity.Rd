@@ -10,22 +10,23 @@ run_deggo_rhythmicity(
   sample_col = "sample",
   time_col = "time",
   group_col = NULL,
-  assay = c("vst", "normalized", "log2_normalized", "raw"),
+  assay = c("vst", "raw", "normalized", "log2_normalized"),
   methods = c("meta2d", "cosinor"),
   period_range = c(20, 28),
   cycle_length = 24,
   cycMethod = c("ARS", "JTK", "LS"),
   padj_cutoff = 0.05,
   cosinor_engine = c("auto", "package", "manual"),
+  output_dir = "DEGgo_rhythmicity",
+  project_name = "DEGgo rhythmicity analysis",
+  generate_plots = TRUE,
+  n_top_plots = 20,
+  txtsize = 12,
+  seed = 4173,
   gene_annotation = NULL,
   gene_id_col = "gene_id",
   gene_symbol_col = NULL,
-  show_gene_id = FALSE,
-  output_dir = "DEGgo_rhythmicity_out",
-  project_name = NULL,
-  generate_plots = TRUE,
-  n_top_plots = 20,
-  seed = 4173,
+  show_gene_id = TRUE,
   verbose = TRUE
 )
 }
@@ -67,6 +68,18 @@ values include \code{"ARS"}, \code{"JTK"}, and \code{"LS"}.}
 to the manual \code{lm()} implementation. \code{"package"} requires the optional
 packages. \code{"manual"} always uses the internal \code{lm()} implementation.}
 
+\item{output_dir}{Output directory.}
+
+\item{project_name}{Optional project name.}
+
+\item{generate_plots}{Logical. Generate rhythmicity diagnostic plots.}
+
+\item{n_top_plots}{Number of top rhythmic genes to plot individually.}
+
+\item{txtsize}{Base text size.}
+
+\item{seed}{Random seed.}
+
 \item{gene_annotation}{Optional gene-annotation data frame used to map
 expression-matrix row identifiers to readable gene symbols.}
 
@@ -77,16 +90,6 @@ When \code{NULL}, common symbol-column names are detected automatically.}
 
 \item{show_gene_id}{Logical. Include the original gene identifier in
 individual rhythmicity plot titles.}
-
-\item{output_dir}{Output directory.}
-
-\item{project_name}{Optional project name.}
-
-\item{generate_plots}{Logical. Generate rhythmicity diagnostic plots.}
-
-\item{n_top_plots}{Number of top rhythmic genes to plot individually.}
-
-\item{seed}{Random seed.}
 
 \item{verbose}{Logical. Print progress messages.}
 }

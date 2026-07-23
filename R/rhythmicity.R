@@ -1,6 +1,6 @@
-# ============================================================ #
+# ======================================================= #===== #
 # DEGgo rhythmicity analysis (MetaCycle + cosinor)
-# ============================================================ #
+# ======================================================= #===== #
 #
 # Standalone module for detecting rhythmic (e.g. circadian) genes in
 # time-course expression data using MetaCycle (meta2d) and single-component
@@ -12,9 +12,9 @@
 # metadata.
 
 
-# ========================================================= #
+# ======================================================= #== #
 # CREATE RHYTHMICITY DIRECTORIES
-# ========================================================= #
+# ======================================================= #== #
 #' Create DEGgo rhythmicity output directories
 #' @keywords internal
 #' @noRd
@@ -29,9 +29,9 @@
 }
 
 
-# ========================================================= #
+# ======================================================= #== #
 # PREPARE RHYTHMICITY INPUT
-# ========================================================= #
+# ======================================================= #== #
 #' Prepare expression matrix and metadata for rhythmicity analysis
 #'
 #' Accepts either a plain genes x samples numeric matrix/data.frame, or a
@@ -46,76 +46,356 @@
     sample_col = "sample",
     time_col = "time",
     group_col = NULL,
-    assay = "vst"
+    assay = c(
+      "vst",
+      "raw",
+      "normalized",
+      "log2_normalized"
+    )
 ) {
 
-  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
+  assay <- match.arg(assay)
+
+  metadata <- as.data.frame(
+    metadata,
+    stringsAsFactors = FALSE
+  )
+
+  # ======================================================= #
+  # 1. Validate metadata
+  # ======================================================= #
 
   if (!sample_col %in% colnames(metadata)) {
-    stop("metadata must contain a '", sample_col, "' column.", call. = FALSE)
-  }
-
-  if (!time_col %in% colnames(metadata)) {
-    stop("metadata must contain a '", time_col, "' column.", call. = FALSE)
-  }
-
-  if (!is.numeric(metadata[[time_col]])) {
-    stop("metadata[['", time_col, "']] must be numeric (time, e.g. hours).", call. = FALSE)
-  }
-
-  if (!is.null(group_col) && !group_col %in% colnames(metadata)) {
-    stop("metadata must contain a '", group_col, "' column.", call. = FALSE)
-  }
-
-  is_dds <- inherits(expr, "DESeqDataSet")
-
-  if (is_dds) {
-
-    if (!requireNamespace("DESeq2", quietly = TRUE)) {
-      stop("Package 'DESeq2' is required to extract expression from a dds object.", call. = FALSE)
-    }
-
-    mat <- switch(
-      assay,
-      raw = DESeq2::counts(expr, normalized = FALSE),
-      normalized = DESeq2::counts(expr, normalized = TRUE),
-      log2_normalized = log2(DESeq2::counts(expr, normalized = TRUE) + 1),
-      vst = SummarizedExperiment::assay(DESeq2::vst(expr, blind = FALSE)),
-      stop("Unsupported assay: ", assay, call. = FALSE)
-    )
-
-  } else {
-    mat <- as.matrix(expr)
-  }
-
-  if (is.null(colnames(mat))) {
-    stop("Expression input must have column names matching sample IDs.", call. = FALSE)
-  }
-
-  common <- intersect(colnames(mat), metadata[[sample_col]])
-
-  if (length(common) < 4) {
     stop(
-      "At least 4 matched samples with time points are required ",
-      "for rhythmicity analysis (found ", length(common), ").",
+      "metadata must contain a '",
+      sample_col,
+      "' column.",
       call. = FALSE
     )
   }
 
-  metadata <- metadata[metadata[[sample_col]] %in% common, , drop = FALSE]
-  metadata <- metadata[order(metadata[[time_col]]), , drop = FALSE]
-  rownames(metadata) <- NULL
+  if (!time_col %in% colnames(metadata)) {
+    stop(
+      "metadata must contain a '",
+      time_col,
+      "' column.",
+      call. = FALSE
+    )
+  }
 
-  mat <- mat[, metadata[[sample_col]], drop = FALSE]
+  if (!is.numeric(metadata[[time_col]])) {
+    stop(
+      "metadata[['",
+      time_col,
+      "']] must be numeric, for example time in hours.",
+      call. = FALSE
+    )
+  }
+
+  if (
+    !is.null(group_col) &&
+    !group_col %in% colnames(metadata)
+  ) {
+    stop(
+      "metadata must contain a '",
+      group_col,
+      "' column.",
+      call. = FALSE
+    )
+  }
+
+  metadata[[sample_col]] <- as.character(
+    metadata[[sample_col]]
+  )
+
+  if (anyNA(metadata[[sample_col]])) {
+    stop(
+      "metadata[['",
+      sample_col,
+      "']] contains missing sample identifiers.",
+      call. = FALSE
+    )
+  }
+
+  if (anyDuplicated(metadata[[sample_col]])) {
+    duplicated_samples <- unique(
+      metadata[[sample_col]][
+        duplicated(metadata[[sample_col]])
+      ]
+    )
+
+    stop(
+      "metadata contains duplicated sample identifiers: ",
+      paste(
+        duplicated_samples,
+        collapse = ", "
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (anyNA(metadata[[time_col]])) {
+    stop(
+      "metadata[['",
+      time_col,
+      "']] contains missing time values.",
+      call. = FALSE
+    )
+  }
+
+  # ======================================================= #
+  # 2. Extract or validate expression matrix
+  # ======================================================= #
+
+  is_dds <- inherits(
+    expr,
+    "DESeqDataSet"
+  )
+
+  if (is_dds) {
+
+    if (!requireNamespace("DESeq2", quietly = TRUE)) {
+      stop(
+        "Package 'DESeq2' is required to extract expression ",
+        "from a DESeqDataSet object.",
+        call. = FALSE
+      )
+    }
+
+    if (!requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+      stop(
+        "Package 'SummarizedExperiment' is required to extract ",
+        "the VST assay.",
+        call. = FALSE
+      )
+    }
+
+    mat <- switch(
+      assay,
+
+      raw = DESeq2::counts(
+        expr,
+        normalized = FALSE
+      ),
+
+      normalized = DESeq2::counts(
+        expr,
+        normalized = TRUE
+      ),
+
+      log2_normalized = log2(
+        DESeq2::counts(
+          expr,
+          normalized = TRUE
+        ) + 1
+      ),
+
+      vst = SummarizedExperiment::assay(
+        DESeq2::vst(
+          expr,
+          blind = FALSE
+        )
+      )
+    )
+
+  } else {
+
+    mat <- as.matrix(expr)
+
+    if (!is.numeric(mat)) {
+      stop(
+        "For matrix input, expr must contain numeric expression values.",
+        call. = FALSE
+      )
+    }
+
+    if (assay == "raw") {
+
+      if (any(mat < 0, na.rm = TRUE)) {
+        stop(
+          "assay = 'raw' requires non-negative expression values.",
+          call. = FALSE
+        )
+      }
+
+      mat <- log2(
+        mat + 1
+      )
+
+    } else if (assay == "normalized") {
+
+      if (any(mat < 0, na.rm = TRUE)) {
+        stop(
+          "assay = 'normalized' requires non-negative expression values.",
+          call. = FALSE
+        )
+      }
+
+      mat <- log2(
+        mat + 1
+      )
+
+    } else if (assay == "log2_normalized") {
+
+      # Matrix is already log2 transformed.
+      mat <- mat
+
+    } else if (assay == "vst") {
+
+      # A plain matrix cannot be VST-transformed without a DESeqDataSet.
+      # It is therefore assumed to already contain transformed values.
+      warning(
+        "assay = 'vst' was used with a matrix input. ",
+        "The matrix is assumed to already contain VST-like or ",
+        "otherwise transformed expression values.",
+        call. = FALSE
+      )
+    }
+  }
+
+  # ======================================================= #
+  # 3. Validate expression matrix
+  # ======================================================= #
+
+  if (is.null(rownames(mat))) {
+    stop(
+      "Expression input must have gene identifiers as row names.",
+      call. = FALSE
+    )
+  }
+
+  if (is.null(colnames(mat))) {
+    stop(
+      "Expression input must have column names matching sample IDs.",
+      call. = FALSE
+    )
+  }
+
+  if (anyDuplicated(colnames(mat))) {
+    duplicated_samples <- unique(
+      colnames(mat)[
+        duplicated(colnames(mat))
+      ]
+    )
+
+    stop(
+      "Expression input contains duplicated sample names: ",
+      paste(
+        duplicated_samples,
+        collapse = ", "
+      ),
+      call. = FALSE
+    )
+  }
+
   storage.mode(mat) <- "double"
 
-  list(mat = mat, metadata = metadata)
+  if (any(!is.finite(mat), na.rm = TRUE)) {
+    stop(
+      "Expression matrix contains non-finite values.",
+      call. = FALSE
+    )
+  }
+
+  # ======================================================= #
+  # 4. Match expression and metadata samples
+  # ======================================================= #
+
+  common <- intersect(
+    colnames(mat),
+    metadata[[sample_col]]
+  )
+
+  if (length(common) < 4L) {
+    stop(
+      "At least 4 matched samples with time points are required ",
+      "for rhythmicity analysis; found ",
+      length(common),
+      ".",
+      call. = FALSE
+    )
+  }
+
+  missing_in_metadata <- setdiff(
+    colnames(mat),
+    metadata[[sample_col]]
+  )
+
+  missing_in_expression <- setdiff(
+    metadata[[sample_col]],
+    colnames(mat)
+  )
+
+  if (length(missing_in_metadata) > 0L) {
+    warning(
+      length(missing_in_metadata),
+      " expression sample(s) were not present in metadata and ",
+      "will be excluded.",
+      call. = FALSE
+    )
+  }
+
+  if (length(missing_in_expression) > 0L) {
+    warning(
+      length(missing_in_expression),
+      " metadata sample(s) were not present in the expression ",
+      "matrix and will be excluded.",
+      call. = FALSE
+    )
+  }
+
+  metadata <- metadata[
+    metadata[[sample_col]] %in% common,
+    ,
+    drop = FALSE
+  ]
+
+  metadata <- metadata[
+    order(
+      metadata[[time_col]],
+      metadata[[sample_col]]
+    ),
+    ,
+    drop = FALSE
+  ]
+
+  rownames(metadata) <- NULL
+
+  mat <- mat[
+    ,
+    metadata[[sample_col]],
+    drop = FALSE
+  ]
+
+  # ======================================================= #
+  # 5. Validate final correspondence
+  # ======================================================= #
+
+  if (!identical(
+    colnames(mat),
+    metadata[[sample_col]]
+  )) {
+    stop(
+      "Internal error: expression columns and metadata samples ",
+      "are not in the same order.",
+      call. = FALSE
+    )
+  }
+
+  list(
+    mat = mat,
+    metadata = metadata,
+    assay = assay,
+    n_genes = nrow(mat),
+    n_samples = ncol(mat)
+  )
 }
 
 
-# ========================================================= #
+
+# ======================================================= #== #
 # RUN METACYCLE
-# ========================================================= #
+# ======================================================= #== #
 #' Run MetaCycle (meta2d) rhythmicity detection
 #' @keywords internal
 #' @noRd
@@ -170,9 +450,9 @@
 }
 
 
-# ========================================================= #
+# ======================================================= #== #
 # MANUAL LM()-BASED COSINOR FALLBACK
-# ========================================================= #
+# ======================================================= #== #
 #' Fit a single-component cosinor model via lm(), without cosinor/cosinor2
 #'
 #' Fits `y ~ cos(2*pi*t/period) + sin(2*pi*t/period)` and back-transforms the
@@ -255,9 +535,9 @@
 }
 
 
-# ========================================================= #
+# ======================================================= #== #
 # RUN SINGLE-GENE COSINOR
-# ========================================================= #
+# ======================================================= #== #
 #' Run single-component cosinor regression per gene
 #'
 #' Uses `cosinor::cosinor.lm()` + `cosinor2::cosinor.detect()` when
@@ -337,9 +617,9 @@
 }
 
 
-# ========================================================= #
+# ======================================================= #== #
 # RUN COSINOR DIFFERENTIAL RHYTHMICITY (GROUP INTERACTION)
-# ========================================================= #
+# ======================================================= #== #
 #' Test differential rhythmicity between two groups via cosinor interaction
 #'
 #' Uses `cosinor::cosinor.lm()` with `amp.acro(group)` when `use_pkg = TRUE`,
@@ -401,9 +681,9 @@
 }
 
 
-# ========================================================= #
+# ======================================================= #== #
 # MERGE RHYTHMICITY RESULTS
-# ========================================================= #
+# ======================================================= #== #
 #' Merge MetaCycle, cosinor and differential-rhythmicity tables
 #' @keywords internal
 #' @noRd
@@ -462,9 +742,9 @@
 
 
 
-# ========================================================= #
+# ======================================================= #== #
 # RHYTHMICITY DIAGNOSTIC PLOTS
-# ========================================================= #
+# ======================================================= #== #
 
 #' Resolve readable gene labels
 #'
@@ -494,108 +774,189 @@
 
   gene_ids <- as.character(gene_ids)
 
-  labels <- stats::setNames(gene_ids, gene_ids)
-
-  symbol_candidates <- c(
-    "Gene",
-    "gene",
-    "feature",
-    "symbol",
-    "SYMBOL",
-    "gene_symbol",
-    "gene_name",
-    "external_gene_name"
+  labels <- stats::setNames(
+    gene_ids,
+    gene_ids
   )
 
-  # -------------------------------------------------------
-  # 1. Prefer symbol columns already present in summary
-  # -------------------------------------------------------
+  # ======================================================= #
+  # 1. Search the rhythmicity summary
+  # ======================================================= #
 
-  if (!is.null(summary) && nrow(summary)) {
+  if (!is.null(summary)) {
 
-    summary_symbol_cols <- intersect(
-      symbol_candidates,
-      setdiff(colnames(summary), "gene")
+    summary <- as.data.frame(
+      summary,
+      stringsAsFactors = FALSE
     )
 
-    if (length(summary_symbol_cols)) {
+    if (nrow(summary) > 0L) {
 
-      symbol_col <- summary_symbol_cols[1]
+      summary_id_candidates <- unique(
+        c(
+          "gene",
+          gene_id_col,
+          "gene_id",
+          "matrix_gene_id",
+          "feature",
+          "EnsemblID",
+          "ENSEMBL"
+        )
+      )
 
-      idx <- match(gene_ids, as.character(summary$gene))
-      values <- as.character(summary[[symbol_col]][idx])
+      summary_symbol_candidates <- unique(
+        c(
+          gene_symbol_col,
+          "gene_symbol",
+          "symbol",
+          "Gene",
+          "SYMBOL",
+          "gene_name",
+          "external_gene_name",
+          "feature_name"
+        )
+      )
 
-      valid <- !is.na(values) &
-        nzchar(trimws(values)) &
-        values != "NA"
+      summary_id_candidates <- summary_id_candidates[
+        !is.na(summary_id_candidates) &
+          nzchar(summary_id_candidates)
+      ]
 
-      labels[valid] <- values[valid]
+      summary_symbol_candidates <- summary_symbol_candidates[
+        !is.na(summary_symbol_candidates) &
+          nzchar(summary_symbol_candidates)
+      ]
+
+      summary_id_col <- intersect(
+        summary_id_candidates,
+        colnames(summary)
+      )
+
+      summary_symbol_col <- intersect(
+        summary_symbol_candidates,
+        colnames(summary)
+      )
+
+      if (
+        length(summary_id_col) > 0L &&
+        length(summary_symbol_col) > 0L
+      ) {
+
+        summary_id_col <- summary_id_col[1L]
+        summary_symbol_col <- summary_symbol_col[1L]
+
+        matched_symbols <- as.character(
+          summary[[summary_symbol_col]][
+            match(
+              gene_ids,
+              as.character(summary[[summary_id_col]])
+            )
+          ]
+        )
+
+        valid <- !is.na(matched_symbols) &
+          nzchar(trimws(matched_symbols)) &
+          matched_symbols != "NA"
+
+        labels[valid] <- matched_symbols[valid]
+      }
     }
   }
 
-  # -------------------------------------------------------
-  # 2. Use external annotation table
-  # -------------------------------------------------------
+  # ======================================================= #
+  # 2. Search the external annotation table
+  # ======================================================= #
 
-  if (!is.null(gene_annotation)) {
+  unresolved <- names(labels)[
+    is.na(labels) |
+      !nzchar(labels) |
+      labels == names(labels)
+  ]
+
+  if (
+    length(unresolved) > 0L &&
+    !is.null(gene_annotation)
+  ) {
 
     gene_annotation <- as.data.frame(
       gene_annotation,
       stringsAsFactors = FALSE
     )
 
-    if (!gene_id_col %in% colnames(gene_annotation)) {
-      stop(
-        "gene_annotation must contain the gene ID column '",
-        gene_id_col,
-        "'.",
-        call. = FALSE
-      )
-    }
+    if (nrow(gene_annotation) > 0L) {
 
-    if (is.null(gene_symbol_col)) {
-
-      available <- intersect(
-        symbol_candidates,
-        setdiff(colnames(gene_annotation), gene_id_col)
+      annotation_id_candidates <- unique(
+        c(
+          gene_id_col,
+          "matrix_gene_id",
+          "gene_id",
+          "gene",
+          "feature",
+          "EnsemblID",
+          "ENSEMBL"
+        )
       )
 
-      if (length(available)) {
-        gene_symbol_col <- available[1]
-      }
-    }
+      annotation_symbol_candidates <- unique(
+        c(
+          gene_symbol_col,
+          "gene_symbol",
+          "symbol",
+          "Gene",
+          "SYMBOL",
+          "gene_name",
+          "external_gene_name",
+          "feature_name"
+        )
+      )
 
-    if (
-      !is.null(gene_symbol_col) &&
-      gene_symbol_col %in% colnames(gene_annotation)
-    ) {
-
-      annotation <- gene_annotation[
-        !duplicated(gene_annotation[[gene_id_col]]),
-        c(gene_id_col, gene_symbol_col),
-        drop = FALSE
+      annotation_id_candidates <- annotation_id_candidates[
+        !is.na(annotation_id_candidates) &
+          nzchar(annotation_id_candidates)
       ]
 
-      idx <- match(
-        gene_ids,
-        as.character(annotation[[gene_id_col]])
+      annotation_symbol_candidates <- annotation_symbol_candidates[
+        !is.na(annotation_symbol_candidates) &
+          nzchar(annotation_symbol_candidates)
+      ]
+
+      annotation_id_col <- intersect(
+        annotation_id_candidates,
+        colnames(gene_annotation)
       )
 
-      values <- as.character(annotation[[gene_symbol_col]][idx])
+      annotation_symbol_col <- intersect(
+        annotation_symbol_candidates,
+        colnames(gene_annotation)
+      )
 
-      valid <- !is.na(values) &
-        nzchar(trimws(values)) &
-        values != "NA"
+      if (
+        length(annotation_id_col) > 0L &&
+        length(annotation_symbol_col) > 0L
+      ) {
 
-      labels[valid] <- values[valid]
+        annotation_id_col <- annotation_id_col[1L]
+        annotation_symbol_col <- annotation_symbol_col[1L]
+
+        matched_symbols <- as.character(
+          gene_annotation[[annotation_symbol_col]][
+            match(
+              unresolved,
+              as.character(
+                gene_annotation[[annotation_id_col]]
+              )
+            )
+          ]
+        )
+
+        valid <- !is.na(matched_symbols) &
+          nzchar(trimws(matched_symbols)) &
+          matched_symbols != "NA"
+
+        labels[unresolved[valid]] <- matched_symbols[valid]
+      }
     }
   }
-
-  # Clean labels
-  labels <- trimws(labels)
-
-  invalid <- is.na(labels) | !nzchar(labels) | labels == "NA"
-  labels[invalid] <- names(labels)[invalid]
 
   labels
 }
@@ -619,576 +980,102 @@
 }
 
 
-#' Generate rhythmicity diagnostic plots
-#'
-#' @param mat Numeric genes-by-samples expression matrix.
-#' @param metadata Sample metadata matched to the columns of `mat`.
-#' @param summary Combined rhythmicity results table.
-#' @param time_col Numeric time column in `metadata`.
-#' @param group_col Optional grouping column.
-#' @param cycle_length Assumed rhythm period in hours.
-#' @param output_dir Plot output directory.
-#' @param n_top Number of top-ranked genes to plot.
-#' @param txtsize Base text size.
-#' @param gene_annotation Optional gene annotation table.
-#' @param gene_id_col Gene-ID column in `gene_annotation`.
-#' @param gene_symbol_col Optional symbol column in `gene_annotation`.
-#' @param show_gene_id Logical. Include the Ensembl ID below the gene symbol.
-#' @param fit_full_cycle Logical. Draw fitted curves across a complete cycle.
-#'
-#' @return A named list of generated ggplot objects.
+
+#' Add gene symbols to a rhythmicity result table
 #'
 #' @keywords internal
 #' @noRd
-.deggo_rhythm_plots <- function(
-    mat,
-    metadata,
-    summary,
-    time_col,
-    group_col = NULL,
-    cycle_length = 24,
-    output_dir,
-    n_top = 20,
-    txtsize = 12,
+.deggo_add_rhythm_annotation <- function(
+    tab,
     gene_annotation = NULL,
     gene_id_col = "gene_id",
-    gene_symbol_col = NULL,
-    show_gene_id = TRUE,
-    fit_full_cycle = TRUE
+    gene_symbol_col = NULL
 ) {
 
-  dir.create(
-    output_dir,
-    recursive = TRUE,
-    showWarnings = FALSE
-  )
-
-  plots <- list()
-
-  if (is.null(summary) || !nrow(summary)) {
-    return(plots)
-  }
-
-  mat <- as.matrix(mat)
-  summary <- as.data.frame(summary, stringsAsFactors = FALSE)
-  metadata <- as.data.frame(metadata, stringsAsFactors = FALSE)
-
-  if (is.null(rownames(mat))) {
-    stop("mat must have gene identifiers as row names.", call. = FALSE)
-  }
-
-  if (!"gene" %in% colnames(summary)) {
-    stop("summary must contain a 'gene' column.", call. = FALSE)
-  }
-
-  if (!time_col %in% colnames(metadata)) {
-    stop(
-      "metadata does not contain time column '",
-      time_col,
-      "'.",
-      call. = FALSE
-    )
-  }
-
-  if (!is.numeric(metadata[[time_col]])) {
-    stop(
-      "metadata[['",
-      time_col,
-      "']] must be numeric.",
-      call. = FALSE
-    )
+  if (
+    is.null(tab) ||
+    !is.data.frame(tab) ||
+    nrow(tab) == 0L ||
+    is.null(gene_annotation) ||
+    is.null(gene_symbol_col)
+  ) {
+    return(tab)
   }
 
   if (
-    !is.null(group_col) &&
-    !group_col %in% colnames(metadata)
+    !gene_id_col %in% colnames(gene_annotation) ||
+    !gene_symbol_col %in% colnames(gene_annotation)
   ) {
-    stop(
-      "metadata does not contain group column '",
-      group_col,
-      "'.",
-      call. = FALSE
-    )
+    return(tab)
   }
 
-  # =======================================================
-  # Safe -log10 transformation
-  # =======================================================
-
-  safe_neglog10 <- function(x) {
-    x <- as.numeric(x)
-    x[x <= 0] <- .Machine$double.xmin
-    -log10(x)
-  }
-
-  # =======================================================
-  # 1. MetaCycle period distribution
-  # =======================================================
-
-  if ("metacycle_period" %in% colnames(summary)) {
-
-    period_data <- summary[
-      is.finite(summary$metacycle_period),
-      ,
-      drop = FALSE
-    ]
-
-    if (nrow(period_data)) {
-
-      p <- ggplot2::ggplot(
-        period_data,
-        ggplot2::aes(x = .data[["metacycle_period"]])
-      ) +
-        ggplot2::geom_histogram(
-          binwidth = 1,
-          boundary = 0,
-          na.rm = TRUE
-        ) +
-        ggplot2::labs(
-          title = "MetaCycle period distribution",
-          x = "Estimated period (hours)",
-          y = "Number of genes"
-        ) +
-        .deggo_theme(txtsize = txtsize)
-
-      ggplot2::ggsave(
-        filename = file.path(
-          output_dir,
-          "period_histogram.png"
-        ),
-        plot = p,
-        width = 6,
-        height = 4,
-        dpi = 300,
-        bg = "white"
-      )
-
-      plots$period_histogram <- p
-    }
-  }
-
-  # =======================================================
-  # 2. Phase distribution
-  # =======================================================
-
-  phase_col <- intersect(
-    c("metacycle_phase", "cosinor_phase"),
-    colnames(summary)
-  )
-
-  if (length(phase_col)) {
-
-    phase_col <- phase_col[1]
-
-    phase_data <- summary[
-      is.finite(summary[[phase_col]]),
-      ,
-      drop = FALSE
-    ]
-
-    if (nrow(phase_data)) {
-
-      p <- ggplot2::ggplot(
-        phase_data,
-        ggplot2::aes(x = .data[[phase_col]])
-      ) +
-        ggplot2::geom_histogram(
-          binwidth = 2,
-          boundary = 0,
-          na.rm = TRUE
-        ) +
-        ggplot2::scale_x_continuous(
-          limits = c(0, cycle_length),
-          breaks = seq(0, cycle_length, by = 4)
-        ) +
-        ggplot2::labs(
-          title = "Rhythmic phase distribution",
-          subtitle = paste("Phase source:", phase_col),
-          x = "Peak phase (hours)",
-          y = "Number of genes"
-        ) +
-        .deggo_theme(txtsize = txtsize)
-
-      ggplot2::ggsave(
-        filename = file.path(
-          output_dir,
-          "phase_histogram.png"
-        ),
-        plot = p,
-        width = 6,
-        height = 4,
-        dpi = 300,
-        bg = "white"
-      )
-
-      plots$phase_histogram <- p
-    }
-  }
-
-  # =======================================================
-  # 3. MetaCycle versus cosinor agreement
-  # =======================================================
-
-  if (
-    all(
-      c("metacycle_padj", "cosinor_padj") %in%
-      colnames(summary)
-    )
-  ) {
-
-    agreement_df <- summary
-
-    agreement_df$metacycle_score <- safe_neglog10(
-      agreement_df$metacycle_padj
-    )
-
-    agreement_df$cosinor_score <- safe_neglog10(
-      agreement_df$cosinor_padj
-    )
-
-    agreement_df <- agreement_df[
-      is.finite(agreement_df$metacycle_score) &
-        is.finite(agreement_df$cosinor_score),
-      ,
-      drop = FALSE
-    ]
-
-    if (nrow(agreement_df)) {
-
-      threshold <- -log10(0.05)
-
-      p <- ggplot2::ggplot(
-        agreement_df,
-        ggplot2::aes(
-          x = .data[["metacycle_score"]],
-          y = .data[["cosinor_score"]]
-        )
-      ) +
-        ggplot2::geom_point(
-          alpha = 0.5,
-          na.rm = TRUE
-        ) +
-        ggplot2::geom_hline(
-          yintercept = threshold,
-          linetype = "dashed"
-        ) +
-        ggplot2::geom_vline(
-          xintercept = threshold,
-          linetype = "dashed"
-        ) +
-        ggplot2::labs(
-          title = "MetaCycle versus cosinor agreement",
-          x = expression(-log[10]("MetaCycle adjusted p-value")),
-          y = expression(-log[10]("Cosinor adjusted p-value"))
-        ) +
-        .deggo_theme(txtsize = txtsize)
-
-      ggplot2::ggsave(
-        filename = file.path(
-          output_dir,
-          "metacycle_vs_cosinor.png"
-        ),
-        plot = p,
-        width = 6,
-        height = 6,
-        dpi = 300,
-        bg = "white"
-      )
-
-      plots$agreement <- p
-    }
-  }
-
-  # =======================================================
-  # 4. Select top rhythmic genes
-  # =======================================================
-
-  rank_candidates <- intersect(
+  annotation_map <- gene_annotation[
+    ,
     c(
-      "metacycle_padj",
-      "cosinor_padj",
-      "metacycle_pvalue",
-      "cosinor_pvalue"
+      gene_id_col,
+      gene_symbol_col
     ),
-    colnames(summary)
+    drop = FALSE
+  ]
+
+  colnames(annotation_map) <- c(
+    "gene",
+    "gene_symbol"
   )
 
-  ranked_summary <- summary
-
-  if (length(rank_candidates)) {
-
-    rank_col <- rank_candidates[1]
-
-    ranked_summary <- ranked_summary[
-      order(
-        ranked_summary[[rank_col]],
-        na.last = TRUE
-      ),
-      ,
-      drop = FALSE
-    ]
-  }
-
-  top_genes <- unique(
-    utils::head(
-      as.character(ranked_summary$gene),
-      n_top
-    )
+  annotation_map$gene <- as.character(
+    annotation_map$gene
   )
 
-  top_genes <- intersect(top_genes, rownames(mat))
-
-  if (!length(top_genes)) {
-    return(plots)
-  }
-
-  # Resolve symbol labels
-  gene_labels <- .deggo_rhythm_gene_labels(
-    gene_ids = top_genes,
-    summary = summary,
-    gene_annotation = gene_annotation,
-    gene_id_col = gene_id_col,
-    gene_symbol_col = gene_symbol_col
+  annotation_map$gene_symbol <- as.character(
+    annotation_map$gene_symbol
   )
 
-  # =======================================================
-  # 5. Expression and fitted-curve plots
-  # =======================================================
+  annotation_map <- annotation_map[
+    !is.na(annotation_map$gene) &
+      nzchar(trimws(annotation_map$gene)),
+    ,
+    drop = FALSE
+  ]
 
-  time_vec <- metadata[[time_col]]
+  annotation_map <- annotation_map[
+    !duplicated(annotation_map$gene),
+    ,
+    drop = FALSE
+  ]
 
-  if (isTRUE(fit_full_cycle)) {
-    time_grid <- seq(
-      0,
-      cycle_length,
-      length.out = 300
-    )
-  } else {
-    time_grid <- seq(
-      min(time_vec, na.rm = TRUE),
-      max(time_vec, na.rm = TRUE),
-      length.out = 300
-    )
-  }
+  original_gene_order <- as.character(
+    tab$gene
+  )
 
-  curve_plots <- list()
+  out <- merge(
+    tab,
+    annotation_map,
+    by = "gene",
+    all.x = TRUE,
+    sort = FALSE
+  )
 
-  for (g in top_genes) {
+  out <- out[
+    match(
+      original_gene_order,
+      out$gene
+    ),
+    ,
+    drop = FALSE
+  ]
 
-    symbol <- unname(gene_labels[g])
+  rownames(out) <- NULL
 
-    if (is.na(symbol) || !nzchar(symbol)) {
-      symbol <- g
-    }
-
-    df <- data.frame(
-      sample = colnames(mat),
-      time = time_vec,
-      expression = as.numeric(mat[g, ]),
-      stringsAsFactors = FALSE
-    )
-
-    if (!is.null(group_col)) {
-      df$group <- factor(metadata[[group_col]])
-    }
-
-    result_row <- summary[
-      as.character(summary$gene) == g,
-      ,
-      drop = FALSE
-    ]
-
-    fit_df <- NULL
-
-    required_fit_cols <- c(
-      "cosinor_mesor",
-      "cosinor_amplitude",
-      "cosinor_acrophase"
-    )
-
-    can_fit <- nrow(result_row) &&
-      all(required_fit_cols %in% colnames(result_row)) &&
-      all(
-        is.finite(
-          as.numeric(
-            result_row[1, required_fit_cols]
-          )
-        )
-      )
-
-    if (can_fit) {
-
-      mesor <- as.numeric(result_row$cosinor_mesor[1])
-      amplitude <- as.numeric(result_row$cosinor_amplitude[1])
-      acrophase <- as.numeric(result_row$cosinor_acrophase[1])
-
-      fit_df <- data.frame(
-        time = time_grid,
-        fitted = mesor +
-          amplitude *
-          cos(
-            2 * pi * time_grid / cycle_length -
-              acrophase
-          )
-      )
-    }
-
-    # -----------------------------------------------------
-    # Plot title and statistical subtitle
-    # -----------------------------------------------------
-
-    plot_title <- symbol
-
-    if (
-      isTRUE(show_gene_id) &&
-      !identical(symbol, g)
-    ) {
-      plot_title <- paste0(symbol, " (", g, ")")
-    }
-
-    subtitle_parts <- character()
-
-    if (
-      nrow(result_row) &&
-      "cosinor_padj" %in% colnames(result_row)
-    ) {
-      subtitle_parts <- c(
-        subtitle_parts,
-        paste0(
-          "Cosinor FDR = ",
-          .deggo_rhythm_format_p(
-            result_row$cosinor_padj[1]
-          )
-        )
-      )
-    }
-
-    if (
-      nrow(result_row) &&
-      "metacycle_padj" %in% colnames(result_row)
-    ) {
-      subtitle_parts <- c(
-        subtitle_parts,
-        paste0(
-          "MetaCycle FDR = ",
-          .deggo_rhythm_format_p(
-            result_row$metacycle_padj[1]
-          )
-        )
-      )
-    }
-
-    if (
-      nrow(result_row) &&
-      "cosinor_phase" %in% colnames(result_row) &&
-      is.finite(result_row$cosinor_phase[1])
-    ) {
-      subtitle_parts <- c(
-        subtitle_parts,
-        paste0(
-          "Peak = ZT",
-          formatC(
-            result_row$cosinor_phase[1],
-            format = "f",
-            digits = 1
-          )
-        )
-      )
-    }
-
-    plot_subtitle <- if (length(subtitle_parts)) {
-      paste(subtitle_parts, collapse = " | ")
-    } else {
-      NULL
-    }
-
-    # -----------------------------------------------------
-    # Build plot
-    # -----------------------------------------------------
-
-    p <- ggplot2::ggplot(
-      df,
-      ggplot2::aes(
-        x = .data[["time"]],
-        y = .data[["expression"]]
-      )
-    )
-
-    if (!is.null(group_col)) {
-      p <- p +
-        ggplot2::geom_point(
-          ggplot2::aes(
-            color = .data[["group"]]
-          ),
-          size = 2
-        )
-    } else {
-      p <- p +
-        ggplot2::geom_point(size = 2)
-    }
-
-    if (!is.null(fit_df)) {
-      p <- p +
-        ggplot2::geom_line(
-          data = fit_df,
-          mapping = ggplot2::aes(
-            x = .data[["time"]],
-            y = .data[["fitted"]]
-          ),
-          inherit.aes = FALSE,
-          linewidth = 0.7
-        )
-    }
-
-    p <- p +
-      ggplot2::scale_x_continuous(
-        limits = c(0, cycle_length),
-        breaks = seq(0, cycle_length, by = 4),
-        minor_breaks = NULL
-      ) +
-      ggplot2::labs(
-        title = plot_title,
-        subtitle = plot_subtitle,
-        x = "Zeitgeber time (hours)",
-        y = "VST expression",
-        color = if (!is.null(group_col)) group_col else NULL
-      ) +
-      .deggo_theme(
-        txtsize = txtsize,
-        x.ang = 0
-      )
-
-    safe_symbol <- make.names(symbol)
-
-    filename <- paste0(
-      "gene_",
-      safe_symbol,
-      "_",
-      make.names(g),
-      "_fit.png"
-    )
-
-    ggplot2::ggsave(
-      filename = file.path(output_dir, filename),
-      plot = p,
-      width = 6.5,
-      height = 4.5,
-      dpi = 300,
-      bg = "white"
-    )
-
-    curve_plots[[symbol]] <- p
-  }
-
-  plots$gene_curves <- curve_plots
-  plots
+  out
 }
 
 
 
-# ========================================================= #
+
+# ======================================================= #== #
 # RUN DEGGO RHYTHMICITY (main entry point)
-# ========================================================= #
+# ======================================================= #== #
 
 #' Run DEGgo rhythmicity (circadian) analysis
 #'
@@ -1236,6 +1123,7 @@
 #' @param project_name Optional project name.
 #' @param generate_plots Logical. Generate rhythmicity diagnostic plots.
 #' @param n_top_plots Number of top rhythmic genes to plot individually.
+#' @param txtsize Base text size.
 #' @param seed Random seed.
 #' @param verbose Logical. Print progress messages.
 #'
@@ -1250,114 +1138,63 @@ run_deggo_rhythmicity <- function(
     sample_col = "sample",
     time_col = "time",
     group_col = NULL,
-    assay = c("vst", "normalized", "log2_normalized", "raw"),
-    methods = c("meta2d", "cosinor"),
-    period_range = c(20, 28),
+    assay = c(
+      "vst",
+      "raw",
+      "normalized",
+      "log2_normalized"
+    ),
+    methods = c(
+      "meta2d",
+      "cosinor"
+    ),
+    period_range = c(
+      20,
+      28
+    ),
     cycle_length = 24,
-    cycMethod = c("ARS", "JTK", "LS"),
+    cycMethod = c(
+      "ARS",
+      "JTK",
+      "LS"
+    ),
     padj_cutoff = 0.05,
-    cosinor_engine = c("auto", "package", "manual"),
+    cosinor_engine = c(
+      "auto",
+      "package",
+      "manual"
+    ),
+    output_dir = "DEGgo_rhythmicity",
+    project_name = "DEGgo rhythmicity analysis",
+    generate_plots = TRUE,
+    n_top_plots = 20,
+    txtsize = 12,
+    seed = 4173,
     gene_annotation = NULL,
     gene_id_col = "gene_id",
     gene_symbol_col = NULL,
-    show_gene_id = FALSE,
-    output_dir = "DEGgo_rhythmicity_out",
-    project_name = NULL,
-    generate_plots = TRUE,
-    n_top_plots = 20,
-    seed = 4173,
+    show_gene_id = TRUE,
     verbose = TRUE
 ) {
-
-  # ------------------------------------------------------- #
-  # Argument validation
-  # ------------------------------------------------------- #
 
   set.seed(seed)
 
   assay <- match.arg(assay)
 
+  cosinor_engine <- match.arg(
+    cosinor_engine
+  )
+
   methods <- match.arg(
     methods,
-    choices = c("meta2d", "cosinor"),
+    choices = c(
+      "meta2d",
+      "cosinor"
+    ),
     several.ok = TRUE
   )
 
   methods <- unique(methods)
-
-  cosinor_engine <- match.arg(cosinor_engine)
-
-  if (
-    !is.numeric(period_range) ||
-    length(period_range) != 2L ||
-    anyNA(period_range) ||
-    any(!is.finite(period_range)) ||
-    period_range[1] <= 0 ||
-    period_range[2] <= period_range[1]
-  ) {
-    stop(
-      "'period_range' must be a numeric vector of length 2 with ",
-      "0 < period_range[1] < period_range[2].",
-      call. = FALSE
-    )
-  }
-
-  if (
-    !is.numeric(cycle_length) ||
-    length(cycle_length) != 1L ||
-    is.na(cycle_length) ||
-    !is.finite(cycle_length) ||
-    cycle_length <= 0
-  ) {
-    stop(
-      "'cycle_length' must be one positive finite numeric value.",
-      call. = FALSE
-    )
-  }
-
-  if (
-    !is.numeric(padj_cutoff) ||
-    length(padj_cutoff) != 1L ||
-    is.na(padj_cutoff) ||
-    padj_cutoff <= 0 ||
-    padj_cutoff >= 1
-  ) {
-    stop(
-      "'padj_cutoff' must be a single numeric value between 0 and 1.",
-      call. = FALSE
-    )
-  }
-
-  if (
-    !is.numeric(n_top_plots) ||
-    length(n_top_plots) != 1L ||
-    is.na(n_top_plots) ||
-    n_top_plots < 0
-  ) {
-    stop(
-      "'n_top_plots' must be a non-negative numeric value.",
-      call. = FALSE
-    )
-  }
-
-  n_top_plots <- as.integer(n_top_plots)
-
-  allowed_cyc_methods <- c("ARS", "JTK", "LS")
-
-  if (
-    !is.character(cycMethod) ||
-    !length(cycMethod) ||
-    any(!cycMethod %in% allowed_cyc_methods)
-  ) {
-    stop(
-      "'cycMethod' must contain one or more of: ",
-      paste(allowed_cyc_methods, collapse = ", "),
-      ".",
-      call. = FALSE
-    )
-  }
-
-  cycMethod <- unique(cycMethod)
 
   log <- .deggo_msg(
     verbose = verbose,
@@ -1371,9 +1208,144 @@ run_deggo_rhythmicity <- function(
 
   t_start <- Sys.time()
 
-  # ------------------------------------------------------- #
-  # Validate optional annotation
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 1. Validate arguments
+  # ======================================================= #
+
+  if (
+    !is.numeric(period_range) ||
+    length(period_range) != 2L ||
+    anyNA(period_range) ||
+    any(!is.finite(period_range)) ||
+    period_range[1L] <= 0 ||
+    period_range[2L] <= period_range[1L]
+  ) {
+    stop(
+      "'period_range' must contain two finite values with ",
+      "0 < minimum < maximum.",
+      call. = FALSE
+    )
+  }
+
+  if (
+    !is.numeric(cycle_length) ||
+    length(cycle_length) != 1L ||
+    is.na(cycle_length) ||
+    !is.finite(cycle_length) ||
+    cycle_length <= 0
+  ) {
+    stop(
+      "'cycle_length' must be one positive finite value.",
+      call. = FALSE
+    )
+  }
+
+  if (
+    !is.numeric(padj_cutoff) ||
+    length(padj_cutoff) != 1L ||
+    is.na(padj_cutoff) ||
+    padj_cutoff <= 0 ||
+    padj_cutoff >= 1
+  ) {
+    stop(
+      "'padj_cutoff' must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  if (
+    !is.numeric(n_top_plots) ||
+    length(n_top_plots) != 1L ||
+    is.na(n_top_plots) ||
+    n_top_plots < 0
+  ) {
+    stop(
+      "'n_top_plots' must be a non-negative number.",
+      call. = FALSE
+    )
+  }
+
+  n_top_plots <- as.integer(
+    n_top_plots
+  )
+
+  allowed_cyc_methods <- c(
+    "ARS",
+    "JTK",
+    "LS"
+  )
+
+  if (
+    !is.character(cycMethod) ||
+    !length(cycMethod) ||
+    any(!cycMethod %in% allowed_cyc_methods)
+  ) {
+    stop(
+      "'cycMethod' must contain one or more of: ",
+      paste(
+        allowed_cyc_methods,
+        collapse = ", "
+      ),
+      ".",
+      call. = FALSE
+    )
+  }
+
+  cycMethod <- unique(cycMethod)
+
+  # ======================================================= #
+  # 2. Prepare expression and metadata once
+  # ======================================================= #
+
+  prepared <- .prepare_rhythm_input(
+    expr = expr,
+    metadata = metadata,
+    sample_col = sample_col,
+    time_col = time_col,
+    group_col = group_col,
+    assay = assay
+  )
+
+  mat <- prepared$mat
+  md <- prepared$metadata
+
+  if (anyDuplicated(rownames(mat))) {
+    stop(
+      "The prepared expression matrix contains duplicated gene IDs.",
+      call. = FALSE
+    )
+  }
+
+  log(
+    paste0(
+      nrow(mat),
+      " genes x ",
+      ncol(mat),
+      " samples prepared for rhythmicity analysis."
+    ),
+    type = "info"
+  )
+
+  time_values <- sort(
+    unique(md[[time_col]])
+  )
+
+  log(
+    paste0(
+      "Time points: ",
+      paste(
+        time_values,
+        collapse = ", "
+      )
+    ),
+    type = "info"
+  )
+
+  # ======================================================= #
+  # 3. Validate gene annotation
+  # ======================================================= #
+
+  detected_symbol_col <- gene_symbol_col
 
   if (!is.null(gene_annotation)) {
 
@@ -1384,7 +1356,7 @@ run_deggo_rhythmicity <- function(
 
     if (!gene_id_col %in% colnames(gene_annotation)) {
       stop(
-        "gene_annotation must contain the gene ID column '",
+        "gene_annotation must contain ID column '",
         gene_id_col,
         "'.",
         call. = FALSE
@@ -1397,45 +1369,103 @@ run_deggo_rhythmicity <- function(
 
     gene_annotation <- gene_annotation[
       !is.na(gene_annotation[[gene_id_col]]) &
-        nzchar(trimws(gene_annotation[[gene_id_col]])),
+        nzchar(
+          trimws(
+            gene_annotation[[gene_id_col]]
+          )
+        ),
       ,
       drop = FALSE
     ]
 
-    gene_annotation <- gene_annotation[
-      !duplicated(gene_annotation[[gene_id_col]]),
-      ,
-      drop = FALSE
-    ]
+    if (is.null(detected_symbol_col)) {
 
-    if (!is.null(gene_symbol_col)) {
+      symbol_candidates <- c(
+        "symbol",
+        "gene_symbol",
+        "Gene",
+        "SYMBOL",
+        "gene_name",
+        "external_gene_name",
+        "feature"
+      )
 
-      if (!gene_symbol_col %in% colnames(gene_annotation)) {
-        stop(
-          "gene_annotation does not contain gene-symbol column '",
-          gene_symbol_col,
-          "'.",
-          call. = FALSE
+      available_symbol_cols <- intersect(
+        symbol_candidates,
+        setdiff(
+          colnames(gene_annotation),
+          gene_id_col
         )
-      }
+      )
 
-      gene_annotation[[gene_symbol_col]] <- as.character(
-        gene_annotation[[gene_symbol_col]]
+      if (length(available_symbol_cols) > 0L) {
+        detected_symbol_col <- available_symbol_cols[1L]
+      }
+    }
+
+    if (
+      !is.null(detected_symbol_col) &&
+      !detected_symbol_col %in%
+      colnames(gene_annotation)
+    ) {
+      stop(
+        "gene_annotation does not contain symbol column '",
+        detected_symbol_col,
+        "'.",
+        call. = FALSE
       )
     }
+
+    if (!is.null(detected_symbol_col)) {
+      gene_annotation[[detected_symbol_col]] <- as.character(
+        gene_annotation[[detected_symbol_col]]
+      )
+    }
+
+    if (!is.null(detected_symbol_col)) {
+
+      valid_symbol <- !is.na(
+        gene_annotation[[detected_symbol_col]]
+      ) &
+        nzchar(
+          trimws(
+            gene_annotation[[detected_symbol_col]]
+          )
+        )
+
+      annotation_order <- order(
+        !valid_symbol
+      )
+
+      gene_annotation <- gene_annotation[
+        annotation_order,
+        ,
+        drop = FALSE
+      ]
+    }
+
+    gene_annotation <- gene_annotation[
+      !duplicated(
+        gene_annotation[[gene_id_col]]
+      ),
+      ,
+      drop = FALSE
+    ]
   }
 
-  # ------------------------------------------------------- #
-  # Dependency checks
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 4. Dependencies and cosinor engine
+  # ======================================================= #
 
   if (
     "meta2d" %in% methods &&
-    !requireNamespace("MetaCycle", quietly = TRUE)
+    !requireNamespace(
+      "MetaCycle",
+      quietly = TRUE
+    )
   ) {
     stop(
-      "Package 'MetaCycle' is required for meta2d-based rhythmicity ",
-      "analysis. Install it with install.packages('MetaCycle').",
+      "Package 'MetaCycle' is required for MetaCycle analysis.",
       call. = FALSE
     )
   }
@@ -1444,17 +1474,24 @@ run_deggo_rhythmicity <- function(
 
   if ("cosinor" %in% methods) {
 
-    pkg_ok <- requireNamespace("cosinor", quietly = TRUE) &&
-      requireNamespace("cosinor2", quietly = TRUE)
+    package_engine_available <-
+      requireNamespace(
+        "cosinor",
+        quietly = TRUE
+      ) &&
+      requireNamespace(
+        "cosinor2",
+        quietly = TRUE
+      )
 
     use_cosinor_pkg <- switch(
       cosinor_engine,
 
       package = {
-        if (!pkg_ok) {
+        if (!package_engine_available) {
           stop(
-            "cosinor_engine = 'package' requires both 'cosinor' and ",
-            "'cosinor2'. Install them or use cosinor_engine = 'manual'.",
+            "cosinor_engine = 'package' requires packages ",
+            "'cosinor' and 'cosinor2'.",
             call. = FALSE
           )
         }
@@ -1464,7 +1501,7 @@ run_deggo_rhythmicity <- function(
 
       manual = FALSE,
 
-      auto = pkg_ok
+      auto = package_engine_available
     )
 
     if (isTRUE(use_cosinor_pkg)) {
@@ -1480,61 +1517,17 @@ run_deggo_rhythmicity <- function(
     }
   }
 
-  # ------------------------------------------------------- #
-  # Prepare output directories and inputs
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 5. Output directories
+  # ======================================================= #
 
-  dirs <- .deggo_rhythm_dirs(output_dir)
-
-  prepped <- .prepare_rhythm_input(
-    expr = expr,
-    metadata = metadata,
-    sample_col = sample_col,
-    time_col = time_col,
-    group_col = group_col,
-    assay = assay
+  dirs <- .deggo_rhythm_dirs(
+    output_dir
   )
 
-  mat <- prepped$mat
-  md <- prepped$metadata
-
-  if (is.null(rownames(mat))) {
-    stop(
-      "The prepared expression matrix must contain gene identifiers as row names.",
-      call. = FALSE
-    )
-  }
-
-  if (anyDuplicated(rownames(mat))) {
-    stop(
-      "The prepared expression matrix contains duplicated gene identifiers.",
-      call. = FALSE
-    )
-  }
-
-  log(
-    paste0(
-      nrow(mat),
-      " genes x ",
-      ncol(mat),
-      " samples prepared for rhythmicity analysis."
-    ),
-    type = "info"
-  )
-
-  time_values <- sort(unique(md[[time_col]]))
-
-  log(
-    paste0(
-      "Time points: ",
-      paste(time_values, collapse = ", ")
-    ),
-    type = "info"
-  )
-
-  # ------------------------------------------------------- #
-  # Run MetaCycle
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 6. MetaCycle
+  # ======================================================= #
 
   meta_res <- NULL
 
@@ -1549,8 +1542,8 @@ run_deggo_rhythmicity <- function(
       mat = mat,
       metadata = md,
       time_col = time_col,
-      minper = period_range[1],
-      maxper = period_range[2],
+      minper = period_range[1L],
+      maxper = period_range[2L],
       cycMethod = cycMethod,
       log = log
     )
@@ -1563,9 +1556,9 @@ run_deggo_rhythmicity <- function(
     }
   }
 
-  # ------------------------------------------------------- #
-  # Run cosinor analyses
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 7. Cosinor
+  # ======================================================= #
 
   cos_res <- NULL
   diff_res <- NULL
@@ -1588,20 +1581,28 @@ run_deggo_rhythmicity <- function(
 
     if (!is.null(group_col)) {
 
-      group_values <- as.character(md[[group_col]])
+      group_values <- as.character(
+        md[[group_col]]
+      )
+
       group_values <- group_values[
         !is.na(group_values) &
           nzchar(trimws(group_values))
       ]
 
-      grp_levels <- unique(group_values)
+      group_levels <- unique(
+        group_values
+      )
 
-      if (length(grp_levels) == 2L) {
+      if (length(group_levels) == 2L) {
 
         log(
           paste0(
             "Testing differential rhythmicity: ",
-            paste(grp_levels, collapse = " vs ")
+            paste(
+              group_levels,
+              collapse = " vs "
+            )
           ),
           type = "step"
         )
@@ -1620,11 +1621,11 @@ run_deggo_rhythmicity <- function(
 
         log(
           paste0(
-            "Skipping differential rhythmicity test: '",
+            "Differential rhythmicity skipped: '",
             group_col,
-            "' has ",
-            length(grp_levels),
-            " non-missing levels; exactly 2 are required."
+            "' contains ",
+            length(group_levels),
+            " levels; exactly two are required."
           ),
           type = "warn"
         )
@@ -1632,9 +1633,9 @@ run_deggo_rhythmicity <- function(
     }
   }
 
-  # ------------------------------------------------------- #
-  # Merge results
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 8. Merge method-specific results
+  # ======================================================= #
 
   merged <- .merge_rhythm_results(
     meta_res = meta_res,
@@ -1643,240 +1644,248 @@ run_deggo_rhythmicity <- function(
     padj_cutoff = padj_cutoff
   )
 
-  # ------------------------------------------------------- #
-  # Add gene symbols to result tables
-  # ------------------------------------------------------- #
+  if (!is.data.frame(merged)) {
+    merged <- as.data.frame(
+      merged,
+      stringsAsFactors = FALSE
+    )
+  }
 
-  detected_symbol_col <- gene_symbol_col
+  # ======================================================= #
+  # 9. Add gene symbols
+  # ======================================================= #
 
-  if (
-    !is.null(gene_annotation) &&
-    is.null(detected_symbol_col)
+  meta_res <- .deggo_add_rhythm_annotation(
+    tab = meta_res,
+    gene_annotation = gene_annotation,
+    gene_id_col = gene_id_col,
+    gene_symbol_col = detected_symbol_col
+  )
+
+  cos_res <- .deggo_add_rhythm_annotation(
+    tab = cos_res,
+    gene_annotation = gene_annotation,
+    gene_id_col = gene_id_col,
+    gene_symbol_col = detected_symbol_col
+  )
+
+  diff_res <- .deggo_add_rhythm_annotation(
+    tab = diff_res,
+    gene_annotation = gene_annotation,
+    gene_id_col = gene_id_col,
+    gene_symbol_col = detected_symbol_col
+  )
+
+  merged <- .deggo_add_rhythm_annotation(
+    tab = merged,
+    gene_annotation = gene_annotation,
+    gene_id_col = gene_id_col,
+    gene_symbol_col = detected_symbol_col
+  )
+
+  # ======================================================= #
+  # 10. Write result tables
+  # ======================================================= #
+
+  write_result <- function(
+    object,
+    filename
   ) {
 
-    symbol_candidates <- c(
-      "Gene",
-      "feature",
-      "symbol",
-      "SYMBOL",
-      "gene_symbol",
-      "gene_name",
-      "external_gene_name"
-    )
-
-    available_symbol_cols <- intersect(
-      symbol_candidates,
-      setdiff(colnames(gene_annotation), gene_id_col)
-    )
-
-    if (length(available_symbol_cols)) {
-      detected_symbol_col <- available_symbol_cols[1]
-    }
-  }
-
-  add_annotation <- function(tab) {
-
     if (
-      is.null(tab) ||
-      !nrow(tab) ||
-      is.null(gene_annotation) ||
-      is.null(detected_symbol_col)
+      !is.null(object) &&
+      is.data.frame(object) &&
+      nrow(object) > 0L
     ) {
-      return(tab)
-    }
-
-    annotation_map <- gene_annotation[
-      ,
-      c(gene_id_col, detected_symbol_col),
-      drop = FALSE
-    ]
-
-    colnames(annotation_map) <- c(
-      "gene",
-      "gene_symbol"
-    )
-
-    annotation_map$gene <- as.character(
-      annotation_map$gene
-    )
-
-    annotation_map$gene_symbol <- as.character(
-      annotation_map$gene_symbol
-    )
-
-    annotation_map <- annotation_map[
-      !duplicated(annotation_map$gene),
-      ,
-      drop = FALSE
-    ]
-
-    out <- merge(
-      annotation_map,
-      tab,
-      by = "gene",
-      all.y = TRUE,
-      sort = FALSE
-    )
-
-    if ("gene" %in% colnames(tab)) {
-      original_order <- match(
-        as.character(tab$gene),
-        as.character(out$gene)
+      utils::write.table(
+        object,
+        file.path(
+          dirs$results,
+          filename
+        ),
+        sep = "\t",
+        quote = FALSE,
+        row.names = FALSE
       )
-
-      if (all(!is.na(original_order))) {
-        out <- out[original_order, , drop = FALSE]
-      }
     }
-
-    rownames(out) <- NULL
-    out
   }
 
-  meta_res <- add_annotation(meta_res)
-  cos_res <- add_annotation(cos_res)
-  diff_res <- add_annotation(diff_res)
-  merged <- add_annotation(merged)
+  write_result(
+    meta_res,
+    "metacycle_results.tsv"
+  )
 
-  # ------------------------------------------------------- #
-  # Write result tables
-  # ------------------------------------------------------- #
+  write_result(
+    cos_res,
+    "cosinor_results.tsv"
+  )
 
-  if (!is.null(meta_res) && nrow(meta_res)) {
-    utils::write.table(
-      meta_res,
-      file.path(
-        dirs$results,
-        "metacycle_results.tsv"
-      ),
-      sep = "\t",
-      quote = FALSE,
-      row.names = FALSE
-    )
-  }
+  write_result(
+    diff_res,
+    "cosinor_differential_rhythmicity.tsv"
+  )
 
-  if (!is.null(cos_res) && nrow(cos_res)) {
-    utils::write.table(
-      cos_res,
-      file.path(
-        dirs$results,
-        "cosinor_results.tsv"
-      ),
-      sep = "\t",
-      quote = FALSE,
-      row.names = FALSE
-    )
-  }
+  write_result(
+    merged,
+    "rhythmicity_summary.tsv"
+  )
 
-  if (!is.null(diff_res) && nrow(diff_res)) {
-    utils::write.table(
-      diff_res,
-      file.path(
-        dirs$results,
-        "cosinor_differential_rhythmicity.tsv"
-      ),
-      sep = "\t",
-      quote = FALSE,
-      row.names = FALSE
-    )
-  }
+  # ======================================================= #
+  # 11. Generate plots
+  # ======================================================= #
 
-  if (nrow(merged)) {
-    utils::write.table(
-      merged,
-      file.path(
-        dirs$results,
-        "rhythmicity_summary.tsv"
-      ),
-      sep = "\t",
-      quote = FALSE,
-      row.names = FALSE
-    )
-  }
+  plots <- list()
 
-  # ------------------------------------------------------- #
-  # Generate plots
-  # ------------------------------------------------------- #
-
-  plots <- NULL
+  expression_label <- switch(
+    assay,
+    vst = "VST expression",
+    raw = "log2(count + 1)",
+    normalized = "log2 normalized expression",
+    log2_normalized = "log2 normalized expression"
+  )
 
   if (
     isTRUE(generate_plots) &&
-    nrow(merged) &&
-    n_top_plots > 0L
+    nrow(merged) > 0L
   ) {
 
     log(
-      "Generating rhythmicity diagnostic plots...",
-      type = "step"
+      paste0(
+        "Generating rhythmicity plots in: ",
+        normalizePath(
+          dirs$plots,
+          winslash = "/",
+          mustWork = FALSE
+        )
+      ),
+      type = "info"
     )
 
-    plots <- tryCatch(
-      .deggo_rhythm_plots(
-        mat = mat,
-        metadata = md,
-        summary = merged,
-        time_col = time_col,
-        group_col = group_col,
-        cycle_length = cycle_length,
-        output_dir = dirs$plots,
-        n_top = n_top_plots,
-        gene_annotation = gene_annotation,
-        gene_id_col = gene_id_col,
-        gene_symbol_col = detected_symbol_col,
-        show_gene_id = show_gene_id
+    log(
+      paste0(
+        "Plot summary dimensions: ",
+        nrow(merged),
+        " genes x ",
+        ncol(merged),
+        " columns."
       ),
-      error = function(e) {
-        log(
-          paste(
-            "Plot generation failed:",
-            conditionMessage(e)
-          ),
-          type = "warn"
-        )
+      type = "info"
+    )
 
-        NULL
-      }
+    plots <- .deggo_rhythm_plots(
+      mat = mat,
+      metadata = md,
+      summary = merged,
+      time_col = time_col,
+      sample_col = sample_col,
+      group_col = group_col,
+      cycle_length = cycle_length,
+      output_dir = dirs$plots,
+      n_top = n_top_plots,
+      txtsize = txtsize,
+      expression_label = expression_label,
+      padj_cutoff = padj_cutoff,
+      gene_annotation = gene_annotation,
+      gene_id_col = gene_id_col,
+      gene_symbol_col = detected_symbol_col,
+      show_gene_id = show_gene_id,
+      fit_full_cycle = TRUE,
+      duplicate_cycle = FALSE,
+      shade_phases = TRUE,
+      lights_on = 0,
+      lights_off = 12,
+      phase_prefix = "ZT",
+      palette = "nature",
+      theme_style = "classic",
+      mode = "light",
+      point_size = 2.2,
+      point_alpha = 0.85,
+      line_width = 0.8,
+      width = 6.5,
+      height = 5,
+      dpi = 300,
+      export_pdf = TRUE,
+      rank_by = "consensus",
+      significant_only = TRUE,
+      log = log
+    )
+
+    n_gene_plots <- if (
+      !is.null(plots$gene_curves)
+    ) {
+      length(plots$gene_curves)
+    } else {
+      0L
+    }
+
+    log(
+      paste0(
+        "Gene-curve plots generated: ",
+        n_gene_plots
+      ),
+      type = "info"
+    )
+
+  } else if (
+    isTRUE(generate_plots) &&
+    nrow(merged) == 0L
+  ) {
+
+    log(
+      "Plots were skipped because the merged result table is empty.",
+      type = "warn"
     )
   }
 
-  # ------------------------------------------------------- #
-  # Analysis summary
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 12. Analysis statistics
+  # ======================================================= #
 
   n_meta <- if (
-    nrow(merged) &&
-    "rhythmic_metacycle" %in% colnames(merged)
+    nrow(merged) > 0L &&
+    "rhythmic_metacycle" %in%
+    colnames(merged)
   ) {
-    sum(merged$rhythmic_metacycle %in% TRUE)
+    sum(
+      merged$rhythmic_metacycle %in% TRUE
+    )
   } else {
     NA_integer_
   }
 
   n_cosinor <- if (
-    nrow(merged) &&
-    "rhythmic_cosinor" %in% colnames(merged)
+    nrow(merged) > 0L &&
+    "rhythmic_cosinor" %in%
+    colnames(merged)
   ) {
-    sum(merged$rhythmic_cosinor %in% TRUE)
+    sum(
+      merged$rhythmic_cosinor %in% TRUE
+    )
   } else {
     NA_integer_
   }
 
   n_both <- if (
-    nrow(merged) &&
-    "rhythmic_by" %in% colnames(merged)
+    nrow(merged) > 0L &&
+    "rhythmic_by" %in%
+    colnames(merged)
   ) {
-    sum(merged$rhythmic_by == "both", na.rm = TRUE)
+    sum(
+      merged$rhythmic_by == "both",
+      na.rm = TRUE
+    )
   } else {
     NA_integer_
   }
 
   n_diff <- if (
-    nrow(merged) &&
-    "diff_rhythm_padj" %in% colnames(merged)
+    nrow(merged) > 0L &&
+    "diff_rhythm_padj" %in%
+    colnames(merged)
   ) {
     sum(
-      merged$diff_rhythm_padj < padj_cutoff,
+      merged$diff_rhythm_padj <
+        padj_cutoff,
       na.rm = TRUE
     )
   } else {
@@ -1894,11 +1903,23 @@ run_deggo_rhythmicity <- function(
   log(
     paste0(
       "Rhythmic genes - MetaCycle: ",
-      ifelse(is.na(n_meta), "not run", n_meta),
+      ifelse(
+        is.na(n_meta),
+        "not run",
+        n_meta
+      ),
       "; cosinor: ",
-      ifelse(is.na(n_cosinor), "not run", n_cosinor),
+      ifelse(
+        is.na(n_cosinor),
+        "not run",
+        n_cosinor
+      ),
       "; consensus: ",
-      ifelse(is.na(n_both), "not available", n_both),
+      ifelse(
+        is.na(n_both),
+        "not available",
+        n_both
+      ),
       "."
     ),
     type = "info"
@@ -1923,9 +1944,9 @@ run_deggo_rhythmicity <- function(
     duration = duration
   )
 
-  # ------------------------------------------------------- #
-  # Return object
-  # ------------------------------------------------------- #
+  # ======================================================= #
+  # 13. Return
+  # ======================================================= #
 
   structure(
     list(
@@ -1951,7 +1972,9 @@ run_deggo_rhythmicity <- function(
         cycle_length = cycle_length,
         cycMethod = cycMethod,
         padj_cutoff = padj_cutoff,
-        cosinor_engine = if ("cosinor" %in% methods) {
+        cosinor_engine = if (
+          "cosinor" %in% methods
+        ) {
           if (isTRUE(use_cosinor_pkg)) {
             "package"
           } else {
@@ -1981,9 +2004,9 @@ run_deggo_rhythmicity <- function(
 
 
 
-# ========================================================= #
+# ======================================================= #== #
 # RUN_DEGGO INTEGRATION: OPTIONAL RHYTHMICITY STEP
-# ========================================================= #
+# ======================================================= #== #
 #' Run rhythmicity analysis as part of the run_deggo() pipeline
 #'
 #' Internal helper called from [run_deggo()] when `rhythmicity_analysis =
@@ -1999,17 +2022,32 @@ run_deggo_rhythmicity <- function(
     output_dir,
     analysis_mode,
     time_col,
-    group_col,
-    assay,
-    methods,
-    period_range,
-    cycle_length,
-    cycMethod,
-    padj_cutoff,
-    cosinor_engine,
-    generate_plots,
-    n_top_plots,
-    project_name,
+    group_col = NULL,
+    assay = "vst",
+    methods = c(
+      "meta2d",
+      "cosinor"
+    ),
+    period_range = c(
+      20,
+      28
+    ),
+    cycle_length = 24,
+    cycMethod = c(
+      "ARS",
+      "JTK",
+      "LS"
+    ),
+    padj_cutoff = 0.05,
+    cosinor_engine = "auto",
+    generate_plots = TRUE,
+    n_top_plots = 20,
+    txtsize = 12,
+    gene_annotation = NULL,
+    gene_id_col = "gene_id",
+    gene_symbol_col = NULL,
+    show_gene_id = TRUE,
+    project_name = "DEGgo rhythmicity analysis",
     log
 ) {
 
@@ -2017,41 +2055,67 @@ run_deggo_rhythmicity <- function(
   dds <- de_results$dds
 
   if (is.null(dds)) {
-    log("Rhythmicity analysis skipped: no dds object available.", type = "warn")
+    log(
+      "Rhythmicity analysis skipped: no dds object available.",
+      type = "warn"
+    )
+
     return(de_results)
   }
 
-  if (is.null(metadata) || !time_col %in% colnames(metadata)) {
+  if (
+    is.null(metadata) ||
+    !time_col %in% colnames(metadata)
+  ) {
     log(
       paste0(
-        "Rhythmicity analysis skipped: metadata column '", time_col,
-        "' not found. Set rhythmicity_time_col to a numeric time/ZT column ",
-        "to enable this step."
+        "Rhythmicity analysis skipped: metadata column '",
+        time_col,
+        "' was not found."
       ),
       type = "warn"
     )
+
     return(de_results)
   }
 
   if (!is.numeric(metadata[[time_col]])) {
     log(
       paste0(
-        "Rhythmicity analysis skipped: metadata column '", time_col,
+        "Rhythmicity analysis skipped: metadata column '",
+        time_col,
         "' is not numeric."
       ),
       type = "warn"
     )
+
     return(de_results)
   }
 
-  log("[RHYTHM] Running rhythmicity analysis (MetaCycle + cosinor)", type = "step")
+  log(
+    "[RHYTHM] Running rhythmicity analysis",
+    type = "step"
+  )
 
-  rhythm_dir <- file.path(output_dir, paste0(analysis_mode, "_rhythmicity"))
+  rhythm_dir <- file.path(
+    output_dir,
+    paste0(
+      analysis_mode,
+      "_rhythmicity"
+    )
+  )
 
   rhythm_results <- tryCatch(
     run_deggo_rhythmicity(
       expr = dds,
       metadata = metadata,
+      sample_col = if (
+        "sample" %in% colnames(metadata)
+      ) {
+        "sample"
+      } else {
+        colnames(metadata)[1L]
+      },
       time_col = time_col,
       group_col = group_col,
       assay = assay,
@@ -2065,14 +2129,28 @@ run_deggo_rhythmicity <- function(
       project_name = project_name,
       generate_plots = generate_plots,
       n_top_plots = n_top_plots,
+      txtsize = txtsize,
+      gene_annotation = gene_annotation,
+      gene_id_col = gene_id_col,
+      gene_symbol_col = gene_symbol_col,
+      show_gene_id = show_gene_id,
       verbose = TRUE
     ),
     error = function(e) {
-      log(paste("Rhythmicity analysis failed:", conditionMessage(e)), type = "error")
+
+      log(
+        paste0(
+          "Rhythmicity analysis failed: ",
+          conditionMessage(e)
+        ),
+        type = "error"
+      )
+
       NULL
     }
   )
 
   de_results$rhythmicity <- rhythm_results
+
   de_results
 }

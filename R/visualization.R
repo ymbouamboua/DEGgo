@@ -4935,3 +4935,1608 @@ plot_all_go_terms <- function(
   de_results$go_results <- go_results
   de_results
 }
+
+
+
+
+
+
+# ========================================================= #
+# PUBLICATION-READY RHYTHMICITY PLOTS
+# ========================================================= #
+
+#' Generate publication-ready rhythmicity plots
+#'
+#' Produces global rhythmicity diagnostics and individual expression-curve
+#' plots for the highest-ranked rhythmic genes.
+#'
+#' @param mat Numeric genes-by-samples expression matrix.
+#' @param metadata Sample metadata matched to columns of `mat`.
+#' @param summary Combined rhythmicity results table containing a `gene`
+#'   column.
+#' @param time_col Numeric time column in `metadata`.
+#' @param sample_col Sample identifier column in `metadata`.
+#' @param group_col Optional grouping column.
+#' @param cycle_length Assumed rhythm period.
+#' @param output_dir Plot output directory.
+#' @param n_top Number of individual genes to plot.
+#' @param txtsize Base text size. When `NULL`, DEGgo publication defaults
+#'   are used.
+#' @param expression_label Y-axis title.
+#' @param padj_cutoff Adjusted p-value threshold.
+#' @param gene_annotation Optional gene annotation data frame.
+#' @param gene_id_col Gene-ID column in `gene_annotation`.
+#' @param gene_symbol_col Gene-symbol column in `gene_annotation`.
+#' @param show_gene_id Include the original gene ID in the title.
+#' @param fit_full_cycle Fit curves over a complete cycle.
+#' @param duplicate_cycle Display two consecutive cycles.
+#' @param shade_phases Shade light and dark phases.
+#' @param lights_on Time corresponding to lights on.
+#' @param lights_off Time corresponding to lights off.
+#' @param phase_prefix Prefix used for peak labels, such as `"ZT"`.
+#' @param palette DEGgo palette name.
+#' @param theme_style DEGgo theme style.
+#' @param mode Plot mode, `"light"` or `"dark"`.
+#' @param point_size Observed-point size.
+#' @param point_alpha Observed-point transparency.
+#' @param line_width Fitted-curve line width.
+#' @param width Individual plot width.
+#' @param height Individual plot height.
+#' @param dpi Output resolution.
+#' @param export_pdf Also save PDF versions.
+#' @param rank_by Gene-ranking strategy.
+#' @param significant_only Prefer genes classified as rhythmic.
+#' @param log DEGgo logger.
+#'
+#' @return A named list of ggplot objects and plotted-gene information.
+#'
+#' @keywords internal
+#' @noRd
+.deggo_rhythm_plots <- function(
+    mat,
+    metadata,
+    summary,
+    time_col,
+    sample_col = "sample",
+    group_col = NULL,
+    cycle_length = 24,
+    output_dir,
+    n_top = 20,
+    txtsize = NULL,
+    expression_label = "Expression",
+    padj_cutoff = 0.05,
+    gene_annotation = NULL,
+    gene_id_col = "gene_id",
+    gene_symbol_col = NULL,
+    show_gene_id = TRUE,
+    fit_full_cycle = TRUE,
+    duplicate_cycle = FALSE,
+    shade_phases = TRUE,
+    lights_on = 0,
+    lights_off = 12,
+    phase_prefix = "ZT",
+    palette = c(
+      "nature",
+      "default",
+      "jama",
+      "nejm",
+      "lancet",
+      "viridis",
+      "okabe"
+    ),
+    theme_style = c(
+      "classic",
+      "minimal",
+      "bw"
+    ),
+    mode = c(
+      "light",
+      "dark"
+    ),
+    point_size = 2.2,
+    point_alpha = 0.85,
+    line_width = 0.8,
+    width = NULL,
+    height = NULL,
+    dpi = NULL,
+    export_pdf = FALSE,
+    rank_by = c(
+      "consensus",
+      "best_fdr",
+      "metacycle",
+      "cosinor"
+    ),
+    significant_only = TRUE,
+    log = NULL
+) {
+
+  palette <- match.arg(palette)
+  theme_style <- match.arg(theme_style)
+  mode <- match.arg(mode)
+  rank_by <- match.arg(rank_by)
+
+  defaults <- .deggo_plot_defaults("single")
+
+  if (is.null(txtsize)) {
+    txtsize <- defaults$txtsize
+  }
+
+  if (is.null(width)) {
+    width <- defaults$width
+  }
+
+  if (is.null(height)) {
+    height <- defaults$height
+  }
+
+  if (is.null(dpi)) {
+    dpi <- defaults$dpi
+  }
+
+  if (is.null(log)) {
+    log <- function(message, type = "info", ...) {
+      base::message(message)
+    }
+  }
+
+  dir.create(
+    output_dir,
+    recursive = TRUE,
+    showWarnings = FALSE
+  )
+
+  plots <- list()
+
+  # ======================================================= #
+  # 1. Validate inputs
+  # ======================================================= #
+
+  if (is.null(summary)) {
+    log(
+      "Rhythmicity summary is NULL; no plots were generated.",
+      type = "warn"
+    )
+
+    return(plots)
+  }
+
+  summary <- as.data.frame(
+    summary,
+    stringsAsFactors = FALSE
+  )
+
+  if (!nrow(summary)) {
+    log(
+      "Rhythmicity summary is empty; no plots were generated.",
+      type = "warn"
+    )
+
+    return(plots)
+  }
+
+  mat <- as.matrix(mat)
+
+  metadata <- as.data.frame(
+    metadata,
+    stringsAsFactors = FALSE
+  )
+
+  required_summary <- "gene"
+
+  if (!required_summary %in% colnames(summary)) {
+    stop(
+      "summary must contain a 'gene' column.",
+      call. = FALSE
+    )
+  }
+
+  required_metadata <- c(
+    sample_col,
+    time_col
+  )
+
+  missing_metadata <- setdiff(
+    required_metadata,
+    colnames(metadata)
+  )
+
+  if (length(missing_metadata)) {
+    stop(
+      "metadata is missing required column(s): ",
+      paste(
+        missing_metadata,
+        collapse = ", "
+      ),
+      ".",
+      call. = FALSE
+    )
+  }
+
+  if (!is.numeric(metadata[[time_col]])) {
+    stop(
+      "metadata[['",
+      time_col,
+      "']] must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  if (
+    !is.null(group_col) &&
+    !group_col %in% colnames(metadata)
+  ) {
+    stop(
+      "metadata does not contain group column '",
+      group_col,
+      "'.",
+      call. = FALSE
+    )
+  }
+
+  if (is.null(rownames(mat))) {
+    stop(
+      "mat must contain gene identifiers as row names.",
+      call. = FALSE
+    )
+  }
+
+  if (is.null(colnames(mat))) {
+    stop(
+      "mat must contain sample identifiers as column names.",
+      call. = FALSE
+    )
+  }
+
+  if (anyDuplicated(rownames(mat))) {
+    stop(
+      "mat contains duplicated gene identifiers.",
+      call. = FALSE
+    )
+  }
+
+  if (anyDuplicated(metadata[[sample_col]])) {
+    stop(
+      "metadata contains duplicated sample identifiers.",
+      call. = FALSE
+    )
+  }
+
+  sample_match <- match(
+    colnames(mat),
+    as.character(metadata[[sample_col]])
+  )
+
+  if (anyNA(sample_match)) {
+    missing_samples <- colnames(mat)[
+      is.na(sample_match)
+    ]
+
+    stop(
+      "Expression samples absent from metadata: ",
+      paste(
+        utils::head(missing_samples, 10L),
+        collapse = ", "
+      ),
+      if (length(missing_samples) > 10L) {
+        ", ..."
+      } else {
+        ""
+      },
+      call. = FALSE
+    )
+  }
+
+  metadata <- metadata[
+    sample_match,
+    ,
+    drop = FALSE
+  ]
+
+  if (!identical(
+    colnames(mat),
+    as.character(metadata[[sample_col]])
+  )) {
+    stop(
+      "Expression columns and metadata rows could not be aligned.",
+      call. = FALSE
+    )
+  }
+
+  summary$gene <- as.character(
+    summary$gene
+  )
+
+  time_vec <- as.numeric(
+    metadata[[time_col]]
+  )
+
+  # ======================================================= #
+  # 2. Publication colors and helpers
+  # ======================================================= #
+
+  discrete_cols <- deggo_palette(
+    palette = palette,
+    n = 8,
+    type = "discrete"
+  )
+
+  sequential_cols <- deggo_palette(
+    palette = palette,
+    n = 9,
+    type = "sequential"
+  )
+
+  significance_cols <- c(
+    "Both" = discrete_cols[3L],
+    "MetaCycle only" = discrete_cols[1L],
+    "Cosinor only" = discrete_cols[2L],
+    "Not significant" = "#B8B8B8"
+  )
+
+  base_theme <- .deggo_theme(
+    style = theme_style,
+    txtsize = txtsize,
+    ttl.pos = "left",
+    ttl.face = "bold",
+    ticks = TRUE,
+    grid.major = FALSE,
+    grid.minor = FALSE,
+    mode = mode,
+    leg.pos = "right",
+    leg.dir = "vertical",
+    leg.size = txtsize,
+    leg.ttl.size = txtsize,
+    plot.subtitle = ggplot2::element_text(
+      size = txtsize,
+      color = if (mode == "light") {
+        "#4D4D4D"
+      } else {
+        "#CCCCCC"
+      },
+      margin = ggplot2::margin(
+        b = 5
+      )
+    ),
+    plot.caption = ggplot2::element_text(
+      size = max(
+        txtsize - 1,
+        5
+      ),
+      hjust = 0,
+      color = if (mode == "light") {
+        "#666666"
+      } else {
+        "#BBBBBB"
+      }
+    ),
+    plot.margin = ggplot2::margin(
+      7,
+      8,
+      7,
+      8
+    )
+  )
+
+  safe_numeric <- function(x) {
+    suppressWarnings(
+      as.numeric(x)
+    )
+  }
+
+  safe_neglog10 <- function(x) {
+
+    x <- safe_numeric(x)
+
+    x[
+      is.finite(x) &
+        x <= 0
+    ] <- .Machine$double.xmin
+
+    -log10(x)
+  }
+
+  format_p <- function(x) {
+
+    x <- safe_numeric(x)[1L]
+
+    if (
+      !length(x) ||
+      is.na(x) ||
+      !is.finite(x)
+    ) {
+      return("NA")
+    }
+
+    if (x < 0.001) {
+      return(
+        formatC(
+          x,
+          format = "e",
+          digits = 2
+        )
+      )
+    }
+
+    formatC(
+      x,
+      format = "f",
+      digits = 3
+    )
+  }
+
+  save_plot <- function(
+    plot,
+    filename,
+    width,
+    height
+  ) {
+
+    png_file <- file.path(
+      output_dir,
+      paste0(
+        filename,
+        ".png"
+      )
+    )
+
+    ggplot2::ggsave(
+      filename = png_file,
+      plot = plot,
+      width = width,
+      height = height,
+      dpi = dpi,
+      units = "in",
+      bg = if (mode == "light") {
+        "white"
+      } else {
+        "#1E1E1E"
+      }
+    )
+
+    if (isTRUE(export_pdf)) {
+      ggplot2::ggsave(
+        filename = file.path(
+          output_dir,
+          paste0(
+            filename,
+            ".pdf"
+          )
+        ),
+        plot = plot,
+        width = width,
+        height = height,
+        units = "in",
+        device = grDevices::cairo_pdf,
+        bg = if (mode == "light") {
+          "white"
+        } else {
+          "#1E1E1E"
+        }
+      )
+    }
+
+    invisible(
+      png_file
+    )
+  }
+
+  # ======================================================= #
+  # 3. Period distribution
+  # ======================================================= #
+
+  if ("metacycle_period" %in% colnames(summary)) {
+
+    period_values <- safe_numeric(
+      summary$metacycle_period
+    )
+
+    period_df <- data.frame(
+      period = period_values[
+        is.finite(period_values)
+      ]
+    )
+
+    if (nrow(period_df)) {
+
+      p_period <- ggplot2::ggplot(
+        period_df,
+        ggplot2::aes(
+          x = .data[["period"]]
+        )
+      ) +
+        ggplot2::geom_histogram(
+          binwidth = 1,
+          boundary = 0,
+          fill = sequential_cols[6L],
+          color = "white",
+          linewidth = 0.2
+        ) +
+        ggplot2::geom_vline(
+          xintercept = cycle_length,
+          linetype = "dashed",
+          linewidth = 0.5,
+          color = discrete_cols[2L]
+        ) +
+        ggplot2::scale_x_continuous(
+          breaks = scales::pretty_breaks(
+            n = 7
+          ),
+          expand = ggplot2::expansion(
+            mult = c(
+              0.02,
+              0.04
+            )
+          )
+        ) +
+        ggplot2::labs(
+          title = "Estimated rhythmic periods",
+          subtitle = paste0(
+            "MetaCycle estimates; reference period = ",
+            cycle_length,
+            " h"
+          ),
+          x = "Estimated period (hours)",
+          y = "Number of genes"
+        ) +
+        base_theme
+
+      save_plot(
+        plot = p_period,
+        filename = "period_histogram",
+        width = 6.5,
+        height = 4.5
+      )
+
+      plots$period_histogram <- p_period
+    }
+  }
+
+  # ======================================================= #
+  # 4. Phase distribution
+  # ======================================================= #
+
+  phase_candidates <- intersect(
+    c(
+      "metacycle_phase",
+      "cosinor_phase"
+    ),
+    colnames(summary)
+  )
+
+  if (length(phase_candidates)) {
+
+    phase_col <- phase_candidates[1L]
+
+    phase_values <- safe_numeric(
+      summary[[phase_col]]
+    )
+
+    phase_values <- phase_values %% cycle_length
+
+    phase_df <- data.frame(
+      phase = phase_values[
+        is.finite(phase_values)
+      ]
+    )
+
+    if (nrow(phase_df)) {
+
+      p_phase <- ggplot2::ggplot(
+        phase_df,
+        ggplot2::aes(
+          x = .data[["phase"]]
+        )
+      )
+
+      if (isTRUE(shade_phases)) {
+
+        p_phase <- p_phase +
+          ggplot2::annotate(
+            "rect",
+            xmin = lights_off,
+            xmax = cycle_length,
+            ymin = -Inf,
+            ymax = Inf,
+            fill = "#000000",
+            alpha = 0.055
+          )
+      }
+
+      p_phase <- p_phase +
+        ggplot2::geom_histogram(
+          binwidth = 2,
+          boundary = 0,
+          fill = sequential_cols[6L],
+          color = "white",
+          linewidth = 0.2
+        ) +
+        ggplot2::scale_x_continuous(
+          limits = c(
+            0,
+            cycle_length
+          ),
+          breaks = seq(
+            0,
+            cycle_length,
+            by = 4
+          ),
+          labels = function(x) {
+            paste0(
+              phase_prefix,
+              x
+            )
+          },
+          expand = c(
+            0,
+            0
+          )
+        ) +
+        ggplot2::labs(
+          title = "Distribution of rhythmic peak phases",
+          subtitle = paste0(
+            "Phase estimates from ",
+            sub(
+              "_",
+              " ",
+              phase_col
+            )
+          ),
+          x = "Peak phase",
+          y = "Number of genes"
+        ) +
+        base_theme
+
+      save_plot(
+        plot = p_phase,
+        filename = "phase_histogram",
+        width = 6.5,
+        height = 4.5
+      )
+
+      plots$phase_histogram <- p_phase
+    }
+  }
+
+  # ======================================================= #
+  # 5. MetaCycle versus cosinor agreement
+  # ======================================================= #
+
+  if (
+    all(
+      c(
+        "metacycle_padj",
+        "cosinor_padj"
+      ) %in% colnames(summary)
+    )
+  ) {
+
+    agreement_df <- data.frame(
+      gene = summary$gene,
+      metacycle_padj = safe_numeric(
+        summary$metacycle_padj
+      ),
+      cosinor_padj = safe_numeric(
+        summary$cosinor_padj
+      ),
+      stringsAsFactors = FALSE
+    )
+
+    agreement_df$metacycle_score <- safe_neglog10(
+      agreement_df$metacycle_padj
+    )
+
+    agreement_df$cosinor_score <- safe_neglog10(
+      agreement_df$cosinor_padj
+    )
+
+    agreement_df$classification <- "Not significant"
+
+    agreement_df$classification[
+      agreement_df$metacycle_padj < padj_cutoff &
+        agreement_df$cosinor_padj >= padj_cutoff
+    ] <- "MetaCycle only"
+
+    agreement_df$classification[
+      agreement_df$metacycle_padj >= padj_cutoff &
+        agreement_df$cosinor_padj < padj_cutoff
+    ] <- "Cosinor only"
+
+    agreement_df$classification[
+      agreement_df$metacycle_padj < padj_cutoff &
+        agreement_df$cosinor_padj < padj_cutoff
+    ] <- "Both"
+
+    agreement_df$classification <- factor(
+      agreement_df$classification,
+      levels = c(
+        "Both",
+        "MetaCycle only",
+        "Cosinor only",
+        "Not significant"
+      )
+    )
+
+    agreement_df <- agreement_df[
+      is.finite(agreement_df$metacycle_score) &
+        is.finite(agreement_df$cosinor_score),
+      ,
+      drop = FALSE
+    ]
+
+    if (nrow(agreement_df)) {
+
+      threshold <- -log10(
+        padj_cutoff
+      )
+
+      p_agreement <- ggplot2::ggplot(
+        agreement_df,
+        ggplot2::aes(
+          x = .data[["metacycle_score"]],
+          y = .data[["cosinor_score"]],
+          color = .data[["classification"]]
+        )
+      ) +
+        ggplot2::geom_hline(
+          yintercept = threshold,
+          linetype = "dashed",
+          linewidth = 0.4,
+          color = "#777777"
+        ) +
+        ggplot2::geom_vline(
+          xintercept = threshold,
+          linetype = "dashed",
+          linewidth = 0.4,
+          color = "#777777"
+        ) +
+        ggplot2::geom_point(
+          size = 1.4,
+          alpha = 0.65,
+          stroke = 0
+        ) +
+        ggplot2::scale_color_manual(
+          values = significance_cols,
+          drop = FALSE
+        ) +
+        ggplot2::labs(
+          title = "Agreement between rhythmicity methods",
+          subtitle = paste0(
+            "Dashed lines indicate FDR < ",
+            padj_cutoff
+          ),
+          x = expression(
+            -log[10]("MetaCycle FDR")
+          ),
+          y = expression(
+            -log[10]("Cosinor FDR")
+          ),
+          color = "Classification"
+        ) +
+        base_theme +
+        ggplot2::theme(
+          legend.position = "right"
+        )
+
+      save_plot(
+        plot = p_agreement,
+        filename = "metacycle_vs_cosinor",
+        width = 6.5,
+        height = 5.5
+      )
+
+      plots$agreement <- p_agreement
+    }
+  }
+
+  # ======================================================= #
+  # 6. Rank rhythmic genes
+  # ======================================================= #
+
+  ranked_summary <- summary
+
+  rhythmic_flag <- rep(
+    FALSE,
+    nrow(ranked_summary)
+  )
+
+  if ("rhythmic_by" %in% colnames(ranked_summary)) {
+    rhythmic_flag <- !is.na(
+      ranked_summary$rhythmic_by
+    ) &
+      ranked_summary$rhythmic_by != "none"
+  } else {
+
+    if ("metacycle_padj" %in% colnames(ranked_summary)) {
+      rhythmic_flag <- rhythmic_flag |
+        safe_numeric(
+          ranked_summary$metacycle_padj
+        ) < padj_cutoff
+    }
+
+    if ("cosinor_padj" %in% colnames(ranked_summary)) {
+      rhythmic_flag <- rhythmic_flag |
+        safe_numeric(
+          ranked_summary$cosinor_padj
+        ) < padj_cutoff
+    }
+  }
+
+  if (
+    isTRUE(significant_only) &&
+    any(
+      rhythmic_flag,
+      na.rm = TRUE
+    )
+  ) {
+    ranked_summary <- ranked_summary[
+      rhythmic_flag %in% TRUE,
+      ,
+      drop = FALSE
+    ]
+  }
+
+  meta_fdr <- if (
+    "metacycle_padj" %in% colnames(ranked_summary)
+  ) {
+    safe_numeric(
+      ranked_summary$metacycle_padj
+    )
+  } else {
+    rep(
+      NA_real_,
+      nrow(ranked_summary)
+    )
+  }
+
+  cos_fdr <- if (
+    "cosinor_padj" %in% colnames(ranked_summary)
+  ) {
+    safe_numeric(
+      ranked_summary$cosinor_padj
+    )
+  } else {
+    rep(
+      NA_real_,
+      nrow(ranked_summary)
+    )
+  }
+
+  minimum_fdr <- mapply(
+    function(x, y) {
+
+      values <- c(
+        x,
+        y
+      )
+
+      values <- values[
+        is.finite(values)
+      ]
+
+      if (!length(values)) {
+        return(
+          NA_real_
+        )
+      }
+
+      min(values)
+    },
+    meta_fdr,
+    cos_fdr
+  )
+
+  consensus_priority <- rep(
+    2L,
+    nrow(ranked_summary)
+  )
+
+  if ("rhythmic_by" %in% colnames(ranked_summary)) {
+
+    consensus_priority[
+      ranked_summary$rhythmic_by == "both"
+    ] <- 0L
+
+    consensus_priority[
+      ranked_summary$rhythmic_by %in%
+        c(
+          "metacycle_only",
+          "cosinor_only"
+        )
+    ] <- 1L
+  }
+
+  ranking_order <- switch(
+    rank_by,
+
+    consensus = order(
+      consensus_priority,
+      minimum_fdr,
+      na.last = TRUE
+    ),
+
+    best_fdr = order(
+      minimum_fdr,
+      na.last = TRUE
+    ),
+
+    metacycle = order(
+      meta_fdr,
+      na.last = TRUE
+    ),
+
+    cosinor = order(
+      cos_fdr,
+      na.last = TRUE
+    )
+  )
+
+  ranked_summary <- ranked_summary[
+    ranking_order,
+    ,
+    drop = FALSE
+  ]
+
+  candidate_genes <- unique(
+    as.character(
+      ranked_summary$gene
+    )
+  )
+
+  candidate_genes <- candidate_genes[
+    !is.na(candidate_genes) &
+      nzchar(
+        trimws(candidate_genes)
+      )
+  ]
+
+  matching_genes <- intersect(
+    candidate_genes,
+    rownames(mat)
+  )
+
+  top_genes <- utils::head(
+    matching_genes,
+    n_top
+  )
+
+  log(
+    paste0(
+      "Rhythmic genes available for ranking: ",
+      length(candidate_genes),
+      "."
+    ),
+    type = "info"
+  )
+
+  log(
+    paste0(
+      "Genes matching the expression matrix: ",
+      length(matching_genes),
+      "."
+    ),
+    type = "info"
+  )
+
+  log(
+    paste0(
+      "Individual gene plots to generate: ",
+      length(top_genes),
+      "."
+    ),
+    type = "info"
+  )
+
+  if (!length(top_genes)) {
+    log(
+      paste0(
+        "No rhythmicity-summary gene identifiers matched ",
+        "the expression-matrix row names."
+      ),
+      type = "warn"
+    )
+
+    return(plots)
+  }
+
+  # ======================================================= #
+  # 7. Resolve symbols and export selected genes
+  # ======================================================= #
+
+  gene_labels <- .deggo_rhythm_gene_labels(
+    gene_ids = top_genes,
+    summary = summary,
+    gene_annotation = gene_annotation,
+    gene_id_col = gene_id_col,
+    gene_symbol_col = gene_symbol_col
+  )
+
+  selected_rows <- ranked_summary[
+    match(
+      top_genes,
+      ranked_summary$gene
+    ),
+    ,
+    drop = FALSE
+  ]
+
+  selected_rows$plot_rank <- seq_len(
+    nrow(selected_rows)
+  )
+
+  selected_rows$display_symbol <- unname(
+    gene_labels[
+      selected_rows$gene
+    ]
+  )
+
+  selected_rows <- selected_rows[
+    ,
+    c(
+      "plot_rank",
+      "gene",
+      "display_symbol",
+      setdiff(
+        colnames(selected_rows),
+        c(
+          "plot_rank",
+          "gene",
+          "display_symbol"
+        )
+      )
+    ),
+    drop = FALSE
+  ]
+
+  utils::write.table(
+    selected_rows,
+    file = file.path(
+      output_dir,
+      "plotted_rhythmic_genes.tsv"
+    ),
+    sep = "\t",
+    quote = FALSE,
+    row.names = FALSE
+  )
+
+  # ======================================================= #
+  # 8. Prepare curve grid
+  # ======================================================= #
+
+  plot_cycle_length <- if (
+    isTRUE(duplicate_cycle)
+  ) {
+    2 * cycle_length
+  } else {
+    cycle_length
+  }
+
+  if (isTRUE(fit_full_cycle)) {
+
+    time_grid <- seq(
+      0,
+      plot_cycle_length,
+      length.out = if (
+        isTRUE(duplicate_cycle)
+      ) {
+        600
+      } else {
+        300
+      }
+    )
+
+  } else {
+
+    time_grid <- seq(
+      min(
+        time_vec,
+        na.rm = TRUE
+      ),
+      max(
+        time_vec,
+        na.rm = TRUE
+      ),
+      length.out = 300
+    )
+  }
+
+  # ======================================================= #
+  # 9. Individual rhythmic-gene plots
+  # ======================================================= #
+
+  curve_plots <- list()
+
+  for (g in top_genes) {
+
+    symbol <- unname(
+      gene_labels[g]
+    )
+
+    if (
+      !length(symbol) ||
+      is.na(symbol) ||
+      !nzchar(trimws(symbol)) ||
+      identical(symbol, "NA")
+    ) {
+      symbol <- g
+    }
+
+    observed_df <- data.frame(
+      sample = colnames(mat),
+      time = time_vec,
+      expression = as.numeric(
+        mat[g, ]
+      ),
+      stringsAsFactors = FALSE
+    )
+
+    if (!is.null(group_col)) {
+      observed_df$group <- factor(
+        metadata[[group_col]]
+      )
+    }
+
+    if (isTRUE(duplicate_cycle)) {
+
+      observed_df_second <- observed_df
+      observed_df_second$time <-
+        observed_df_second$time +
+        cycle_length
+
+      observed_df <- rbind(
+        observed_df,
+        observed_df_second
+      )
+    }
+
+    result_row <- summary[
+      summary$gene == g,
+      ,
+      drop = FALSE
+    ]
+
+    result_row <- result_row[
+      1L,
+      ,
+      drop = FALSE
+    ]
+
+    fit_df <- NULL
+    fitted_peak <- NA_real_
+
+    required_fit_cols <- c(
+      "cosinor_mesor",
+      "cosinor_amplitude",
+      "cosinor_acrophase"
+    )
+
+    if (
+      nrow(result_row) &&
+      all(
+        required_fit_cols %in%
+        colnames(result_row)
+      )
+    ) {
+
+      fit_parameters <- safe_numeric(
+        unlist(
+          result_row[
+            1L,
+            required_fit_cols,
+            drop = FALSE
+          ],
+          use.names = FALSE
+        )
+      )
+
+      if (all(is.finite(fit_parameters))) {
+
+        mesor <- fit_parameters[1L]
+        amplitude <- fit_parameters[2L]
+        acrophase <- fit_parameters[3L]
+
+        fit_df <- data.frame(
+          time = time_grid,
+          fitted =
+            mesor +
+            amplitude *
+            cos(
+              2 * pi *
+                time_grid /
+                cycle_length -
+                acrophase
+            )
+        )
+
+        fitted_peak <-
+          (
+            (
+              acrophase %%
+                (
+                  2 * pi
+                )
+            ) /
+              (
+                2 * pi
+              )
+          ) *
+          cycle_length
+      }
+    }
+
+    if (
+      "cosinor_phase" %in% colnames(result_row)
+    ) {
+      phase_candidate <- safe_numeric(
+        result_row$cosinor_phase
+      )[1L]
+
+      if (
+        length(phase_candidate) &&
+        is.finite(phase_candidate)
+      ) {
+        fitted_peak <- phase_candidate %% cycle_length
+      }
+    }
+
+    plot_title <- symbol
+
+    if (
+      isTRUE(show_gene_id) &&
+      !identical(
+        as.character(symbol),
+        as.character(g)
+      )
+    ) {
+      plot_title <- paste0(
+        symbol
+      )
+    }
+
+    subtitle_parts <- character()
+
+    if (
+      "metacycle_padj" %in% colnames(result_row)
+    ) {
+      subtitle_parts <- c(
+        subtitle_parts,
+        paste0(
+          "MetaCycle FDR ",
+          format_p(
+            result_row$metacycle_padj
+          )
+        )
+      )
+    }
+
+    if (
+      "cosinor_padj" %in% colnames(result_row)
+    ) {
+      subtitle_parts <- c(
+        subtitle_parts,
+        paste0(
+          "Cosinor FDR ",
+          format_p(
+            result_row$cosinor_padj
+          )
+        )
+      )
+    }
+
+    if (is.finite(fitted_peak)) {
+      subtitle_parts <- c(
+        subtitle_parts,
+        paste0(
+          "Peak ",
+          phase_prefix,
+          formatC(
+            fitted_peak,
+            format = "f",
+            digits = 1
+          )
+        )
+      )
+    }
+
+    if (
+      "metacycle_period" %in%
+      colnames(result_row)
+    ) {
+
+      period_value <- safe_numeric(
+        result_row$metacycle_period
+      )[1L]
+
+      if (
+        length(period_value) &&
+        is.finite(period_value)
+      ) {
+        subtitle_parts <- c(
+          subtitle_parts,
+          paste0(
+            "Period ",
+            formatC(
+              period_value,
+              format = "f",
+              digits = 1
+            ),
+            " h"
+          )
+        )
+      }
+    }
+
+    plot_subtitle <- if (
+      length(subtitle_parts)
+    ) {
+      paste(
+        subtitle_parts,
+        collapse = "   \u2022   "
+      )
+    } else {
+      NULL
+    }
+
+    p_gene <- ggplot2::ggplot(
+      observed_df,
+      ggplot2::aes(
+        x = .data[["time"]],
+        y = .data[["expression"]]
+      )
+    )
+
+    # ----------------------------------------------------- #
+    # Light-dark shading
+    # ----------------------------------------------------- #
+
+    if (isTRUE(shade_phases)) {
+
+      cycle_starts <- seq(
+        0,
+        plot_cycle_length - cycle_length,
+        by = cycle_length
+      )
+
+      dark_rectangles <- do.call(
+        rbind,
+        lapply(
+          cycle_starts,
+          function(start) {
+            data.frame(
+              xmin = start + lights_off,
+              xmax = start + cycle_length,
+              ymin = -Inf,
+              ymax = Inf
+            )
+          }
+        )
+      )
+
+      p_gene <- p_gene +
+        ggplot2::geom_rect(
+          data = dark_rectangles,
+          mapping = ggplot2::aes(
+            xmin = .data[["xmin"]],
+            xmax = .data[["xmax"]],
+            ymin = .data[["ymin"]],
+            ymax = .data[["ymax"]]
+          ),
+          inherit.aes = FALSE,
+          fill = if (mode == "light") {
+            "#000000"
+          } else {
+            "#FFFFFF"
+          },
+          alpha = 0.055,
+          color = NA
+        )
+    }
+
+    # ----------------------------------------------------- #
+    # Fitted cosinor curve
+    # ----------------------------------------------------- #
+
+    if (!is.null(fit_df)) {
+      p_gene <- p_gene +
+        ggplot2::geom_line(
+          data = fit_df,
+          mapping = ggplot2::aes(
+            x = .data[["time"]],
+            y = .data[["fitted"]]
+          ),
+          inherit.aes = FALSE,
+          linewidth = line_width,
+          color = discrete_cols[2L],
+          lineend = "round"
+        )
+    }
+
+    # ----------------------------------------------------- #
+    # Peak indicator
+    # ----------------------------------------------------- #
+
+    if (is.finite(fitted_peak)) {
+
+      peak_positions <- fitted_peak
+
+      if (isTRUE(duplicate_cycle)) {
+        peak_positions <- c(
+          fitted_peak,
+          fitted_peak + cycle_length
+        )
+      }
+
+      p_gene <- p_gene +
+        ggplot2::geom_vline(
+          xintercept = peak_positions,
+          linewidth = 0.35,
+          linetype = "dotted",
+          color = discrete_cols[2L],
+          alpha = 0.75
+        )
+    }
+
+    # ----------------------------------------------------- #
+    # Observed expression
+    # ----------------------------------------------------- #
+
+    if (!is.null(group_col)) {
+
+      group_levels <- levels(
+        observed_df$group
+      )
+
+      group_cols <- deggo_palette(
+        palette = palette,
+        n = max(
+          length(group_levels),
+          1L
+        ),
+        type = "discrete"
+      )
+
+      names(group_cols) <- group_levels
+
+      p_gene <- p_gene +
+        ggplot2::geom_point(
+          ggplot2::aes(
+            color = .data[["group"]]
+          ),
+          size = point_size,
+          alpha = point_alpha,
+          stroke = 0
+        ) +
+        ggplot2::scale_color_manual(
+          values = group_cols,
+          drop = FALSE
+        )
+
+    } else {
+
+      p_gene <- p_gene +
+        ggplot2::geom_point(
+          size = point_size,
+          alpha = point_alpha,
+          color = discrete_cols[1L],
+          stroke = 0
+        )
+    }
+
+    x_breaks <- seq(
+      0,
+      plot_cycle_length,
+      by = 4
+    )
+
+    p_gene <- p_gene +
+      ggplot2::scale_x_continuous(
+        limits = c(
+          0,
+          plot_cycle_length
+        ),
+        breaks = x_breaks,
+        labels = function(x) {
+          paste0(
+            phase_prefix,
+            x
+          )
+        },
+        minor_breaks = NULL,
+        expand = ggplot2::expansion(
+          mult = c(
+            0.01,
+            0.02
+          )
+        )
+      ) +
+      ggplot2::scale_y_continuous(
+        expand = ggplot2::expansion(
+          mult = c(
+            0.06,
+            0.12
+          )
+        )
+      ) +
+      ggplot2::labs(
+        title = plot_title,
+        subtitle = plot_subtitle,
+        x = "Zeitgeber time",
+        y = expression_label,
+        color = if (!is.null(group_col)) {
+          group_col
+        } else {
+          NULL
+        },
+        # caption = if (isTRUE(shade_phases)) {
+        #    "Shaded regions indicate the dark phase; dotted lines indicate fitted peak phase."
+        # } else {
+        #   NULL
+        # }
+      ) +
+      base_theme +
+      ggplot2::theme(
+        legend.position = if (
+          is.null(group_col)
+        ) {
+          "none"
+        } else {
+          "right"
+        }
+      )
+
+    safe_symbol <- gsub(
+      "[^A-Za-z0-9_.-]+",
+      "_",
+      symbol
+    )
+
+    safe_gene_id <- gsub(
+      "[^A-Za-z0-9_.-]+",
+      "_",
+      g
+    )
+
+    safe_symbol <- gsub(
+      "_+",
+      "_",
+      safe_symbol
+    )
+
+    filename <- paste0(
+      "gene_",
+      safe_symbol,
+      "_",
+      safe_gene_id,
+      "_rhythm"
+    )
+
+    save_plot(
+      plot = p_gene,
+      filename = filename,
+      width = width,
+      height = height
+    )
+
+    plot_name <- if (
+      identical(
+        symbol,
+        g
+      )
+    ) {
+      g
+    } else {
+      paste0(
+        symbol,
+        "_",
+        g
+      )
+    }
+
+    curve_plots[[plot_name]] <- p_gene
+  }
+
+  plots$gene_curves <- curve_plots
+  plots$plotted_genes <- selected_rows
+
+  plots
+}
+
