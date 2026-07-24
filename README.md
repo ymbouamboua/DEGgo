@@ -231,7 +231,6 @@ DEGgo_results/
 ├── go_enrichment/
 │   ├── GO_results.tsv
 │   ├── GO_dotplot.png
-│   ├── GO_barplot.png
 │   └── GO_summary.tsv
 ├── reports/
 │   ├── DEGgo_report.html
