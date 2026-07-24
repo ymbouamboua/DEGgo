@@ -252,7 +252,7 @@ optional downstream analyses such as Gene Ontology enrichment.
 ## Public circadian example
 
 DEGgo includes a fully reproducible workflow based on the public baboon
-transcriptomic atlas (**GSE98965**, Mure *et al.*, Science 2018).
+transcriptomic atlas **[GSE98965](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98965)** (Mure *et al.*, Science 2018).
 
 ``` r
 results <- run_public_circadian_example(
