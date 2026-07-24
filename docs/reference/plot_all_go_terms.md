@@ -6,9 +6,26 @@ creates one GO plot per comparison using
 [`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md),
 and optionally saves each plot as PNG and PDF.
 
+Generate Gene Ontology enrichment plots for all comparisons stored in a
+DEGgo results object. This function iterates over `results$go_results`,
+creates one GO plot per comparison using
+[`plot_go_terms()`](https://ymbouamboua.github.io/DEGgo/reference/plot_go_terms.md),
+and optionally saves each plot as PNG and PDF.
+
 ## Usage
 
 ``` r
+plot_all_go_terms(
+  results,
+  top_n = 10,
+  txtsize = 8,
+  style = "bw",
+  output_dir = NULL,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
 plot_all_go_terms(
   results,
   top_n = 10,
@@ -67,9 +84,20 @@ plot_all_go_terms(
 A named list of `ggplot` objects, one per comparison. Comparisons
 without enriched GO terms return `NULL`.
 
+A named list of `ggplot` objects, one per comparison. Comparisons
+without enriched GO terms return `NULL`.
+
 ## Examples
 
 ``` r
+if (FALSE) { # \dontrun{
+go_plots <- plot_all_go_terms(
+  results = results,
+  top_n = 10,
+  output_dir = "GO_plots"
+)
+} # }
+
 if (FALSE) { # \dontrun{
 go_plots <- plot_all_go_terms(
   results = results,

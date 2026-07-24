@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">DEGgo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@
     <div class="section level2">
       <h2 id="main-workflow">Main workflow<a class="anchor" aria-label="anchor" href="#main-workflow"></a></h2>
 
-
+      <div class="section-desc"><p>Core functions for running differential expression analysis, functional enrichment, and report generation.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -64,7 +64,7 @@
           <code><a href="generate_deggo_report.html">generate_deggo_report()</a></code>
 
         </dt>
-        <dd>Generate DEGgo HTML/PDF Report</dd>
+        <dd>Generate a DEGgo report</dd>
 
         <dt>
 
@@ -73,9 +73,53 @@
         </dt>
         <dd>Generate a PowerPoint report from DEGgo results</dd>
       </dl></div><div class="section level2">
+      <h2 id="circadian-rhythmicity-analysis">Circadian rhythmicity analysis<a class="anchor" aria-label="anchor" href="#circadian-rhythmicity-analysis"></a></h2>
+
+      <div class="section-desc"><p>Functions for preparing circadian transcriptomic datasets, detecting rhythmic genes, and running reproducible public examples.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="run_deggo_rhythmicity.html">run_deggo_rhythmicity()</a></code>
+
+        </dt>
+        <dd>Run DEGgo rhythmicity (circadian) analysis</dd>
+
+        <dt>
+
+          <code><a href="deggo_extract_rhythmic_genes.html">deggo_extract_rhythmic_genes()</a></code>
+
+        </dt>
+        <dd>Extract selected genes from DEGgo rhythmicity results</dd>
+
+        <dt>
+
+          <code><a href="prepare_circadian_tissue.html">prepare_circadian_tissue()</a></code>
+
+        </dt>
+        <dd>Prepare one GSE98965 tissue for circadian analysis</dd>
+
+        <dt>
+
+          <code><a href="download_gse98965.html">download_gse98965()</a></code>
+
+        </dt>
+        <dd>Download the GSE98965 baboon transcriptomic atlas</dd>
+
+        <dt>
+
+          <code><a href="run_public_circadian_example.html">run_public_circadian_example()</a></code>
+
+        </dt>
+        <dd>Run the public GSE98965 circadian RNA-seq example</dd>
+      </dl></div><div class="section level2">
       <h2 id="quality-control">Quality control<a class="anchor" aria-label="anchor" href="#quality-control"></a></h2>
 
-
+      <div class="section-desc"><p>Functions for count-data exploration, sample-level quality control, filtering, and marker assessment.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -119,7 +163,7 @@
       </dl></div><div class="section level2">
       <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a></h2>
 
-
+      <div class="section-desc"><p>Functions for generating publication-ready differential expression and functional enrichment visualizations.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -138,7 +182,7 @@
           <code><a href="plot_heatmap.html">plot_heatmap()</a></code>
 
         </dt>
-        <dd>Generate DEGgo heatmap</dd>
+        <dd>Plot a DEGgo Differential Expression Heatmap</dd>
 
         <dt>
 
@@ -173,11 +217,11 @@
           <code><a href="plot_gene_heatmap.html">plot_gene_heatmap()</a></code>
 
         </dt>
-        <dd>Plot expression heatmap for selected genes</dd>
+        <dd>Plot Expression Heatmap for Selected Genes</dd>
       </dl></div><div class="section level2">
       <h2 id="expression-analysis">Expression analysis<a class="anchor" aria-label="anchor" href="#expression-analysis"></a></h2>
 
-
+      <div class="section-desc"><p>Functions for extracting and inspecting gene-expression values.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -193,7 +237,7 @@
       </dl></div><div class="section level2">
       <h2 id="gene-and-go-extraction">Gene and GO extraction<a class="anchor" aria-label="anchor" href="#gene-and-go-extraction"></a></h2>
 
-
+      <div class="section-desc"><p>Functions for extracting differentially expressed genes, enriched Gene Ontology terms, and associated gene sets.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -227,6 +271,22 @@
 
         </dt>
         <dd>Extract GO terms matching keywords</dd>
+      </dl></div><div class="section level2">
+      <h2 id="palettes-and-visualization-helpers">Palettes and visualization helpers<a class="anchor" aria-label="anchor" href="#palettes-and-visualization-helpers"></a></h2>
+
+      <div class="section-desc"><p>Colour palettes and visual styling utilities used by DEGgo.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="deggo_palette.html">deggo_palette()</a></code>
+
+        </dt>
+        <dd>Retrieve a DEGgo color palette</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

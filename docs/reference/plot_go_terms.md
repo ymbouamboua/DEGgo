@@ -2,6 +2,8 @@
 
 Plot GO terms by regulation status
 
+Plot GO terms by regulation status
+
 ## Usage
 
 ``` r
@@ -12,6 +14,21 @@ plot_go_terms(
   top_n = 10,
   wrap_width = 50,
   color_values = c(Up = "#740001", Down = "#6497b1"),
+  palette = "default",
+  size_range = c(2, 6),
+  style = "bw",
+  x_angle = 0,
+  txtsize = 12
+)
+
+plot_go_terms(
+  go_df,
+  go_terms_of_interest = NULL,
+  comparison = NULL,
+  top_n = 10,
+  wrap_width = 50,
+  color_values = c(Up = "#740001", Down = "#6497b1"),
+  palette = "default",
   size_range = c(2, 6),
   style = "bw",
   x_angle = 0,
@@ -46,6 +63,10 @@ plot_go_terms(
 
   Named colors for Up and Down.
 
+- palette:
+
+  Optional color palette used for GO-term visualization.
+
 - size_range:
 
   Point size range.
@@ -63,5 +84,7 @@ plot_go_terms(
   Base font size.
 
 ## Value
+
+A ggplot object.
 
 A ggplot object.

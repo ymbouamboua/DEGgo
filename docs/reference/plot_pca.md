@@ -18,7 +18,8 @@ plot_pca(
   height = 6,
   dpi = 300,
   style = "classic",
-  txtsize = 12
+  txtsize = 12,
+  palette = "default"
 )
 ```
 
@@ -75,6 +76,11 @@ plot_pca(
 - txtsize:
 
   Base text size.
+
+- palette:
+
+  Optional color palette. Can be a named palette supported by DEGgo or a
+  character vector of colors.
 
 ## Value
 

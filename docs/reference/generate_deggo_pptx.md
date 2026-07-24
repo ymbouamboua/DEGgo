@@ -8,6 +8,7 @@ Generate a PowerPoint report from DEGgo results
 generate_deggo_pptx(
   results,
   output_file = "DEGgo_Report.pptx",
+  project_name = NULL,
   title = "DEGgo RNA-seq report",
   subtitle = "Differential expression, visualization and Gene Ontology summary"
 )
@@ -22,6 +23,10 @@ generate_deggo_pptx(
 - output_file:
 
   Output PPTX file.
+
+- project_name:
+
+  Optional project name displayed in the PowerPoint report.
 
 - title:
 

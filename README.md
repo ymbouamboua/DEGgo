@@ -1,20 +1,36 @@
 DEGgo
 ================
 
+<div align="center">
+
+<img src="man/figures/DEGgo_logo.svg" width="500" alt="DEGgo logo"/>
+
+<br><br>
+
+<strong> An integrated R framework for automated bulk RNA-seq
+differential expression, functional enrichment, circadian rhythmicity
+analysis, and reproducible reporting. </strong>
+
+</div>
+
+<!-- badges: start -->
+
 <p align="center">
 
-<img src="man/figures/DEGgo_logo.svg" width="500"/>
-
-**An integrated framework for automated bulk RNA-seq differential
-expression, functional enrichment, circadian rhythmicity analysis, and
-reproducible reporting.**
+[![R-CMD-check](https://github.com/ymbouamboua/DEGgo/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ymbouamboua/DEGgo/actions/workflows/R-CMD-check.yaml)
+[![Documentation](https://img.shields.io/badge/docs-pkgdown-blue.svg)](https://ymbouamboua.github.io/DEGgo/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg)](https://doi.org/10.5281/zenodo.20785178)
+![R](https://img.shields.io/badge/R-%3E%3D4.3-blue) [![License:
+MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Stars](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
 
 </p>
 
-![R](https://img.shields.io/badge/R-%3E%3D4.3-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg)
-![Stars](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
+<!-- badges: end -->
+
+📖 **Documentation:** <https://ymbouamboua.github.io/DEGgo/>
+
+------------------------------------------------------------------------
 
 ## Highlights
 
@@ -231,6 +247,7 @@ DEGgo_results/
 ├── go_enrichment/
 │   ├── GO_results.tsv
 │   ├── GO_dotplot.png
+│   ├── GO_barplot.png
 │   └── GO_summary.tsv
 ├── reports/
 │   ├── DEGgo_report.html
@@ -252,7 +269,7 @@ optional downstream analyses such as Gene Ontology enrichment.
 ## Public circadian example
 
 DEGgo includes a fully reproducible workflow based on the public baboon
-transcriptomic atlas **[GSE98965](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98965)** (Mure *et al.*, Science 2018).
+transcriptomic atlas (**GSE98965**, Mure *et al.*, Science 2018).
 
 ``` r
 results <- run_public_circadian_example(

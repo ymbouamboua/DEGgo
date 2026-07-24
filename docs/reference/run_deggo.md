@@ -1,6 +1,8 @@
 # Run DEGgo bulk RNA-seq downstream analysis
 
-Run a complete and automated bulk RNA-seq downstream analysis workflow.
+Automated bulk RNA-seq differential expression workflow including QC,
+preprocessing, differential expression, annotation, visualization, GO
+enrichment, reporting, and reproducibility exports.
 
 ## Usage
 
@@ -8,6 +10,7 @@ Run a complete and automated bulk RNA-seq downstream analysis workflow.
 run_deggo(
   counts,
   metadata,
+  project_name = NULL,
   gene_col = c("gene_id", "GeneID", "gene", "Gene", "ENSEMBL", "ensembl", "ensembl_id"),
   feature_col = c("gene_name", "SYMBOL", "symbol", "gene_symbol", "external_gene_name"),
   sample_col = c("sample", "Sample", "SAMPLE"),
@@ -23,6 +26,16 @@ run_deggo(
   logfc_cutoff = 0.25,
   top_n_heatmap = 50,
   top_n_labels = 10,
+  min_expr_count = 20,
+  min_expr_samples = 3,
+  min_prevalence = 0.6,
+  max_sample_fraction = 0.45,
+  max_group_sample_fraction = 0.45,
+  min_group_mean = 10,
+  min_group_median = 20,
+  max_group_cv = NULL,
+  expr_filter_groups = "auto",
+  clean_deg_tables = TRUE,
   ontology = c("BP", "MF", "CC"),
   organism = c("human", "mouse", "rat", "custom"),
   orgdb = NULL,
@@ -31,13 +44,24 @@ run_deggo(
   contrast = NULL,
   design_formula = ~condition,
   pairwise_group_cols = NULL,
-  pairwise_contrast_col = "comparison_group",
+  pairwise_contrast_col = "group",
   pairwise_contrasts = NULL,
   filter_method = c("count", "cpm", "none"),
   pairwise_mode = c("all", "within_first", "within_second"),
   min_count = 5,
   min_samples = 2,
   min_total = 10,
+  rhythmicity_analysis = FALSE,
+  rhythmicity_time_col = "time",
+  rhythmicity_group_col = NULL,
+  rhythmicity_assay = c("vst", "normalized", "log2_normalized", "raw"),
+  rhythmicity_methods = c("meta2d", "cosinor"),
+  rhythmicity_period_range = c(20, 28),
+  rhythmicity_cycle_length = 24,
+  rhythmicity_cycMethod = c("ARS", "JTK", "LS"),
+  cosinor_engine = c("auto", "package", "manual"),
+  rhythmicity_plots = TRUE,
+  rhythmicity_n_top_plots = 20,
   generate_report = TRUE,
   report_formats = "html",
   report_template = NULL,
@@ -46,6 +70,8 @@ run_deggo(
   save_reproducibility = TRUE,
   save_clean_inputs = TRUE,
   txtsize = 12,
+  heatmap_annotation_cols = "auto",
+  palette = "default",
   seed = 123
 )
 ```
@@ -54,272 +80,276 @@ run_deggo(
 
 - counts:
 
-  Raw count table, data frame or matrix. Rows should represent
-  genes/features and columns should represent samples. If
-  `prepare_input = TRUE`, DEGgo attempts to detect gene and sample
-  columns automatically using `gene_col`, `feature_col`, and
-  `sample_col`.
+  Raw count matrix or data frame.
 
 - metadata:
 
-  Sample metadata data frame. Must contain a sample identifier column
-  matching the count matrix sample names. For single analysis, it must
-  contain `condition` unless this is encoded in the design/contrast
-  workflow. For pairwise analysis, `condition` can be automatically
-  generated from `pairwise_group_cols`.
+  Sample metadata data frame.
+
+- project_name:
+
+  Optional project name shown in HTML, PDF and PowerPoint reports.
 
 - gene_col:
 
-  Character vector of possible gene identifier column names. Used during
-  input preparation.
+  Candidate gene identifier column names.
 
 - feature_col:
 
-  Character vector of possible feature/gene symbol column names. Used
-  during input preparation and marker-based checks.
+  Candidate gene symbol/name column names.
 
 - sample_col:
 
-  Character vector of possible sample identifier column names in
-  `metadata`.
+  Candidate sample identifier column names.
 
 - prepare_input:
 
-  Logical. If `TRUE`, automatically prepares and matches the count table
-  and metadata using `prepare_counts_metadata()`. If `FALSE`, `counts`
-  must already be a numeric matrix with sample names matching metadata
-  row names or a sample column.
+  Logical. Prepare and match input tables.
 
 - raw_qc:
 
-  Logical. If `TRUE`, run exploratory raw sample QC before input
-  preparation and differential expression analysis using
-  [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md).
+  Logical. Run raw count QC.
 
 - remove_flagged:
 
-  Logical. If `TRUE`, remove samples flagged by the raw QC table before
-  continuing the workflow. Default is `FALSE` to keep sample exclusion
-  under user control.
+  Logical. Remove QC-flagged samples.
 
 - qc_markers:
 
-  Optional character vector of marker genes used during raw and clean
-  QC.
+  Optional marker genes for QC.
 
 - marker_sets:
 
-  Optional named list of marker gene sets used for marker-based
-  biological validation with
-  [`marker_score_check()`](https://ymbouamboua.github.io/DEGgo/reference/marker_score_check.md).
+  Optional named marker gene sets.
 
 - qc_sample_col:
 
-  Optional sample column used by
-  [`remove_flagged_samples()`](https://ymbouamboua.github.io/DEGgo/reference/remove_flagged_samples.md).
-  If `NULL`, the first value of `sample_col` is used.
+  Optional sample column for QC.
 
 - qc_output_prefix:
 
-  Character prefix used for QC output directories.
+  QC output prefix.
 
 - output_dir:
 
-  Output directory. If `NULL`, results are written to `"DEGgo_results"`.
-  A dated DEGgo subdirectory is created automatically.
+  Output directory.
 
 - padj_cutoff:
 
-  Adjusted p-value cutoff used to define significant DEGs.
+  Adjusted p-value cutoff.
 
 - logfc_cutoff:
 
-  Absolute log2 fold-change cutoff used to define significant DEGs.
+  Absolute log2 fold-change cutoff.
 
 - top_n_heatmap:
 
-  Number of top genes to display in DEG heatmaps.
+  Number of genes shown in heatmaps.
 
 - top_n_labels:
 
-  Number of top genes to label in volcano plots.
+  Number of genes labelled in volcano plots.
+
+- min_expr_count:
+
+  Minimum expression count for clean DEG filtering.
+
+- min_expr_samples:
+
+  Minimum samples passing expression threshold.
+
+- min_prevalence:
+
+  Minimum prevalence for clean DEG filtering.
+
+- max_sample_fraction:
+
+  Maximum single-sample fraction.
+
+- max_group_sample_fraction:
+
+  Maximum fraction of group expression contributed by a single sample.
+
+- min_group_mean:
+
+  Minimum group mean expression.
+
+- min_group_median:
+
+  Optional minimum median expression required in at least one comparison
+  group during post-DE filtering.
+
+- max_group_cv:
+
+  Optional maximum within-group coefficient of variation used during
+  post-DE filtering.
+
+- expr_filter_groups:
+
+  Grouping variables for expression filtering.
+
+- clean_deg_tables:
+
+  Logical. Apply post-DEG expression cleaning.
 
 - ontology:
 
-  Gene Ontology namespace. One of `"BP"`, `"MF"`, or `"CC"`.
+  GO ontology.
 
 - organism:
 
-  Organism used for gene annotation. One of `"human"`, `"mouse"`,
-  `"rat"`, or `"custom"`.
+  Organism name.
 
 - orgdb:
 
-  Optional AnnotationDbi OrgDb object. Required when
-  `organism = "custom"`.
+  Optional custom OrgDb object.
 
 - method:
 
-  Differential expression method. One of `"DESeq2"`, `"edgeR"`, or
-  `"limma"`. Pairwise mode currently supports DESeq2 only.
+  Differential expression method.
 
 - analysis_mode:
 
-  Analysis mode. `"single"` runs one differential expression analysis.
-  `"pairwise"` runs multiple pairwise DESeq2 contrasts.
+  Single or pairwise analysis mode.
 
 - contrast:
 
-  Optional contrast passed to the differential expression engine in
-  single-analysis mode.
+  Contrast vector for single analysis.
 
 - design_formula:
 
-  Design formula used by the differential expression engine, for example
-  `~ condition` or `~ batch + condition`.
+  Design formula.
 
 - pairwise_group_cols:
 
-  Character vector of metadata columns used to define pairwise groups.
-  Required when `analysis_mode = "pairwise"`.
+  Metadata columns used to build pairwise groups.
 
 - pairwise_contrast_col:
 
-  Name of the metadata column used to store or generate pairwise
-  contrast groups.
+  Name of pairwise contrast column.
 
 - pairwise_contrasts:
 
-  Optional named list of pairwise contrasts. If provided, these
-  contrasts are used instead of automatically generated contrasts.
+  Optional named list of pairwise contrasts.
 
 - filter_method:
 
-  Low-expression filtering method. One of `"count"`, `"cpm"`, or
-  `"none"`.
+  Gene filtering method.
 
 - pairwise_mode:
 
-  Pairwise comparison mode. One of `"all"`, `"within_first"`, or
-  `"within_second"`.
+  Pairwise contrast generation mode.
 
 - min_count:
 
-  Minimum count threshold used by count-based filtering.
+  Minimum count threshold.
 
 - min_samples:
 
-  Minimum number of samples required to pass the count/CPM threshold.
+  Minimum number of samples passing `min_count`.
 
 - min_total:
 
-  Minimum total count required for a gene to be retained.
+  Minimum total count.
+
+- rhythmicity_analysis:
+
+  Logical. Run MetaCycle + cosinor rhythmicity analysis on the fitted
+  `dds` object (see
+  [`run_deggo_rhythmicity()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo_rhythmicity.md)).
+  Disabled by default; requires a numeric time column in `metadata`.
+
+- rhythmicity_time_col:
+
+  Metadata column with numeric time (e.g. ZT hours) used for rhythmicity
+  analysis.
+
+- rhythmicity_group_col:
+
+  Optional metadata column defining exactly two groups for the
+  differential rhythmicity test.
+
+- rhythmicity_assay:
+
+  Assay extracted from `dds` for rhythmicity analysis. One of `"vst"`,
+  `"normalized"`, `"log2_normalized"`, `"raw"`.
+
+- rhythmicity_methods:
+
+  Rhythmicity methods to run: `"meta2d"`, `"cosinor"`, or both.
+
+- rhythmicity_period_range:
+
+  MetaCycle period search window.
+
+- rhythmicity_cycle_length:
+
+  Assumed period for the cosinor fit.
+
+- rhythmicity_cycMethod:
+
+  MetaCycle methods to combine.
+
+- cosinor_engine:
+
+  Cosinor fitting engine: `"auto"`, `"package"` (`cosinor`/`cosinor2`),
+  or `"manual"` (dependency-free
+  [`lm()`](https://rdrr.io/r/stats/lm.html) fallback).
+
+- rhythmicity_plots:
+
+  Logical. Generate rhythmicity diagnostic plots.
+
+- rhythmicity_n_top_plots:
+
+  Number of top rhythmic genes to plot.
 
 - generate_report:
 
-  Logical. If `TRUE`, generate DEGgo report files.
+  Logical. Generate report.
 
 - report_formats:
 
-  Character vector of report formats, for example `"html"`, `"pdf"`, or
-  `c("html", "pdf")`.
+  Report formats.
 
 - report_template:
 
-  Optional path to a custom R Markdown report template. If `NULL`, the
-  package DEGgo template is used.
+  Optional report template path.
 
 - generate_pptx:
 
-  Logical. If `TRUE`, generate a PowerPoint report.
+  Logical. Generate PowerPoint.
 
 - pptx_file:
 
-  Optional path to the output PowerPoint file. If `NULL`,
-  `"DEGgo_Report.pptx"` is written inside `output_dir`.
+  Optional PowerPoint output file.
 
 - save_reproducibility:
 
-  Logical. If `TRUE`, save reproducibility files, including run objects
-  and session information.
+  Logical. Save reproducibility bundle.
 
 - save_clean_inputs:
 
-  Logical. If `TRUE`, save cleaned count and metadata tables after
-  sample matching and filtering.
+  Logical. Save cleaned input tables.
 
 - txtsize:
 
-  Base text size used in DEGgo visualizations.
+  Base text size.
+
+- heatmap_annotation_cols:
+
+  Character vector of metadata columns used as heatmap annotations, or
+  `"auto"` for automatic selection.
+
+- palette:
+
+  Optional color palette used by DEGgo plots. Can be a named DEGgo
+  palette or a character vector of colors.
 
 - seed:
 
-  Random seed for reproducibility.
+  Random seed.
 
 ## Value
 
-A named list containing differential expression results, significant
-DEGs, summary tables, plots, GO enrichment results, QC outputs, cleaned
-counts and metadata, report paths, PowerPoint path, output directories,
-run parameters, manifest, and DEGgo version.
-
-## Details
-
-DEGgo can perform optional raw sample quality control, optional removal
-of flagged samples, marker-based biological validation, input
-preparation, sample matching, gene identifier cleaning, low-expression
-filtering, differential expression analysis, result annotation, PCA,
-heatmap and volcano visualization, Gene Ontology enrichment,
-reproducibility export, and automated HTML/PDF/PPTX report generation.
-
-The function supports either a single differential expression analysis
-or multiple pairwise contrasts. Pairwise mode currently uses DESeq2.
-
-In single mode, DEGgo runs one differential expression analysis using
-the selected method and design formula. In pairwise mode, DEGgo builds
-or uses predefined pairwise contrasts from metadata columns and runs
-DESeq2 for each contrast.
-
-The raw QC step is performed before input preparation and filtering. The
-sample QC step is performed after gene filtering and uses the final
-matched count matrix and metadata.
-
-Automatic sample removal is disabled by default because exclusion of
-samples should usually be reviewed by the analyst.
-
-## See also
-
-`prepare_counts_metadata`, `explore_bulk_rnaseq`,
-`remove_flagged_samples`, `marker_score_check`, `run_de`,
-`run_deseq2_pairwise`, `run_go_enrichment`, `generate_deggo_report`,
-`generate_deggo_pptx`
-
-## Examples
-
-``` r
-if (FALSE) { # \dontrun{
-results <- run_deggo(
-  counts = counts,
-  metadata = metadata,
-  organism = "mouse",
-  method = "DESeq2",
-  analysis_mode = "single",
-  design_formula = ~ condition,
-  contrast = c("condition", "treated", "control"),
-  sample_col = "sample"
-)
-
-pairwise_results <- run_deggo(
-  counts = counts,
-  metadata = metadata,
-  organism = "mouse",
-  method = "DESeq2",
-  analysis_mode = "pairwise",
-  pairwise_group_cols = c("treatment", "sex", "tissue"),
-  pairwise_contrasts = pairwise_contrasts,
-  sample_col = "sample",
-  raw_qc = TRUE,
-  remove_flagged = FALSE
-)
-} # }
-```
+A DEGgo results object.

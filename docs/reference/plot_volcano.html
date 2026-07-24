@@ -11,7 +11,7 @@ or Ns based on log2 fold-change and p-value thresholds."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">DEGgo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,6 +61,7 @@ or Ns based on log2 fold-change and p-value thresholds.</p>
 <span>  top_n_labels <span class="op">=</span> <span class="fl">40</span>,</span>
 <span>  genes_highlight <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  colors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Up <span class="op">=</span> <span class="st">"#740001"</span>, Down <span class="op">=</span> <span class="st">"#6497b1"</span>, Ns <span class="op">=</span> <span class="st">"gray70"</span><span class="op">)</span>,</span>
+<span>  palette <span class="op">=</span> <span class="st">"default"</span>,</span>
 <span>  point_size <span class="op">=</span> <span class="fl">1.5</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.65</span>,</span>
 <span>  title <span class="op">=</span> <span class="st">"Volcano Plot"</span>,</span>
@@ -133,6 +134,12 @@ automatically tries <code>"SYMBOL"</code>, <code>"gene"</code>, then <code>"ENSE
 <dt id="arg-colors">colors<a class="anchor" aria-label="anchor" href="#arg-colors"></a></dt>
 <dd><p>Named vector of colors for <code>Up</code>,
 <code>Down</code>, and <code>Ns</code>.</p></dd>
+
+
+<dt id="arg-palette">palette<a class="anchor" aria-label="anchor" href="#arg-palette"></a></dt>
+<dd><p>Optional color palette used for regulation classes. It may
+be a named DEGgo palette or a named character vector defining colors for
+<code>"Up"</code>, <code>"Down"</code>, and <code>"NS"</code>.</p></dd>
 
 
 <dt id="arg-point-size">point_size<a class="anchor" aria-label="anchor" href="#arg-point-size"></a></dt>

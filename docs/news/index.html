@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">DEGgo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,60 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.0" id="deggo-100">DEGgo 1.0.0<a class="anchor" aria-label="anchor" href="#deggo-100"></a></h2>
+<div class="section level3">
+<h3 id="new-features-1-0-0">New features<a class="anchor" aria-label="anchor" href="#new-features-1-0-0"></a></h3>
+<ul><li>Initial stable release</li>
+<li>DESeq2, edgeR and limma support</li>
+<li>Single and pairwise differential expression workflows</li>
+<li>Automatic quality control</li>
+<li>Publication-ready PCA, volcano plots and heatmaps</li>
+<li>GO enrichment analysis</li>
+<li>HTML report generation</li>
+<li>PowerPoint export</li>
+<li>Reproducibility reports</li>
+<li>Example datasets and tutorials</li>
+<li>Added <code><a href="../reference/run_deggo_rhythmicity.html">run_deggo_rhythmicity()</a></code> for circadian and time-course rhythmicity analysis.</li>
+<li>Added MetaCycle-based rhythmicity detection.</li>
+<li>Added single-component cosinor regression with automatic or manual fitting.</li>
+<li>Added optional differential-rhythmicity testing between two groups.</li>
+<li>Added rhythmicity diagnostic plots and gene-symbol annotation support.</li>
+<li>Added structured rhythmicity result tables and reproducibility parameters.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-1-0-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-1-0-0"></a></h3>
+<ul><li>Improved <code><a href="../reference/plot_volcano.html">plot_volcano()</a></code> documentation.</li>
+<li>Removed unintended global-variable dependencies.</li>
+<li>Improved CRAN portability by replacing non-ASCII characters in R source files.</li>
+<li>Resolved all package warnings and code/documentation issues detected by <code>R CMD check</code>.</li>
+<li>Improved output organization and reproducibility.</li>
+<li>Enhanced DEG summary tables and visualization.</li>
+<li>Improved automated HTML report generation.</li>
+<li>General code cleanup and documentation updates.</li>
+</ul><hr></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.2" id="deggo-012">DEGgo 0.1.2<a class="anchor" aria-label="anchor" href="#deggo-012"></a></h2>
+<div class="section level3">
+<h3 id="improvements-0-1-2">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-1-2"></a></h3>
+<ul><li>Refactored the internal analysis workflow for improved maintainability.</li>
+<li>Added <code>analysis.R</code> and <code>cleaning.R</code> modules.</li>
+<li>Renamed <code>enrichement.R</code> to <code>enrichment.R</code>.</li>
+<li>Simplified and optimized <code><a href="../reference/run_deggo.html">run_deggo()</a></code> internals.</li>
+<li>Improved Gene Ontology enrichment workflow and visualization.</li>
+<li>Enhanced annotation and preprocessing modules.</li>
+<li>Updated function documentation and examples.</li>
+<li>Expanded unit tests and improved package robustness.</li>
+<li>Removed obsolete internal helper documentation.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-1-2">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-2"></a></h3>
+<ul><li>Fixed documentation inconsistencies.</li>
+<li>Resolved <code>R CMD check</code> notes related to documentation and plotting.</li>
+<li>General code cleanup and internal refactoring.</li>
+</ul><hr></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="deggo-010">DEGgo 0.1.0<a class="anchor" aria-label="anchor" href="#deggo-010"></a></h2>
 <div class="section level3">
 <h3 id="initial-public-release-0-1-0">Initial public release<a class="anchor" aria-label="anchor" href="#initial-public-release-0-1-0"></a></h3>
@@ -48,23 +102,23 @@
 <li>Automated PCA, volcano plot, and heatmap generation.</li>
 <li>Gene Ontology enrichment analysis and visualization.</li>
 <li>Interactive HTML reporting with reproducibility tracking.</li>
-<li>Support for custom OrgDb annotation databases through the orgdb argument, enabling analyses of non-model organisms.</li>
+<li>Support for custom OrgDb annotation databases through the <code>orgdb</code> argument, enabling analyses of non-model organisms.</li>
 </ul></div>
 <div class="section level4">
 <h4 id="improvements-0-1-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-1-0"></a></h4>
 <ul><li>Improved output organization and reproducibility files.</li>
 <li>Enhanced DEG summary tables and visualization.</li>
 <li>Added automated report generation with integrated figures and enrichment results.</li>
-</ul></div>
+</ul><hr></div>
 </div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="deggo-0009000">DEGgo 0.0.0.9000<a class="anchor" aria-label="anchor" href="#deggo-0009000"></a></h2>
+<div class="section level3">
+<h3 id="development-0-0-0-9000">Development<a class="anchor" aria-label="anchor" href="#development-0-0-0-9000"></a></h3>
 <ul><li>Initial development version.</li>
 <li>Added bulk RNA-seq QC, differential expression, GO enrichment, and plotting helpers.</li>
-</ul><div class="section level3">
-<h3 id="deggo-development-version-0-0-0-9000">DEGgo (development version)<a class="anchor" aria-label="anchor" href="#deggo-development-version-0-0-0-9000"></a></h3>
-<ul><li>Initial CRAN submission.</li>
+<li>Initial package structure.</li>
 </ul></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

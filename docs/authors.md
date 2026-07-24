@@ -11,13 +11,13 @@ Source:
 [`DESCRIPTION`](https://github.com/ymbouamboua/DEGgo/blob/HEAD/DESCRIPTION)
 
 Mbouamboua Y (2026). *DEGgo: Differential Expression and Gene Ontology
-enrichment analysis for bulk RNA-seq data*. R package version 0.1.1,
+enrichment analysis for bulk RNA-seq data*. R package version 1.0.0,
 <https://ymbouamboua.github.io/DEGgo/>.
 
     @Manual{,
       title = {DEGgo: Differential Expression and Gene Ontology enrichment analysis for bulk RNA-seq data},
       author = {Yvon Mbouamboua},
       year = {2026},
-      note = {R package version 0.1.1},
+      note = {R package version 1.0.0},
       url = {https://ymbouamboua.github.io/DEGgo/},
     }

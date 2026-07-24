@@ -17,7 +17,7 @@ run_go_enrichment(
   qvalue_cutoff = 0.2,
   p_adjust_method = "BH",
   logfc_col = "log2FoldChange",
-  entrez_col = "ENTREZID",
+  entrez_col = NULL,
   min_genes = 10
 )
 ```

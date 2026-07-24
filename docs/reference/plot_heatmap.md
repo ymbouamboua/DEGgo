@@ -1,6 +1,6 @@
-# Generate DEGgo heatmap
+# Plot a DEGgo Differential Expression Heatmap
 
-Generates a clustered heatmap of top differentially expressed genes.
+Plot a DEGgo Differential Expression Heatmap
 
 ## Usage
 
@@ -12,22 +12,28 @@ plot_heatmap(
   contrast = NULL,
   sample_subset = NULL,
   metadata_filter = NULL,
-  top_n_heatmap = 50,
+  top_n_heatmap = 20,
   padj_cutoff = 0.05,
+  logfc_cutoff = 0.25,
   main = "Top Differentially Expressed Genes",
   output_dir = "DEGgo_out",
   filename = "Heatmap",
   fallback = TRUE,
-  annotation_cols = c("condition", "treatment", "sex", "tissue"),
   annotation_colors = NULL,
+  annotation_cols = NULL,
   order_by = NULL,
+  order_levels = NULL,
   scale_rows = TRUE,
   cluster_rows = TRUE,
   cluster_cols = FALSE,
-  fontsize_row = 12,
-  fontsize_col = 10,
-  width = 8,
-  height = 10
+  fontsize_row = NULL,
+  fontsize_col = NULL,
+  show_dendrogram = FALSE,
+  width = NULL,
+  height = NULL,
+  show_rownames = NULL,
+  show_colnames = NULL,
+  palette = "default"
 )
 ```
 
@@ -35,35 +41,41 @@ plot_heatmap(
 
 - vsd:
 
-  Variance-stabilized dataset.
+  Variance-stabilized expression object.
 
 - res_df:
 
-  Differential expression results data frame.
+  Differential-expression table, preferably a cleaned table from
+  `de_results$sig_deg_clean`.
 
 - metadata:
 
-  Sample metadata data frame.
+  Sample metadata.
 
 - contrast:
 
-  Contrast name to plot.
+  Optional contrast vector.
 
 - sample_subset:
 
-  Optional sample vector to retain.
+  Optional samples to retain.
 
 - metadata_filter:
 
-  Optional named list used to filter metadata.
+  Optional named metadata filtering list.
 
 - top_n_heatmap:
 
-  Number of genes displayed in the heatmap.
+  Number of genes displayed.
 
 - padj_cutoff:
 
-  Adjusted p-value threshold.
+  Adjusted P-value cutoff.
+
+- logfc_cutoff:
+
+  Absolute log2 fold-change cutoff used when selecting significant genes
+  for the heatmap.
 
 - main:
 
@@ -71,57 +83,76 @@ plot_heatmap(
 
 - output_dir:
 
-  Directory for exported plots.
+  Output directory.
 
 - filename:
 
-  Output file name without extension.
+  Output filename without extension.
 
 - fallback:
 
-  Logical. If TRUE, use top ranked genes when no significant genes pass
-  `padj_cutoff`.
-
-- annotation_cols:
-
-  Metadata columns shown as heatmap annotations.
+  Use ranked genes if no gene passes the significance cutoff.
 
 - annotation_colors:
 
-  Named list of annotation colors.
+  Optional annotation-color list.
+
+- annotation_cols:
+
+  Metadata annotation columns.
 
 - order_by:
 
-  Metadata columns used to order samples.
+  Metadata variables used to order samples.
+
+- order_levels:
+
+  Optional named list defining sample-group order.
 
 - scale_rows:
 
-  Logical; scale rows before plotting.
+  Scale expression by gene.
 
 - cluster_rows:
 
-  Logical; cluster genes.
+  Cluster genes.
 
 - cluster_cols:
 
-  Logical; cluster samples.
+  Cluster samples.
 
 - fontsize_row:
 
-  Row label font size.
+  Row-label size.
 
 - fontsize_col:
 
-  Column label font size.
+  Column-label size.
+
+- show_dendrogram:
+
+  Display dendrograms.
 
 - width:
 
-  Plot width in inches.
+  Output width.
 
 - height:
 
-  Plot height in inches.
+  Output height.
+
+- show_rownames:
+
+  Display row names.
+
+- show_colnames:
+
+  Display column names.
+
+- palette:
+
+  DEGgo palette name.
 
 ## Value
 
-Heatmap expression matrix, invisibly.
+Invisibly returns the plotted expression matrix.
