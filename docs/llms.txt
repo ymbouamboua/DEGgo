@@ -1,12 +1,17 @@
 # DEGgo
 
-![](reference/figures/DEGgo_logo.svg)
+![DEGgo logo](reference/figures/DEGgo_logo.svg)
 
-**An integrated framework for automated bulk RNA-seq differential
+  
+  
+
+**An integrated R framework for automated bulk RNA-seq differential
 expression, functional enrichment, circadian rhythmicity analysis, and
 reproducible reporting.**
 
-![R](https://img.shields.io/badge/R-%3E%3D4.3-blue)![License](https://img.shields.io/badge/license-MIT-green)![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg)![Stars](https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social)
+📖 **Documentation:** <https://ymbouamboua.github.io/DEGgo/>
+
+------------------------------------------------------------------------
 
 ## Highlights
 
@@ -90,6 +95,37 @@ install.packages(c("MetaCycle","cosinor","cosinor2"))
 ```
 
 ## Quick Start
+
+### Input data
+
+#### Count table
+
+DEGgo accepts raw count tables or matrices. The count table should
+contain one gene identifier column and one column per sample.
+
+``` text
+gene_id          gene_name    Sample1    Sample2    Sample3
+ENSG00000000003  TSPAN6       120        145        98
+ENSG00000000005  TNMD         65         80         50
+ENSG00000000419  DPM1         12         18         250
+```
+
+#### Metadata
+
+Metadata must contain one row per sample. The sample identifier column
+is supplied using `sample_col`.
+
+``` text
+sample      condition    batch
+Sample1     control      A
+Sample2     treated      A
+Sample3     control      B
+```
+
+The sample names in the metadata must match the sample columns in the
+count table.
+
+### Example analysis with the airway dataset
 
 The package includes a ready-to-use RNA-seq dataset derived from the
 Bioconductor **[airway](https://bioconductor.org/packages/airway/)**
@@ -234,6 +270,7 @@ DEGgo_results/
 ├── go_enrichment/
 │   ├── GO_results.tsv
 │   ├── GO_dotplot.png
+│   ├── GO_barplot.png
 │   └── GO_summary.tsv
 ├── reports/
 │   ├── DEGgo_report.html
@@ -255,9 +292,7 @@ optional downstream analyses such as Gene Ontology enrichment.
 ## Public circadian example
 
 DEGgo includes a fully reproducible workflow based on the public baboon
-transcriptomic atlas
-**[GSE98965](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98965)**
-(Mure *et al.*, Science 2018).
+transcriptomic atlas (**GSE98965**, Mure *et al.*, Science 2018).
 
 ``` r
 

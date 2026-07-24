@@ -8,3 +8,5 @@
 ^pkgdown$
 ^setup$
 ^CITATION\.cff$
+^doc$
+^Meta$

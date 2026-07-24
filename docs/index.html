@@ -56,12 +56,18 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="deggo">DEGgo<a class="anchor" aria-label="anchor" href="#deggo"></a>
 </h1></div>
-<p align="center">
-</p>
-<p><img src="reference/figures/DEGgo_logo.svg" width="500"></p>
-<p><strong>An integrated framework for automated bulk RNA-seq differential expression, functional enrichment, circadian rhythmicity analysis, and reproducible reporting.</strong></p>
+<div align="center">
+<p><img src="reference/figures/DEGgo_logo.svg" width="500" alt="DEGgo logo"></p>
+<p><br><br></p>
+<p><strong> An integrated R framework for automated bulk RNA-seq differential expression, functional enrichment, circadian rhythmicity analysis, and reproducible reporting. </strong></p>
+</div>
+<!-- badges: start -->
 
-<p><img src="https://img.shields.io/badge/R-%3E%3D4.3-blue" alt="R"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg" alt="DOI"><img src="https://img.shields.io/github/stars/ymbouamboua/DEGgo?style=social" alt="Stars"></p>
+
+
+<!-- badges: end -->
+<p>📖 <strong>Documentation:</strong> <a href="https://ymbouamboua.github.io/DEGgo/" class="uri">https://ymbouamboua.github.io/DEGgo/</a></p>
+<hr>
 <div class="section level2">
 <h2 id="highlights">Highlights<a class="anchor" aria-label="anchor" href="#highlights"></a>
 </h2>
@@ -168,8 +174,34 @@
 <div class="section level2">
 <h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
+<div class="section level3">
+<h3 id="input-data">Input data<a class="anchor" aria-label="anchor" href="#input-data"></a>
+</h3>
+<div class="section level4">
+<h4 id="count-table">Count table<a class="anchor" aria-label="anchor" href="#count-table"></a>
+</h4>
+<p>DEGgo accepts raw count tables or matrices. The count table should contain one gene identifier column and one column per sample.</p>
+<pre class="text"><code>gene_id          gene_name    Sample1    Sample2    Sample3
+ENSG00000000003  TSPAN6       120        145        98
+ENSG00000000005  TNMD         65         80         50
+ENSG00000000419  DPM1         12         18         250</code></pre>
+</div>
+<div class="section level4">
+<h4 id="metadata">Metadata<a class="anchor" aria-label="anchor" href="#metadata"></a>
+</h4>
+<p>Metadata must contain one row per sample. The sample identifier column is supplied using <code>sample_col</code>.</p>
+<pre class="text"><code>sample      condition    batch
+Sample1     control      A
+Sample2     treated      A
+Sample3     control      B</code></pre>
+<p>The sample names in the metadata must match the sample columns in the count table.</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="example-analysis-with-the-airway-dataset">Example analysis with the airway dataset<a class="anchor" aria-label="anchor" href="#example-analysis-with-the-airway-dataset"></a>
+</h3>
 <p>The package includes a ready-to-use RNA-seq dataset derived from the Bioconductor <strong><a href="https://bioconductor.org/packages/airway/" class="external-link">airway</a></strong> package (Himes <em>et al.</em>), providing a reproducible example for testing and learning the complete DEGgo workflow.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.delim</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>    <span class="st">"extdata"</span>,</span>
@@ -187,10 +219,11 @@
 <span>  <span class="op">)</span>,</span>
 <span>  check.names <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+</div>
 <div class="section level3">
 <h3 id="single-differential-expression-analysis">Single differential expression analysis<a class="anchor" aria-label="anchor" href="#single-differential-expression-analysis"></a>
 </h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
 <span>  counts<span class="op">=</span><span class="va">counts</span>,</span>
 <span>  metadata<span class="op">=</span><span class="va">metadata</span>,</span>
@@ -207,7 +240,7 @@
 <h3 id="pairwise-differential-expression-analysis">Pairwise differential expression analysis<a class="anchor" aria-label="anchor" href="#pairwise-differential-expression-analysis"></a>
 </h3>
 <p>Create a combined comparison variable when pairwise comparisons involve several metadata columns:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/interaction.html" class="external-link">interaction</a></span><span class="op">(</span></span>
 <span>  <span class="va">metadata</span><span class="op">$</span><span class="va">condition</span>,</span>
 <span>  <span class="va">metadata</span><span class="op">$</span><span class="va">sex</span>,</span>
@@ -215,7 +248,7 @@
 <span>  drop <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Define the comparisons:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pairwise_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  treatment_vs_control_male <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"group"</span>,</span>
@@ -236,7 +269,7 @@
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Run the pairwise workflow:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pairwise_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
 <span>  counts <span class="op">=</span> <span class="va">counts</span>,</span>
 <span>  metadata <span class="op">=</span> <span class="va">metadata</span>,</span>
@@ -282,6 +315,7 @@
 ├── go_enrichment/
 │   ├── GO_results.tsv
 │   ├── GO_dotplot.png
+│   ├── GO_barplot.png
 │   └── GO_summary.tsv
 ├── reports/
 │   ├── DEGgo_report.html
@@ -300,8 +334,8 @@
 <div class="section level2">
 <h2 id="public-circadian-example">Public circadian example<a class="anchor" aria-label="anchor" href="#public-circadian-example"></a>
 </h2>
-<p>DEGgo includes a fully reproducible workflow based on the public baboon transcriptomic atlas <strong><a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE98965" class="external-link">GSE98965</a></strong> (Mure <em>et al.</em>, Science 2018).</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<p>DEGgo includes a fully reproducible workflow based on the public baboon transcriptomic atlas (<strong>GSE98965</strong>, Mure <em>et al.</em>, Science 2018).</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_public_circadian_example.html">run_public_circadian_example</a></span><span class="op">(</span></span>
 <span>    tissue_code<span class="op">=</span><span class="st">"LIV"</span>,</span>
 <span>    output_dir<span class="op">=</span><span class="st">"Circadian_results"</span></span>
@@ -311,7 +345,7 @@
 <h2 id="rhythmicity-analysis">Rhythmicity analysis<a class="anchor" aria-label="anchor" href="#rhythmicity-analysis"></a>
 </h2>
 <p><code><a href="reference/run_deggo_rhythmicity.html">run_deggo_rhythmicity()</a></code> detects rhythmic genes in circadian or periodic time-course experiments using MetaCycle, cosinor regression, or both.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rhythm_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo_rhythmicity.html">run_deggo_rhythmicity</a></span><span class="op">(</span></span>
 <span>  expr <span class="op">=</span> <span class="va">expression_matrix</span>,</span>
 <span>  metadata <span class="op">=</span> <span class="va">metadata</span>,</span>
@@ -480,7 +514,7 @@
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
 <p>A complete tutorial and advanced examples are available in the package vignette.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/browseVignettes.html" class="external-link">browseVignettes</a></span><span class="op">(</span><span class="st">"DEGgo"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -559,7 +593,15 @@
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/ymbouamboua/DEGgo/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ymbouamboua/DEGgo/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://ymbouamboua.github.io/DEGgo/"><img src="https://img.shields.io/badge/docs-pkgdown-blue.svg" alt="Documentation"></a></li>
+<li><a href="https://doi.org/10.5281/zenodo.20785178" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20785178.svg" alt="DOI"></a></li>
+<li><a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>

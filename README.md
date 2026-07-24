@@ -111,6 +111,37 @@ install.packages(c("MetaCycle","cosinor","cosinor2"))
 
 ## Quick Start
 
+### Input data
+
+#### Count table
+
+DEGgo accepts raw count tables or matrices. The count table should
+contain one gene identifier column and one column per sample.
+
+``` text
+gene_id          gene_name    Sample1    Sample2    Sample3
+ENSG00000000003  TSPAN6       120        145        98
+ENSG00000000005  TNMD         65         80         50
+ENSG00000000419  DPM1         12         18         250
+```
+
+#### Metadata
+
+Metadata must contain one row per sample. The sample identifier column
+is supplied using `sample_col`.
+
+``` text
+sample      condition    batch
+Sample1     control      A
+Sample2     treated      A
+Sample3     control      B
+```
+
+The sample names in the metadata must match the sample columns in the
+count table.
+
+### Example analysis with the airway dataset
+
 The package includes a ready-to-use RNA-seq dataset derived from the
 Bioconductor **[airway](https://bioconductor.org/packages/airway/)**
 package (Himes *et al.*), providing a reproducible example for testing
