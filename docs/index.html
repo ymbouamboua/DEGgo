@@ -218,6 +218,11 @@ Sample3     control      B</code></pre>
 <span>    package <span class="op">=</span> <span class="st">"DEGgo"</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  check.names <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">metadata</span><span class="op">$</span><span class="va">treatment</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span></span>
+<span>  <span class="va">metadata</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>  levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"untreated"</span>, <span class="st">"treated"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -227,6 +232,7 @@ Sample3     control      B</code></pre>
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
 <span>  counts<span class="op">=</span><span class="va">counts</span>,</span>
 <span>  metadata<span class="op">=</span><span class="va">metadata</span>,</span>
+<span>  sample_col <span class="op">=</span> <span class="st">"sample"</span>,</span>
 <span>  organism<span class="op">=</span><span class="st">"human"</span>,</span>
 <span>  method<span class="op">=</span><span class="st">"DESeq2"</span>,</span>
 <span>  design_formula<span class="op">=</span><span class="op">~</span><span class="va">treatment</span>,</span>
@@ -236,60 +242,132 @@ Sample3     control      B</code></pre>
 <pre class="text"><code>treated versus untreated</code></pre>
 <p>Therefore, positive <code>log2FoldChange</code> values represent higher expression in the treated group.</p>
 </div>
-<div class="section level3">
-<h3 id="pairwise-differential-expression-analysis">Pairwise differential expression analysis<a class="anchor" aria-label="anchor" href="#pairwise-differential-expression-analysis"></a>
-</h3>
-<p>Create a combined comparison variable when pairwise comparisons involve several metadata columns:</p>
+</div>
+<div class="section level2">
+<h2 id="pairwise-differential-expression-analysis">Pairwise differential expression analysis<a class="anchor" aria-label="anchor" href="#pairwise-differential-expression-analysis"></a>
+</h2>
+<p>DEGgo also supports automated pairwise differential expression analysis across multiple experimental groups.</p>
+<p>This example generates a reproducible synthetic RNA-seq dataset with two experimental factors:</p>
+<ul>
+<li>treatment (control vs treated)</li>
+<li>sex (male vs female)</li>
+</ul>
+<p>Each combination contains three biological replicates.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/interaction.html" class="external-link">interaction</a></span><span class="op">(</span></span>
-<span>  <span class="va">metadata</span><span class="op">$</span><span class="va">condition</span>,</span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span></span>
+<span>  treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treated"</span><span class="op">)</span>,</span>
+<span>  sex <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"male"</span>, <span class="st">"female"</span><span class="op">)</span>,</span>
+<span>  replicate <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">metadata</span><span class="op">$</span><span class="va">sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"S"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/interaction.html" class="external-link">interaction</a></span><span class="op">(</span></span>
+<span>  <span class="va">metadata</span><span class="op">$</span><span class="va">treatment</span>,</span>
 <span>  <span class="va">metadata</span><span class="op">$</span><span class="va">sex</span>,</span>
 <span>  sep <span class="op">=</span> <span class="st">"_"</span>,</span>
 <span>  drop <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">[</span></span>
+<span>  ,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sample"</span>, <span class="st">"treatment"</span>, <span class="st">"sex"</span>, <span class="st">"replicate"</span>, <span class="st">"group"</span><span class="op">)</span></span>
+<span><span class="op">]</span></span>
+<span></span>
+<span><span class="va">n_genes</span> <span class="op">&lt;-</span> <span class="fl">1000</span></span>
+<span></span>
+<span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/NegBinomial.html" class="external-link">rnbinom</a></span><span class="op">(</span></span>
+<span>    <span class="va">n_genes</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span>,</span>
+<span>    mu <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>    size <span class="op">=</span> <span class="fl">1</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  nrow <span class="op">=</span> <span class="va">n_genes</span>,</span>
+<span>  ncol <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
+<span>  <span class="st">"ENSG"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%011d"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_genes</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">$</span><span class="va">sample</span></span>
+<span></span>
+<span><span class="co">## Introduce artificial differential expression</span></span>
+<span></span>
+<span><span class="va">counts</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span>, <span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">==</span> <span class="st">"treated_male"</span><span class="op">]</span> <span class="op">&lt;-</span></span>
+<span>  <span class="va">counts</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span>, <span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">==</span> <span class="st">"treated_male"</span><span class="op">]</span> <span class="op">*</span> <span class="fl">4</span></span>
+<span></span>
+<span><span class="va">counts</span><span class="op">[</span><span class="fl">51</span><span class="op">:</span><span class="fl">100</span>, <span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">==</span> <span class="st">"treated_female"</span><span class="op">]</span> <span class="op">&lt;-</span></span>
+<span>  <span class="va">counts</span><span class="op">[</span><span class="fl">51</span><span class="op">:</span><span class="fl">100</span>, <span class="va">metadata</span><span class="op">$</span><span class="va">group</span> <span class="op">==</span> <span class="st">"treated_female"</span><span class="op">]</span> <span class="op">*</span> <span class="fl">3</span></span>
+<span></span>
+<span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  gene_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>,</span>
+<span>  <span class="va">counts</span>,</span>
+<span>  check.names <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Define the comparisons:</p>
+<p>Define the desired pairwise comparisons.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pairwise_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  treatment_vs_control_male <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"group"</span>,</span>
-<span>    <span class="st">"treatment_male"</span>,</span>
-<span>    <span class="st">"control_male"</span></span>
-<span>  <span class="op">)</span>,</span>
 <span></span>
-<span>  treatment_vs_control_female <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"group"</span>,</span>
-<span>    <span class="st">"treatment_female"</span>,</span>
-<span>    <span class="st">"control_female"</span></span>
-<span>  <span class="op">)</span>,</span>
+<span>  treated_vs_control_male <span class="op">=</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"group"</span>,</span>
+<span>      <span class="st">"treated_male"</span>,</span>
+<span>      <span class="st">"control_male"</span><span class="op">)</span>,</span>
 <span></span>
-<span>  male_vs_female_control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"group"</span>,</span>
-<span>    <span class="st">"control_male"</span>,</span>
-<span>    <span class="st">"control_female"</span></span>
-<span>  <span class="op">)</span></span>
+<span>  treated_vs_control_female <span class="op">=</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"group"</span>,</span>
+<span>      <span class="st">"treated_female"</span>,</span>
+<span>      <span class="st">"control_female"</span><span class="op">)</span>,</span>
+<span></span>
+<span>  male_vs_female_control <span class="op">=</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"group"</span>,</span>
+<span>      <span class="st">"control_male"</span>,</span>
+<span>      <span class="st">"control_female"</span><span class="op">)</span>,</span>
+<span></span>
+<span>  male_vs_female_treated <span class="op">=</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"group"</span>,</span>
+<span>      <span class="st">"treated_male"</span>,</span>
+<span>      <span class="st">"treated_female"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Run the pairwise workflow:</p>
+<p>Run DEGgo</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pairwise_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_deggo.html">run_deggo</a></span><span class="op">(</span></span>
 <span>  counts <span class="op">=</span> <span class="va">counts</span>,</span>
 <span>  metadata <span class="op">=</span> <span class="va">metadata</span>,</span>
-<span>  organism <span class="op">=</span> <span class="st">"mouse"</span>,</span>
+<span>  organism <span class="op">=</span> <span class="st">"human"</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"DESeq2"</span>,</span>
+<span></span>
 <span>  analysis_mode <span class="op">=</span> <span class="st">"pairwise"</span>,</span>
+<span></span>
 <span>  sample_col <span class="op">=</span> <span class="st">"sample"</span>,</span>
+<span></span>
 <span>  design_formula <span class="op">=</span> <span class="op">~</span> <span class="va">group</span>,</span>
+<span></span>
 <span>  pairwise_group_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"condition"</span>,</span>
+<span>    <span class="st">"treatment"</span>,</span>
 <span>    <span class="st">"sex"</span></span>
 <span>  <span class="op">)</span>,</span>
+<span></span>
 <span>  pairwise_contrast_col <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span></span>
 <span>  pairwise_contrasts <span class="op">=</span> <span class="va">pairwise_contrasts</span>,</span>
+<span></span>
 <span>  output_dir <span class="op">=</span> <span class="st">"DEGgo_pairwise_results"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="deggo-output-files">DEGgo output files<a class="anchor" aria-label="anchor" href="#deggo-output-files"></a>
-</h3>
+<p>The analysis automatically performs each requested comparison independently and generates:</p>
+<ul>
+<li>differential expression tables</li>
+<li>PCA plots</li>
+<li>volcano plots</li>
+<li>clustered heatmaps</li>
+<li>Gene Ontology enrichment analyses</li>
+<li>interactive HTML report</li>
+<li>reproducibility files</li>
+</ul>
 <p>The <code><a href="reference/run_deggo.html">run_deggo()</a></code> workflow automatically organizes all results into a structured project directory.</p>
 <pre class="text"><code>DEGgo_results/
 ├── qc/
@@ -328,7 +406,6 @@ Sample3     control      B</code></pre>
 └── logs/
     └── DEGgo.log</code></pre>
 <p>The exact contents depend on the selected analysis method (<code>DESeq2</code>, <code>edgeR</code>, or <code>limma</code>), analysis mode (<code>single</code> or <code>pairwise</code>), and optional downstream analyses such as Gene Ontology enrichment.</p>
-</div>
 </div>
 <div class="section level2">
 <h2 id="public-circadian-example">Public circadian example<a class="anchor" aria-label="anchor" href="#public-circadian-example"></a>

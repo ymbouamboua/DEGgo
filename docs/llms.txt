@@ -151,6 +151,11 @@ metadata <- read.delim(
   ),
   check.names = FALSE
 )
+
+metadata$treatment <- factor(
+  metadata$treatment,
+  levels = c("untreated", "treated")
+)
 ```
 
 ### Single differential expression analysis
@@ -160,6 +165,7 @@ metadata <- read.delim(
 results <- run_deggo(
   counts=counts,
   metadata=metadata,
+  sample_col = "sample",
   organism="human",
   method="DESeq2",
   design_formula=~treatment,
@@ -176,69 +182,145 @@ treated versus untreated
 Therefore, positive `log2FoldChange` values represent higher expression
 in the treated group.
 
-### Pairwise differential expression analysis
+## Pairwise differential expression analysis
 
-Create a combined comparison variable when pairwise comparisons involve
-several metadata columns:
+DEGgo also supports automated pairwise differential expression analysis
+across multiple experimental groups.
+
+This example generates a reproducible synthetic RNA-seq dataset with two
+experimental factors:
+
+- treatment (control vs treated)
+- sex (male vs female)
+
+Each combination contains three biological replicates.
 
 ``` r
 
+set.seed(123)
+
+metadata <- expand.grid(
+  treatment = c("control", "treated"),
+  sex = c("male", "female"),
+  replicate = 1:3,
+  stringsAsFactors = FALSE
+)
+
+metadata$sample <- paste0("S", seq_len(nrow(metadata)))
+
 metadata$group <- interaction(
-  metadata$condition,
+  metadata$treatment,
   metadata$sex,
   sep = "_",
   drop = TRUE
 )
+
+metadata <- metadata[
+  ,
+  c("sample", "treatment", "sex", "replicate", "group")
+]
+
+n_genes <- 1000
+
+counts <- matrix(
+  rnbinom(
+    n_genes * nrow(metadata),
+    mu = 100,
+    size = 1
+  ),
+  nrow = n_genes,
+  ncol = nrow(metadata)
+)
+
+rownames(counts) <- paste0(
+  "ENSG",
+  sprintf("%011d", seq_len(n_genes))
+)
+
+colnames(counts) <- metadata$sample
+
+## Introduce artificial differential expression
+
+counts[1:50, metadata$group == "treated_male"] <-
+  counts[1:50, metadata$group == "treated_male"] * 4
+
+counts[51:100, metadata$group == "treated_female"] <-
+  counts[51:100, metadata$group == "treated_female"] * 3
+
+counts <- data.frame(
+  gene_id = rownames(counts),
+  counts,
+  check.names = FALSE
+)
 ```
 
-Define the comparisons:
+Define the desired pairwise comparisons.
 
 ``` r
 
 pairwise_contrasts <- list(
-  treatment_vs_control_male = c(
-    "group",
-    "treatment_male",
-    "control_male"
-  ),
 
-  treatment_vs_control_female = c(
-    "group",
-    "treatment_female",
-    "control_female"
-  ),
+  treated_vs_control_male =
+    c("group",
+      "treated_male",
+      "control_male"),
 
-  male_vs_female_control = c(
-    "group",
-    "control_male",
-    "control_female"
-  )
+  treated_vs_control_female =
+    c("group",
+      "treated_female",
+      "control_female"),
+
+  male_vs_female_control =
+    c("group",
+      "control_male",
+      "control_female"),
+
+  male_vs_female_treated =
+    c("group",
+      "treated_male",
+      "treated_female")
 )
 ```
 
-Run the pairwise workflow:
+Run DEGgo
 
 ``` r
 
-pairwise_results <- run_deggo(
+results <- run_deggo(
   counts = counts,
   metadata = metadata,
-  organism = "mouse",
+  organism = "human",
   method = "DESeq2",
+
   analysis_mode = "pairwise",
+
   sample_col = "sample",
+
   design_formula = ~ group,
+
   pairwise_group_cols = c(
-    "condition",
+    "treatment",
     "sex"
   ),
+
   pairwise_contrast_col = "group",
+
   pairwise_contrasts = pairwise_contrasts,
+
   output_dir = "DEGgo_pairwise_results"
 )
 ```
 
-### DEGgo output files
+The analysis automatically performs each requested comparison
+independently and generates:
+
+- differential expression tables
+- PCA plots
+- volcano plots
+- clustered heatmaps
+- Gene Ontology enrichment analyses
+- interactive HTML report
+- reproducibility files
 
 The
 [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md)
