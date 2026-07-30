@@ -683,7 +683,7 @@ extract_expression <- function(
 #' @noRd
 .make_run_params <- function(
     deggo_version,
-    project_name = NULL,
+    project_name,
     organism,
     method,
     analysis_mode,
@@ -705,18 +705,17 @@ extract_expression <- function(
     pairwise_group_cols,
     pairwise_contrast_col,
     pairwise_mode,
+    rhythmicity_analysis,
+    dream_ddf = NULL,
+    dream_n_cores = NULL,
     output_dir,
-    repro_dir,
-    rhythmicity_analysis = FALSE
+    repro_dir
 ) {
-  `%||%` <- function(x, y) if (is.null(x)) y else x
 
   list(
     deggo_version = deggo_version,
     project_name = project_name,
-    date = as.character(Sys.Date()),
     organism = organism,
-    project_name = project_name,
     method = method,
     analysis_mode = analysis_mode,
     ontology = ontology,
@@ -730,18 +729,22 @@ extract_expression <- function(
     top_n_labels = top_n_labels,
     txtsize = txtsize,
     prepare_input = prepare_input,
-    gene_col = paste(gene_col, collapse = ", "),
-    feature_col = paste(feature_col, collapse = ", "),
-    sample_col = paste(sample_col, collapse = ", "),
+    gene_col = gene_col,
+    feature_col = feature_col,
+    sample_col = sample_col,
     design_formula = paste(deparse(design_formula), collapse = ""),
-    pairwise_group_cols = paste(pairwise_group_cols %||% NA, collapse = ", "),
+    pairwise_group_cols = pairwise_group_cols,
     pairwise_contrast_col = pairwise_contrast_col,
     pairwise_mode = pairwise_mode,
     rhythmicity_analysis = rhythmicity_analysis,
+    dream_ddf = dream_ddf,
+    dream_n_cores = dream_n_cores,
     output_dir = output_dir,
-    reproducibility_dir = repro_dir
+    reproducibility_dir = repro_dir,
+    timestamp = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   )
 }
+
 
 # ======================================================= #
 # .save_repro

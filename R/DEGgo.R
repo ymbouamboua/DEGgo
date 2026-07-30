@@ -37,6 +37,10 @@
 #' @param organism Organism name.
 #' @param orgdb Optional custom OrgDb object.
 #' @param method Differential expression method.
+#' @param dream_ddf Méthode utilisée pour calculer les degrés de liberté dans
+#'   les modèles `dream`. L'une de `"adaptive"`, `"Satterthwaite"` ou
+#'   `"Kenward-Roger"`.
+#' @param dream_n_cores Nombre de cœurs utilisés par `dream`.
 #' @param analysis_mode Single or pairwise analysis mode.
 #' @param contrast Contrast vector for single analysis.
 #' @param design_formula Design formula.
@@ -126,7 +130,9 @@ run_deggo <- function(
     ontology = c("BP", "MF", "CC"),
     organism = c("human", "mouse", "rat", "custom"),
     orgdb = NULL,
-    method = c("DESeq2", "edgeR", "limma"),
+    method = c("DESeq2", "edgeR", "limma", "dream"),
+    dream_ddf = c("adaptive", "Satterthwaite", "Kenward-Roger"),
+    dream_n_cores = 1L,
     analysis_mode = c("single", "pairwise"),
     contrast = NULL,
     design_formula = ~ condition,
@@ -164,6 +170,18 @@ run_deggo <- function(
   set.seed(seed)
 
   method <- match.arg(method)
+  dream_ddf <- match.arg(dream_ddf)
+  dream_n_cores <- as.integer(dream_n_cores)[1]
+
+  if (
+    is.na(dream_n_cores) ||
+    dream_n_cores < 1L
+  ) {
+    stop(
+      "'dream_n_cores' must be a positive integer.",
+      call. = FALSE
+    )
+  }
   filter_method <- match.arg(filter_method)
   organism <- match.arg(organism)
   analysis_mode <- match.arg(analysis_mode)
@@ -380,6 +398,46 @@ run_deggo <- function(
     }
   }
 
+  if (
+    method == "dream" &&
+    !any(
+      grepl(
+        "\\|",
+        paste(
+          deparse(design_formula),
+          collapse = ""
+        )
+      )
+    )
+  ) {
+    warning(
+      paste(
+        "The dream method was selected, but 'design_formula'",
+        "does not contain a random effect such as '(1 | subject)'.",
+        "dream can still fit fixed-effects models, but limma may be",
+        "more appropriate in that situation."
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (
+    method == "dream" &&
+    !requireNamespace(
+      "variancePartition",
+      quietly = TRUE
+    )
+  ) {
+    stop(
+      paste(
+        "The dream method requires the Bioconductor package",
+        "'variancePartition'. Install it with:",
+        'BiocManager::install("variancePartition")'
+      ),
+      call. = FALSE
+    )
+  }
+
   if (analysis_mode == "pairwise") {
 
     if (method != "DESeq2") {
@@ -423,17 +481,35 @@ run_deggo <- function(
 
   if (analysis_mode == "single") {
 
-    de_results <- .run_deggo_single(
-      counts = counts,
-      metadata = metadata,
-      method = method,
-      design_formula = design_formula,
-      contrast = contrast,
-      orgdb = orgdb,
-      padj_cutoff = padj_cutoff,
-      logfc_cutoff = logfc_cutoff,
-      log = log
-    )
+    if (method == "dream") {
+
+      de_results <- .run_deggo_dream(
+        counts = counts,
+        metadata = metadata,
+        design_formula = design_formula,
+        contrast = contrast,
+        orgdb = orgdb,
+        padj_cutoff = padj_cutoff,
+        logfc_cutoff = logfc_cutoff,
+        ddf = dream_ddf,
+        n_cores = dream_n_cores,
+        log = log
+      )
+
+    } else {
+
+      de_results <- .run_deggo_single(
+        counts = counts,
+        metadata = metadata,
+        method = method,
+        design_formula = design_formula,
+        contrast = contrast,
+        orgdb = orgdb,
+        padj_cutoff = padj_cutoff,
+        logfc_cutoff = logfc_cutoff,
+        log = log
+      )
+    }
 
   } else {
 
@@ -591,6 +667,21 @@ run_deggo <- function(
   # 12b. Rhythmicity analysis (optional)
   # ---------------------------------------------------------- #
 
+  if (
+    isTRUE(rhythmicity_analysis) &&
+    method == "dream"
+  ) {
+    stop(
+      paste(
+        "Rhythmicity analysis from a fitted DESeqDataSet is not",
+        "currently available with method = 'dream'.",
+        "Run run_deggo_rhythmicity() separately using the count",
+        "matrix or the dream normalized expression matrix."
+      ),
+      call. = FALSE
+    )
+  }
+
   if (isTRUE(rhythmicity_analysis)) {
 
     de_results <- .deggo_make_rhythmicity(
@@ -642,6 +733,8 @@ run_deggo <- function(
     pairwise_contrast_col = pairwise_contrast_col,
     pairwise_mode = pairwise_mode,
     rhythmicity_analysis = rhythmicity_analysis,
+    dream_ddf = dream_ddf,
+    dream_n_cores = dream_n_cores,
     output_dir = output_dir,
     repro_dir = repro_dir
   )
@@ -659,11 +752,20 @@ run_deggo <- function(
     save_reproducibility = save_reproducibility
   )
 
+  rhythmicity_dir <- NULL
+
+  if (
+    is.list(de_results$rhythmicity) &&
+    !is.null(de_results$rhythmicity$output_dir)
+  ) {
+    rhythmicity_dir <- de_results$rhythmicity$output_dir
+  }
+
   de_results$output_manifest <- .write_deggo_manifest(
     output_dir = output_dir,
     dirs = dirs,
     analysis_mode = analysis_mode,
-    rhythmicity_dir = de_results$rhythmicity$output_dir
+    rhythmicity_dir = rhythmicity_dir
   )
 
   run_files <- .deggo_organize_run_files(

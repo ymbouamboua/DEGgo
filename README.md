@@ -8,8 +8,9 @@ DEGgo
 <br><br>
 
 <strong> An integrated R framework for automated bulk RNA-seq
-differential expression, functional enrichment, circadian rhythmicity
-analysis, and reproducible reporting. </strong>
+differential expression, experimental design assessment, functional
+enrichment, circadian rhythmicity analysis, and reproducible reporting.
+</strong>
 
 </div>
 
@@ -34,52 +35,69 @@ MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Highlights
 
-- One-command RNA-seq workflow
-- DESeq2, edgeR and limma
-- GO enrichment
-- Circadian rhythmicity (MetaCycle + Cosinor)
+- Experimental design assessment with `design_qc()`
+- Automated recommendations for DESeq2 or `dream`
+- One-command bulk RNA-seq differential expression workflow
+- DESeq2, edgeR, limma, and variancePartition/dream support
+- Single and automated pairwise analyses
+- Gene Ontology enrichment
+- Circadian rhythmicity analysis with MetaCycle and cosinor regression
 - Publication-quality figures
-- HTML, PDF and PowerPoint reports
-- Reproducible analyses
+- HTML, PDF, and PowerPoint reports
+- Reproducibility files and structured output directories
 
 ## Workflow
 
-    Raw counts
+``` text
+Raw counts + metadata
           │
           ▼
-     Input validation
+ Experimental design QC
+          │
+          ├── PCA variance assessment
+          ├── PERMANOVA
+          ├── batch-factor assessment
+          ├── repeated-unit detection
+          └── method recommendation
           │
           ▼
-     Sample QC
+ Input validation
           │
           ▼
-     Expression filtering
+ Sample QC
           │
           ▼
-     Differential expression
+ Expression filtering
+          │
+          ▼
+ Differential expression
           │
           ├── PCA
           ├── Volcano
           ├── Heatmap
-          ├── GO
+          ├── GO enrichment
           └── Reports
           │
           ▼
-     Circadian analysis
+ Optional circadian analysis
           ├── MetaCycle
           ├── Cosinor
           ├── Differential rhythmicity
           └── Publication figures
+```
 
-1.  Input validation
-2.  Quality control
-3.  Expression filtering
-4.  Differential expression
-5.  PCA / Volcano / Heatmap
-6.  GO enrichment
-7.  Reports
-8.  Reproducibility
-9.  Optional rhythmicity analysis
+The main analysis steps are:
+
+1.  Experimental design assessment
+2.  Input validation
+3.  Quality control
+4.  Expression filtering
+5.  Differential expression
+6.  PCA, volcano plots, and heatmaps
+7.  Gene Ontology enrichment
+8.  Automated reports
+9.  Reproducibility export
+10. Optional rhythmicity analysis
 
 ## Gallery
 
@@ -99,24 +117,35 @@ MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ``` r
 install.packages("remotes")
-remotes::install_github("ymbouamboua/DEGgo")
+
+remotes::install_github(
+  "ymbouamboua/DEGgo"
+)
+
 library(DEGgo)
 ```
 
-Optional:
+Optional rhythmicity dependencies:
 
 ``` r
-install.packages(c("MetaCycle","cosinor","cosinor2"))
+install.packages(
+  c(
+    "MetaCycle",
+    "cosinor",
+    "cosinor2"
+  )
+)
 ```
 
-## Quick Start
+## Quick start
 
 ### Input data
 
 #### Count table
 
-DEGgo accepts raw count tables or matrices. The count table should
-contain one gene identifier column and one column per sample.
+DEGgo accepts raw count tables, data frames, or matrices. A tabular
+count object may contain one gene identifier column and one column per
+sample.
 
 ``` text
 gene_id          gene_name    Sample1    Sample2    Sample3
@@ -125,22 +154,161 @@ ENSG00000000005  TNMD         65         80         50
 ENSG00000000419  DPM1         12         18         250
 ```
 
+For count matrices, genes should be stored in rows, samples in columns,
+and gene identifiers in unique row names.
+
 #### Metadata
 
 Metadata must contain one row per sample. The sample identifier column
-is supplied using `sample_col`.
+is specified with `sample_col`.
 
 ``` text
-sample      condition    batch
+sample      treatment    batch
 Sample1     control      A
 Sample2     treated      A
 Sample3     control      B
 ```
 
-The sample names in the metadata must match the sample columns in the
+Sample identifiers in the metadata must match the sample columns in the
 count table.
 
-### Example analysis with the airway dataset
+## Experimental design assessment
+
+Before differential expression analysis, `design_qc()` can be used to
+assess the experimental structure and identify factors that dominate
+global expression variation.
+
+The function:
+
+- validates counts and metadata;
+- transforms the count matrix using VST, rlog, or log-CPM;
+- evaluates principal-component variation;
+- optionally runs PERMANOVA;
+- assesses treatment, batch, tissue, sex, donor, cage, or other design
+  factors;
+- detects repeated experimental units when `unit_col` is supplied;
+- recommends either DESeq2 or `dream` based on the detected structure.
+
+### Basic design assessment
+
+``` r
+counts <- readtbl(
+  file.path(
+    root,
+    "data",
+    "processed",
+    "clean_counts.tsv"
+  )
+)
+
+metadata <- readtbl(
+  file.path(
+    root,
+    "data",
+    "processed",
+    "clean_metadata.tsv"
+  )
+)
+
+design_res <- design_qc(
+  counts = counts,
+  metadata = metadata,
+  sample_col = "sample",
+  group_col = "treatment",
+  batch_cols = c(
+    "sex",
+    "tissue"
+  ),
+  transform = "vst",
+  run_permanova = TRUE
+)
+```
+
+Example output:
+
+``` text
+DEGgo DesignQC
+--------------------------------------------------
+Samples:             60
+Groups:              2
+Independent units:   not specified/detected
+Repeated units:      no
+Dominant factor:     tissue
+Recommended method:  DESeq2
+Reason:              No repeated experimental unit was specified or detected.
+```
+
+This indicates that tissue explains more global expression variation
+than the treatment factor, but the samples are treated as independent
+because no valid experimental-unit column was supplied.
+
+### Repeated-measures designs
+
+Use `unit_col` only when the column contains a genuine, globally unique
+experimental-unit identifier, such as:
+
+- patient ID;
+- donor ID;
+- animal ID;
+- dam or litter ID;
+- cage ID;
+- subject ID measured repeatedly across time or treatment.
+
+``` r
+design_res <- design_qc(
+  counts = counts,
+  metadata = metadata,
+  sample_col = "sample",
+  group_col = "treatment",
+  batch_cols = c(
+    "sex",
+    "tissue"
+  ),
+  unit_col = "animal_id",
+  transform = "vst",
+  run_permanova = TRUE
+)
+```
+
+Example output:
+
+``` text
+DEGgo DesignQC
+--------------------------------------------------
+Samples:             17
+Groups:              2
+Independent units:   8 (cage)
+Repeated units:      yes
+Dominant factor:     cage
+Recommended method:  dream
+Reason:              Multiple samples share each cage; treating all samples as independent would create pseudoreplication, and cage dominates the assessed PCA structure.
+
+Warnings:
+  - Experimental unit auto-detected as 'cage'. Verify this choice; explicit unit_col is safer.
+```
+
+When the same experimental unit contributes samples to several groups or
+conditions, DEGgo may recommend `dream`.
+
+Do not use replicate numbers such as `1`, `2`, `3`, `4`, and `5` as
+`unit_col` when those numbers are reused independently across
+treatments, sexes, tissues, cohorts, or experiments.
+
+### Interpreting method recommendations
+
+| Design structure | Typical recommendation |
+|:---|:---|
+| Independent biological replicates | DESeq2 |
+| Independent groups with known fixed batch factors | DESeq2 |
+| Repeated measurements from the same donor or animal | dream |
+| Several tissues from the same individual in one joint model | dream |
+| Longitudinal or paired observations | dream |
+| Replicate numbers reused across unrelated samples | Do not use as `unit_col` |
+
+The recommendation is diagnostic guidance. The final model should always
+reflect the biological experimental unit and the scientific comparison.
+
+## Example analysis with the airway dataset
 
 The package includes a ready-to-use RNA-seq dataset derived from the
 Bioconductor **[airway](https://bioconductor.org/packages/airway/)**
@@ -168,7 +336,23 @@ metadata <- read.delim(
 
 metadata$treatment <- factor(
   metadata$treatment,
-  levels = c("untreated", "treated")
+  levels = c(
+    "untreated",
+    "treated"
+  )
+)
+```
+
+### Assess the design
+
+``` r
+design_res <- design_qc(
+  counts = counts,
+  metadata = metadata,
+  sample_col = "sample",
+  group_col = "treatment",
+  transform = "vst",
+  run_permanova = TRUE
 )
 ```
 
@@ -176,13 +360,17 @@ metadata$treatment <- factor(
 
 ``` r
 results <- run_deggo(
-  counts=counts,
-  metadata=metadata,
+  counts = counts,
+  metadata = metadata,
   sample_col = "sample",
-  organism="human",
-  method="DESeq2",
-  design_formula=~treatment,
-  contrast=c("treatment","treated","untreated")
+  organism = "human",
+  method = "DESeq2",
+  design_formula = ~ treatment,
+  contrast = c(
+    "treatment",
+    "treated",
+    "untreated"
+  )
 )
 ```
 
@@ -197,28 +385,37 @@ in the treated group.
 
 ## Pairwise differential expression analysis
 
-DEGgo also supports automated pairwise differential expression analysis
+DEGgo supports automated pairwise differential expression analysis
 across multiple experimental groups.
 
-This example generates a reproducible synthetic RNA-seq dataset with two
-experimental factors:
+This example generates a reproducible synthetic RNA-seq dataset
+containing two experimental factors:
 
-- treatment (control vs treated)
-- sex (male vs female)
+- treatment: control versus treated;
+- sex: male versus female.
 
-Each combination contains three biological replicates.
+Each combination contains three independent biological replicates.
 
 ``` r
 set.seed(123)
 
 metadata <- expand.grid(
-  treatment = c("control", "treated"),
-  sex = c("male", "female"),
-  replicate = 1:3,
+  treatment = c(
+    "control",
+    "treated"
+  ),
+  sex = c(
+    "male",
+    "female"
+  ),
+  replicate = seq_len(3),
   stringsAsFactors = FALSE
 )
 
-metadata$sample <- paste0("S", seq_len(nrow(metadata)))
+metadata$sample <- paste0(
+  "S",
+  seq_len(nrow(metadata))
+)
 
 metadata$group <- interaction(
   metadata$treatment,
@@ -229,7 +426,13 @@ metadata$group <- interaction(
 
 metadata <- metadata[
   ,
-  c("sample", "treatment", "sex", "replicate", "group")
+  c(
+    "sample",
+    "treatment",
+    "sex",
+    "replicate",
+    "group"
+  )
 ]
 
 n_genes <- 1000
@@ -246,18 +449,31 @@ counts <- matrix(
 
 rownames(counts) <- paste0(
   "ENSG",
-  sprintf("%011d", seq_len(n_genes))
+  sprintf(
+    "%011d",
+    seq_len(n_genes)
+  )
 )
 
 colnames(counts) <- metadata$sample
 
-## Introduce artificial differential expression
+# Introduce artificial differential expression
 
-counts[1:50, metadata$group == "treated_male"] <-
-  counts[1:50, metadata$group == "treated_male"] * 4
+counts[
+  1:50,
+  metadata$group == "treated_male"
+] <- counts[
+  1:50,
+  metadata$group == "treated_male"
+] * 4
 
-counts[51:100, metadata$group == "treated_female"] <-
-  counts[51:100, metadata$group == "treated_female"] * 3
+counts[
+  51:100,
+  metadata$group == "treated_female"
+] <- counts[
+  51:100,
+  metadata$group == "treated_female"
+] * 3
 
 counts <- data.frame(
   gene_id = rownames(counts),
@@ -266,46 +482,66 @@ counts <- data.frame(
 )
 ```
 
-Define the desired pairwise comparisons.
+### Assess the pairwise design
+
+The replicate column in this synthetic example is only a within-group
+replicate label. Because values are reused across unrelated groups, it
+should not be supplied as `unit_col`.
 
 ``` r
-pairwise_contrasts <- list(
-
-  treated_vs_control_male =
-    c("group",
-      "treated_male",
-      "control_male"),
-
-  treated_vs_control_female =
-    c("group",
-      "treated_female",
-      "control_female"),
-
-  male_vs_female_control =
-    c("group",
-      "control_male",
-      "control_female"),
-
-  male_vs_female_treated =
-    c("group",
-      "treated_male",
-      "treated_female")
+design_res <- design_qc(
+  counts = counts,
+  metadata = metadata,
+  sample_col = "sample",
+  group_col = "group",
+  batch_cols = "sex",
+  transform = "vst",
+  run_permanova = TRUE
 )
 ```
 
-Run DEGgo
+### Define pairwise comparisons
+
+``` r
+pairwise_contrasts <- list(
+  treated_vs_control_male = c(
+    "group",
+    "treated_male",
+    "control_male"
+  ),
+
+  treated_vs_control_female = c(
+    "group",
+    "treated_female",
+    "control_female"
+  ),
+
+  male_vs_female_control = c(
+    "group",
+    "control_male",
+    "control_female"
+  ),
+
+  male_vs_female_treated = c(
+    "group",
+    "treated_male",
+    "treated_female"
+  )
+)
+```
+
+### Run pairwise DEGgo
 
 ``` r
 results <- run_deggo(
   counts = counts,
   metadata = metadata,
+
   organism = "human",
   method = "DESeq2",
-
   analysis_mode = "pairwise",
 
   sample_col = "sample",
-
   design_formula = ~ group,
 
   pairwise_group_cols = c(
@@ -314,26 +550,78 @@ results <- run_deggo(
   ),
 
   pairwise_contrast_col = "group",
-
   pairwise_contrasts = pairwise_contrasts,
 
   output_dir = "DEGgo_pairwise_results"
 )
 ```
 
-The analysis automatically performs each requested comparison
-independently and generates:
+The workflow performs each requested comparison independently and
+generates:
 
-- differential expression tables
-- PCA plots
-- volcano plots
-- clustered heatmaps
-- Gene Ontology enrichment analyses
-- interactive HTML report
-- reproducibility files
+- differential expression tables;
+- PCA plots;
+- volcano plots;
+- clustered heatmaps;
+- Gene Ontology enrichment analyses;
+- automated reports;
+- reproducibility files.
 
-The `run_deggo()` workflow automatically organizes all results into a
-structured project directory.
+For a contrast such as:
+
+``` r
+c(
+  "group",
+  "treated_male",
+  "control_male"
+)
+```
+
+positive `log2FoldChange` values indicate higher expression in treated
+males, whereas negative values indicate higher expression in control
+males.
+
+## Repeated-measures analysis with dream
+
+For paired, longitudinal, donor-aware, or repeated-tissue experiments,
+DEGgo supports `variancePartition::dream`.
+
+A valid repeated-measures model requires a true experimental-unit
+identifier.
+
+``` r
+results <- run_deggo(
+  counts = counts,
+  metadata = metadata,
+
+  sample_col = "sample",
+  organism = "mouse",
+
+  method = "dream",
+  analysis_mode = "single",
+
+  design_formula = ~ treatment + tissue + (1 | animal_id),
+
+  contrast = c(
+    "treatment",
+    "PAMH",
+    "PBS"
+  ),
+
+  dream_ddf = "adaptive",
+  dream_n_cores = 4,
+
+  output_dir = "DEGgo_dream_results"
+)
+```
+
+Here, `animal_id` must uniquely identify the animal from which repeated
+samples were collected.
+
+## Output structure
+
+The `run_deggo()` workflow organizes results into a structured project
+directory.
 
 ``` text
 DEGgo_results/
@@ -374,19 +662,30 @@ DEGgo_results/
     └── DEGgo.log
 ```
 
-The exact contents depend on the selected analysis method (`DESeq2`,
-`edgeR`, or `limma`), analysis mode (`single` or `pairwise`), and
-optional downstream analyses such as Gene Ontology enrichment.
+The exact contents depend on the selected analysis method, analysis
+mode, and optional downstream analyses.
+
+Supported differential expression methods include:
+
+- `DESeq2`;
+- `edgeR`;
+- `limma`;
+- `dream`.
+
+Supported analysis modes include:
+
+- `single`;
+- `pairwise`.
 
 ## Public circadian example
 
 DEGgo includes a fully reproducible workflow based on the public baboon
-transcriptomic atlas (**GSE98965**, Mure *et al.*, Science 2018).
+transcriptomic atlas **GSE98965** from Mure *et al.* (Science, 2018).
 
 ``` r
 results <- run_public_circadian_example(
-    tissue_code="LIV",
-    output_dir="Circadian_results"
+  tissue_code = "LIV",
+  output_dir = "Circadian_results"
 )
 ```
 
@@ -403,8 +702,14 @@ rhythm_results <- run_deggo_rhythmicity(
   sample_col = "sample",
   time_col = "time",
   assay = "log2_normalized",
-  methods = c("meta2d", "cosinor"),
-  period_range = c(20, 28),
+  methods = c(
+    "meta2d",
+    "cosinor"
+  ),
+  period_range = c(
+    20,
+    28
+  ),
   cycle_length = 24,
   padj_cutoff = 0.05,
   output_dir = "DEGgo_rhythmicity_results"
@@ -412,8 +717,6 @@ rhythm_results <- run_deggo_rhythmicity(
 ```
 
 ### Rhythmicity output files
-
-The rhythmicity workflow produces files such as:
 
 ``` text
 DEGgo_rhythmicity_results/
@@ -433,6 +736,7 @@ DEGgo_rhythmicity_results/
 
 | Function | Description |
 |:---|:---|
+| `design_qc()` | Assess experimental structure, dominant factors, repeated units, and the most appropriate differential expression method |
 | `run_deggo()` | Run the complete bulk RNA-seq differential expression workflow |
 | `run_deggo_rhythmicity()` | Detect rhythmic genes using MetaCycle and cosinor regression |
 | `check_raw_counts()` | Validate raw count matrices and sample identifiers before analysis |
@@ -447,7 +751,7 @@ DEGgo_rhythmicity_results/
 | `plot_gene_expression()` | Visualize selected genes across biological groups |
 | `plot_gene_heatmap()` | Visualize marker or selected genes as a heatmap |
 | `plot_heatmap()` | Generate heatmaps of differentially expressed genes |
-| `plot_pca()` | Perform principal component analysis |
+| `plot_pca()` | Perform principal-component analysis |
 | `plot_volcano()` | Generate publication-ready volcano plots |
 | `generate_deggo_report()` | Generate an automated HTML or PDF analysis report |
 | `generate_deggo_pptx()` | Generate a PowerPoint summary report |
@@ -476,7 +780,7 @@ annotation table can be provided through `gene_annotation`.
 ## Documentation
 
 A complete tutorial and advanced examples are available in the package
-vignette.
+vignettes.
 
 ``` r
 browseVignettes("DEGgo")
@@ -486,12 +790,15 @@ browseVignettes("DEGgo")
 
 ### Current
 
+- Experimental design assessment
 - Differential expression
 - Pairwise analysis
+- Repeated-measures analysis with dream
 - GO enrichment
-- Rhythmicity
-- HTML reports
-- PPTX export
+- Rhythmicity analysis
+- HTML and PDF reports
+- PowerPoint export
+- Reproducibility files
 
 ### Planned
 
@@ -510,7 +817,7 @@ If you use DEGgo, please cite the Zenodo release:
 
 ## Contributing
 
-Bug reports, feature requests and pull requests are welcome.
+Bug reports, feature requests, and pull requests are welcome.
 
 ## License
 

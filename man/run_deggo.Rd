@@ -36,7 +36,9 @@ run_deggo(
   ontology = c("BP", "MF", "CC"),
   organism = c("human", "mouse", "rat", "custom"),
   orgdb = NULL,
-  method = c("DESeq2", "edgeR", "limma"),
+  method = c("DESeq2", "edgeR", "limma", "dream"),
+  dream_ddf = c("adaptive", "Satterthwaite", "Kenward-Roger"),
+  dream_n_cores = 1L,
   analysis_mode = c("single", "pairwise"),
   contrast = NULL,
   design_formula = ~condition,
@@ -138,6 +140,12 @@ used during post-DE filtering.}
 \item{orgdb}{Optional custom OrgDb object.}
 
 \item{method}{Differential expression method.}
+
+\item{dream_ddf}{Méthode utilisée pour calculer les degrés de liberté dans
+les modèles \code{dream}. L'une de \code{"adaptive"}, \code{"Satterthwaite"} ou
+\code{"Kenward-Roger"}.}
+
+\item{dream_n_cores}{Nombre de cœurs utilisés par \code{dream}.}
 
 \item{analysis_mode}{Single or pairwise analysis mode.}
 

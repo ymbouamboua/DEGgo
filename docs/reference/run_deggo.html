@@ -81,7 +81,9 @@ GO enrichment, reporting, and reproducibility exports.</p>
 <span>  ontology <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"BP"</span>, <span class="st">"MF"</span>, <span class="st">"CC"</span><span class="op">)</span>,</span>
 <span>  organism <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"human"</span>, <span class="st">"mouse"</span>, <span class="st">"rat"</span>, <span class="st">"custom"</span><span class="op">)</span>,</span>
 <span>  orgdb <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"DESeq2"</span>, <span class="st">"edgeR"</span>, <span class="st">"limma"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"DESeq2"</span>, <span class="st">"edgeR"</span>, <span class="st">"limma"</span>, <span class="st">"dream"</span><span class="op">)</span>,</span>
+<span>  dream_ddf <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"adaptive"</span>, <span class="st">"Satterthwaite"</span>, <span class="st">"Kenward-Roger"</span><span class="op">)</span>,</span>
+<span>  dream_n_cores <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  analysis_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"single"</span>, <span class="st">"pairwise"</span><span class="op">)</span>,</span>
 <span>  contrast <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  design_formula <span class="op">=</span> <span class="op">~</span><span class="va">condition</span>,</span>
@@ -250,6 +252,16 @@ used during post-DE filtering.</p></dd>
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>Differential expression method.</p></dd>
+
+
+<dt id="arg-dream-ddf">dream_ddf<a class="anchor" aria-label="anchor" href="#arg-dream-ddf"></a></dt>
+<dd><p>Méthode utilisée pour calculer les degrés de liberté dans
+les modèles <code>dream</code>. L'une de <code>"adaptive"</code>, <code>"Satterthwaite"</code> ou
+<code>"Kenward-Roger"</code>.</p></dd>
+
+
+<dt id="arg-dream-n-cores">dream_n_cores<a class="anchor" aria-label="anchor" href="#arg-dream-n-cores"></a></dt>
+<dd><p>Nombre de cœurs utilisés par <code>dream</code>.</p></dd>
 
 
 <dt id="arg-analysis-mode">analysis_mode<a class="anchor" aria-label="anchor" href="#arg-analysis-mode"></a></dt>

@@ -39,7 +39,9 @@ run_deggo(
   ontology = c("BP", "MF", "CC"),
   organism = c("human", "mouse", "rat", "custom"),
   orgdb = NULL,
-  method = c("DESeq2", "edgeR", "limma"),
+  method = c("DESeq2", "edgeR", "limma", "dream"),
+  dream_ddf = c("adaptive", "Satterthwaite", "Kenward-Roger"),
+  dream_n_cores = 1L,
   analysis_mode = c("single", "pairwise"),
   contrast = NULL,
   design_formula = ~condition,
@@ -207,6 +209,16 @@ run_deggo(
 - method:
 
   Differential expression method.
+
+- dream_ddf:
+
+  Méthode utilisée pour calculer les degrés de liberté dans les modèles
+  `dream`. L'une de `"adaptive"`, `"Satterthwaite"` ou
+  `"Kenward-Roger"`.
+
+- dream_n_cores:
+
+  Nombre de cœurs utilisés par `dream`.
 
 - analysis_mode:
 

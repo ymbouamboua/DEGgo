@@ -30,6 +30,27 @@ params:
   project_name: "DEGgo RNA-seq analysis"
 ---
 
+# Executive Summary
+
+```{r executive-summary, echo=FALSE, results='asis'}
+cat("> **Automatically generated summary**\n\n")
+cat("- Samples analysed: ...  \n")
+cat("- Genes retained: ...  \n")
+cat("- Differentially expressed genes: ...  \n")
+cat("- Enriched pathways: ...  \n")
+cat("- Main biological findings: ...\n")
+```
+
+# Study Design
+
+## Experimental design
+
+## Sample metadata
+
+## Contrasts analysed
+
+---
+
 ```{r setup, include=FALSE}
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
@@ -1353,39 +1374,39 @@ if (!is.null(summary_df) && nrow(summary_df) > 0) {
 ```
 
 
-
-```{r de-summary-plot}
 ## DE summary plot
 
-# if (!is.null(sumtab)) {
-#   s <- as.data.frame(sumtab)
-# 
-#   if (all(c("comparison", "upregulated", "downregulated") %in% colnames(s))) {
-#     plot_df <- rbind(
-#       data.frame(comparison = s$comparison, count = s$upregulated, regulation = "Up"),
-#       data.frame(comparison = s$comparison, count = s$downregulated, regulation = "Down")
-#     )
-#     
-#     ggplot2::ggplot(
-#       plot_df,
-#       ggplot2::aes(
-#         x = stats::reorder(comparison, count, FUN = sum),
-#         y = count,
-#         fill = regulation
-#       )
-#     ) +
-#       ggplot2::geom_col(width = 0.8) +
-#       ggplot2::coord_flip() +
-#       ggplot2::scale_fill_manual(values = c(Up = "#740001", Down = "#6497b1")) +
-#       ggplot2::labs(x = NULL, y = "Number of DEGs", fill = NULL) +
-#       ggplot2::theme_bw(base_size = 12) +
-#       ggplot2::theme(
-#         legend.position = "top",
-#         panel.grid.major.y = ggplot2::element_blank(),
-#         axis.text.y = ggplot2::element_text(size = 10)
-#       )
-#   }
-# }
+```{r de-summary-plot}
+
+if (!is.null(sumtab)) {
+  s <- as.data.frame(sumtab)
+
+  if (all(c("comparison", "upregulated", "downregulated") %in% colnames(s))) {
+    plot_df <- rbind(
+      data.frame(comparison = s$comparison, count = s$upregulated, regulation = "Up"),
+      data.frame(comparison = s$comparison, count = s$downregulated, regulation = "Down")
+    )
+    
+    ggplot2::ggplot(
+      plot_df,
+      ggplot2::aes(
+        x = stats::reorder(comparison, count, FUN = sum),
+        y = count,
+        fill = regulation
+      )
+    ) +
+      ggplot2::geom_col(width = 0.8) +
+      ggplot2::coord_flip() +
+      ggplot2::scale_fill_manual(values = c(Up = "#740001", Down = "#6497b1")) +
+      ggplot2::labs(x = NULL, y = "Number of DEGs", fill = NULL) +
+      ggplot2::theme_bw(base_size = 12) +
+      ggplot2::theme(
+        legend.position = "top",
+        panel.grid.major.y = ggplot2::element_blank(),
+        axis.text.y = ggplot2::element_text(size = 10)
+      )
+  }
+}
 
 ```
 
@@ -1984,3 +2005,33 @@ section_note(
 
 ```
 
+
+
+# Automatic Biological Interpretation
+
+This section should automatically generate publication-ready paragraphs summarizing:
+- quality control;
+- PCA separation;
+- differential expression;
+- pathway enrichment;
+- biological interpretation for each contrast.
+
+# Reproducibility Checklist
+
+- DEGgo version
+- R version
+- Package versions
+- Session information
+- Runtime
+- Seed
+- Parameters used
+
+# Appendix
+
+## Complete DEG tables
+
+## Complete enrichment tables
+
+## Output manifest
+
+## File inventory

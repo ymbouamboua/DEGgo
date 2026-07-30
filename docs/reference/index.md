@@ -3,7 +3,7 @@
 ## Main workflow
 
 Core functions for running differential expression analysis, functional
-enrichment, and report generation.
+enrichment, report generation, and result export.
 
 - [`run_deggo()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo.md)
   : Run DEGgo bulk RNA-seq downstream analysis
@@ -14,10 +14,27 @@ enrichment, and report generation.
 - [`generate_deggo_pptx()`](https://ymbouamboua.github.io/DEGgo/reference/generate_deggo_pptx.md)
   : Generate a PowerPoint report from DEGgo results
 
+## Experimental design assessment
+
+Functions for validating RNA-seq study designs, identifying repeated
+experimental units, assessing dominant sources of global expression
+variation, detecting potential pseudoreplication, and recommending
+appropriate DESeq2 or dream models.
+
+- [`design_qc()`](https://ymbouamboua.github.io/DEGgo/reference/design_qc.md)
+  : Experimental design quality control for bulk RNA-seq
+- [`aggregate_counts_by_unit()`](https://ymbouamboua.github.io/DEGgo/reference/aggregate_counts_by_unit.md)
+  : Aggregate raw counts by an experimental unit
+- [`plot(`*`<deggo_design_qc>`*`)`](https://ymbouamboua.github.io/DEGgo/reference/plot.deggo_design_qc.md)
+  : Plot DesignQC PCA
+- [`print(`*`<deggo_design_qc>`*`)`](https://ymbouamboua.github.io/DEGgo/reference/print.deggo_design_qc.md)
+  : Print a DEGgo design quality control summary
+
 ## Circadian rhythmicity analysis
 
 Functions for preparing circadian transcriptomic datasets, detecting
-rhythmic genes, and running reproducible public examples.
+rhythmic genes, testing differential rhythmicity, and running
+reproducible public examples.
 
 - [`run_deggo_rhythmicity()`](https://ymbouamboua.github.io/DEGgo/reference/run_deggo_rhythmicity.md)
   : Run DEGgo rhythmicity (circadian) analysis
@@ -33,7 +50,7 @@ rhythmic genes, and running reproducible public examples.
 ## Quality control
 
 Functions for count-data exploration, sample-level quality control,
-filtering, and marker assessment.
+filtering, sample removal, and marker assessment.
 
 - [`explore_bulk_rnaseq()`](https://ymbouamboua.github.io/DEGgo/reference/explore_bulk_rnaseq.md)
   : Explore and QC bulk RNA-seq count data
@@ -48,8 +65,8 @@ filtering, and marker assessment.
 
 ## Visualization
 
-Functions for generating publication-ready differential expression and
-functional enrichment visualizations.
+Functions for generating publication-ready differential expression,
+gene-expression, and functional enrichment visualizations.
 
 - [`plot_volcano()`](https://ymbouamboua.github.io/DEGgo/reference/plot_volcano.md)
   : Generate volcano plot for differential expression results
@@ -68,7 +85,8 @@ functional enrichment visualizations.
 
 ## Expression analysis
 
-Functions for extracting and inspecting gene-expression values.
+Functions for extracting and inspecting normalized or transformed
+gene-expression values.
 
 - [`extract_expression()`](https://ymbouamboua.github.io/DEGgo/reference/extract_expression.md)
   : Extract normalized gene expression
@@ -76,7 +94,7 @@ Functions for extracting and inspecting gene-expression values.
 ## Gene and GO extraction
 
 Functions for extracting differentially expressed genes, enriched Gene
-Ontology terms, and associated gene sets.
+Ontology terms, rhythmic genes, and associated gene sets.
 
 - [`deggo_extract_deg_genes()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_extract_deg_genes.md)
   : Extract selected DEG genes from DEGgo results
@@ -89,7 +107,7 @@ Ontology terms, and associated gene sets.
 
 ## Palettes and visualization helpers
 
-Colour palettes and visual styling utilities used by DEGgo.
+Colour palettes and visual styling utilities used throughout DEGgo.
 
 - [`deggo_palette()`](https://ymbouamboua.github.io/DEGgo/reference/deggo_palette.md)
   : Retrieve a DEGgo color palette

@@ -40,17 +40,34 @@
 <h2 class="pkg-version" data-toc-text="1.0.0" id="deggo-100">DEGgo 1.0.0<a class="anchor" aria-label="anchor" href="#deggo-100"></a></h2>
 <div class="section level3">
 <h3 id="new-features-1-0-0">New features<a class="anchor" aria-label="anchor" href="#new-features-1-0-0"></a></h3>
-<ul><li>Initial stable release</li>
-<li>DESeq2, edgeR and limma support</li>
-<li>Single and pairwise differential expression workflows</li>
-<li>Automatic quality control</li>
-<li>Publication-ready PCA, volcano plots and heatmaps</li>
-<li>GO enrichment analysis</li>
-<li>HTML report generation</li>
-<li>PowerPoint export</li>
-<li>Reproducibility reports</li>
-<li>Example datasets and tutorials</li>
-<li>Added <code><a href="../reference/run_deggo_rhythmicity.html">run_deggo_rhythmicity()</a></code> for circadian and time-course rhythmicity analysis.</li>
+<ul><li>Initial stable release.</li>
+<li>Added support for differential expression analysis with DESeq2, edgeR, and limma.</li>
+<li>Added single-contrast and pairwise differential expression workflows.</li>
+<li>Added automated quality-control and input-validation workflows.</li>
+<li>Added publication-ready PCA plots, volcano plots, heatmaps, and summary tables.</li>
+<li>Added Gene Ontology enrichment analysis and visualization.</li>
+<li>Added automated HTML report generation.</li>
+<li>Added PowerPoint export.</li>
+<li>Added reproducibility reports containing analysis parameters and session information.</li>
+<li>Added example datasets, tutorials, and complete analysis workflows.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="experimental-design-assessment-1-0-0">Experimental design assessment<a class="anchor" aria-label="anchor" href="#experimental-design-assessment-1-0-0"></a></h3>
+<ul><li>Added design_qc() for assessing experimental structure before differential expression analysis.</li>
+<li>Added validation of count matrices, metadata, sample identifiers, groups, batches, and experimental-unit columns.</li>
+<li>Added automated transformation of count matrices using VST, rlog, or log2-CPM.</li>
+<li>Added principal-component analysis for identifying factors associated with global expression variation.</li>
+<li>Added optional PERMANOVA analysis using the vegan package.</li>
+<li>Added assessment of treatment, batch, tissue, sex, donor, patient, cage, animal, and other design variables.</li>
+<li>Added detection of repeated experimental units when unit_col is supplied or conservatively detected.</li>
+<li>Added identification of paired, repeated-measures, nested, and potentially pseudoreplicated designs.</li>
+<li>Added automated recommendations for DESeq2 or dream based on the detected experimental structure.</li>
+<li>Added suggested model formulas and alternative analysis strategies.</li>
+<li>Added the deggo_design_qc result class and a dedicated print method for concise design summaries.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="rhythmicity-analysis-1-0-0">Rhythmicity analysis<a class="anchor" aria-label="anchor" href="#rhythmicity-analysis-1-0-0"></a></h3>
+<ul><li>Added run_deggo_rhythmicity() for circadian and time-course rhythmicity analysis.</li>
 <li>Added MetaCycle-based rhythmicity detection.</li>
 <li>Added single-component cosinor regression with automatic or manual fitting.</li>
 <li>Added optional differential-rhythmicity testing between two groups.</li>
@@ -59,24 +76,32 @@
 </ul></div>
 <div class="section level3">
 <h3 id="improvements-1-0-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-1-0-0"></a></h3>
-<ul><li>Improved <code><a href="../reference/plot_volcano.html">plot_volcano()</a></code> documentation.</li>
+<ul><li>Improved plot_volcano() documentation.</li>
+<li>Improved count and metadata preprocessing.</li>
+<li>Added automatic detection of common gene identifier columns.</li>
+<li>Added optional removal of Ensembl version suffixes.</li>
+<li>Added optional aggregation of duplicated gene identifiers.</li>
+<li>Improved sample matching and metadata validation.</li>
+<li>Improved handling of repeated-measures and experimental-unit designs.</li>
+<li>Improved recommendations for avoiding pseudoreplication.</li>
+<li>Improved output organization and reproducibility.</li>
+<li>Enhanced differential-expression summary tables and visualizations.</li>
+<li>Improved Gene Ontology enrichment summaries.</li>
+<li>Improved automated HTML report generation.</li>
 <li>Removed unintended global-variable dependencies.</li>
 <li>Improved CRAN portability by replacing non-ASCII characters in R source files.</li>
-<li>Resolved all package warnings and code/documentation issues detected by <code>R CMD check</code>.</li>
-<li>Improved output organization and reproducibility.</li>
-<li>Enhanced DEG summary tables and visualization.</li>
-<li>Improved automated HTML report generation.</li>
-<li>General code cleanup and documentation updates.</li>
-</ul><hr></div>
+<li>Resolved package warnings and code/documentation issues detected by R CMD check.</li>
+<li>General code cleanup, refactoring, testing, and documentation updates.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2" id="deggo-012">DEGgo 0.1.2<a class="anchor" aria-label="anchor" href="#deggo-012"></a></h2>
 <div class="section level3">
 <h3 id="improvements-0-1-2">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-1-2"></a></h3>
 <ul><li>Refactored the internal analysis workflow for improved maintainability.</li>
-<li>Added <code>analysis.R</code> and <code>cleaning.R</code> modules.</li>
-<li>Renamed <code>enrichement.R</code> to <code>enrichment.R</code>.</li>
-<li>Simplified and optimized <code><a href="../reference/run_deggo.html">run_deggo()</a></code> internals.</li>
+<li>Added analysis.R and cleaning.R modules.</li>
+<li>Renamed enrichement.R to enrichment.R.</li>
+<li>Simplified and optimized run_deggo() internals.</li>
 <li>Improved Gene Ontology enrichment workflow and visualization.</li>
 <li>Enhanced annotation and preprocessing modules.</li>
 <li>Updated function documentation and examples.</li>
@@ -86,9 +111,9 @@
 <div class="section level3">
 <h3 id="bug-fixes-0-1-2">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-2"></a></h3>
 <ul><li>Fixed documentation inconsistencies.</li>
-<li>Resolved <code>R CMD check</code> notes related to documentation and plotting.</li>
-<li>General code cleanup and internal refactoring.</li>
-</ul><hr></div>
+<li>Resolved R CMD check notes related to documentation and plotting.</li>
+<li>Performed general code cleanup and internal refactoring.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="deggo-010">DEGgo 0.1.0<a class="anchor" aria-label="anchor" href="#deggo-010"></a></h2>
@@ -96,20 +121,20 @@
 <h3 id="initial-public-release-0-1-0">Initial public release<a class="anchor" aria-label="anchor" href="#initial-public-release-0-1-0"></a></h3>
 <div class="section level4">
 <h4 id="new-features-0-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-0"></a></h4>
-<ul><li>Automated bulk RNA-seq quality control workflow.</li>
-<li>Differential expression analysis using DESeq2, edgeR, or limma.</li>
-<li>Single-contrast and pairwise analysis modes.</li>
-<li>Automated PCA, volcano plot, and heatmap generation.</li>
-<li>Gene Ontology enrichment analysis and visualization.</li>
-<li>Interactive HTML reporting with reproducibility tracking.</li>
-<li>Support for custom OrgDb annotation databases through the <code>orgdb</code> argument, enabling analyses of non-model organisms.</li>
+<ul><li>Added an automated bulk RNA-seq quality-control workflow.</li>
+<li>Added differential expression analysis using DESeq2, edgeR, or limma.</li>
+<li>Added single-contrast and pairwise analysis modes.</li>
+<li>Added automated PCA, volcano plot, and heatmap generation.</li>
+<li>Added Gene Ontology enrichment analysis and visualization.</li>
+<li>Added interactive HTML reporting with reproducibility tracking.</li>
+<li>Added support for custom OrgDb annotation databases through the orgdb argument, enabling analyses of non-model organisms.</li>
 </ul></div>
 <div class="section level4">
 <h4 id="improvements-0-1-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-1-0"></a></h4>
 <ul><li>Improved output organization and reproducibility files.</li>
-<li>Enhanced DEG summary tables and visualization.</li>
+<li>Enhanced differential-expression summary tables and visualization.</li>
 <li>Added automated report generation with integrated figures and enrichment results.</li>
-</ul><hr></div>
+</ul></div>
 </div>
 </div>
     <div class="section level2">
@@ -117,8 +142,8 @@
 <div class="section level3">
 <h3 id="development-0-0-0-9000">Development<a class="anchor" aria-label="anchor" href="#development-0-0-0-9000"></a></h3>
 <ul><li>Initial development version.</li>
-<li>Added bulk RNA-seq QC, differential expression, GO enrichment, and plotting helpers.</li>
-<li>Initial package structure.</li>
+<li>Added bulk RNA-seq quality control, differential expression, Gene Ontology enrichment, and plotting helpers.</li>
+<li>Added the initial package structure.</li>
 </ul></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

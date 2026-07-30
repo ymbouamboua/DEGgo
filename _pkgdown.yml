@@ -5,10 +5,11 @@ template:
   bootswatch: flatly
 
 home:
-  title: DEGgo
+  title: "DEGgo"
   description: >
     Automated and reproducible bulk RNA-seq differential expression,
-    Gene Ontology, and circadian rhythmicity analysis.
+    experimental design assessment, Gene Ontology enrichment, and
+    circadian rhythmicity analysis.
 
 navbar:
   structure:
@@ -22,25 +23,38 @@ navbar:
 
   components:
     github:
-      icon: fab fa-github
-      aria-label: GitHub repository
+      icon: "fab fa-github"
+      aria-label: "GitHub repository"
       href: https://github.com/ymbouamboua/DEGgo
 
 reference:
   - title: "Main workflow"
     desc: >
       Core functions for running differential expression analysis,
-      functional enrichment, and report generation.
+      functional enrichment, report generation, and result export.
     contents:
       - run_deggo
       - run_go_enrichment
       - generate_deggo_report
       - generate_deggo_pptx
 
+  - title: "Experimental design assessment"
+    desc: >
+      Functions for validating RNA-seq study designs, identifying repeated
+      experimental units, assessing dominant sources of global expression
+      variation, detecting potential pseudoreplication, and recommending
+      appropriate DESeq2 or dream models.
+    contents:
+      - design_qc
+      - aggregate_counts_by_unit
+      - plot.deggo_design_qc
+      - print.deggo_design_qc
+
   - title: "Circadian rhythmicity analysis"
     desc: >
       Functions for preparing circadian transcriptomic datasets,
-      detecting rhythmic genes, and running reproducible public examples.
+      detecting rhythmic genes, testing differential rhythmicity,
+      and running reproducible public examples.
     contents:
       - run_deggo_rhythmicity
       - deggo_extract_rhythmic_genes
@@ -51,7 +65,7 @@ reference:
   - title: "Quality control"
     desc: >
       Functions for count-data exploration, sample-level quality control,
-      filtering, and marker assessment.
+      filtering, sample removal, and marker assessment.
     contents:
       - explore_bulk_rnaseq
       - check_raw_counts
@@ -61,8 +75,8 @@ reference:
 
   - title: "Visualization"
     desc: >
-      Functions for generating publication-ready differential expression
-      and functional enrichment visualizations.
+      Functions for generating publication-ready differential expression,
+      gene-expression, and functional enrichment visualizations.
     contents:
       - plot_volcano
       - plot_heatmap
@@ -74,14 +88,15 @@ reference:
 
   - title: "Expression analysis"
     desc: >
-      Functions for extracting and inspecting gene-expression values.
+      Functions for extracting and inspecting normalized or transformed
+      gene-expression values.
     contents:
       - extract_expression
 
   - title: "Gene and GO extraction"
     desc: >
       Functions for extracting differentially expressed genes,
-      enriched Gene Ontology terms, and associated gene sets.
+      enriched Gene Ontology terms, rhythmic genes, and associated gene sets.
     contents:
       - deggo_extract_deg_genes
       - deggo_extract_go_genes
@@ -90,7 +105,7 @@ reference:
 
   - title: "Palettes and visualization helpers"
     desc: >
-      Colour palettes and visual styling utilities used by DEGgo.
+      Colour palettes and visual styling utilities used throughout DEGgo.
     contents:
       - deggo_palette
 

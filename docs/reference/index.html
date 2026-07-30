@@ -38,7 +38,7 @@
     <div class="section level2">
       <h2 id="main-workflow">Main workflow<a class="anchor" aria-label="anchor" href="#main-workflow"></a></h2>
 
-      <div class="section-desc"><p>Core functions for running differential expression analysis, functional enrichment, and report generation.</p></div>
+      <div class="section-desc"><p>Core functions for running differential expression analysis, functional enrichment, report generation, and result export.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -73,9 +73,46 @@
         </dt>
         <dd>Generate a PowerPoint report from DEGgo results</dd>
       </dl></div><div class="section level2">
+      <h2 id="experimental-design-assessment">Experimental design assessment<a class="anchor" aria-label="anchor" href="#experimental-design-assessment"></a></h2>
+
+      <div class="section-desc"><p>Functions for validating RNA-seq study designs, identifying repeated experimental units, assessing dominant sources of global expression variation, detecting potential pseudoreplication, and recommending appropriate DESeq2 or dream models.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="design_qc.html">design_qc()</a></code>
+
+        </dt>
+        <dd>Experimental design quality control for bulk RNA-seq</dd>
+
+        <dt>
+
+          <code><a href="aggregate_counts_by_unit.html">aggregate_counts_by_unit()</a></code>
+
+        </dt>
+        <dd>Aggregate raw counts by an experimental unit</dd>
+
+        <dt>
+
+          <code><a href="plot.deggo_design_qc.html">plot(<i>&lt;deggo_design_qc&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot DesignQC PCA</dd>
+
+        <dt>
+
+          <code><a href="print.deggo_design_qc.html">print(<i>&lt;deggo_design_qc&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a DEGgo design quality control summary</dd>
+      </dl></div><div class="section level2">
       <h2 id="circadian-rhythmicity-analysis">Circadian rhythmicity analysis<a class="anchor" aria-label="anchor" href="#circadian-rhythmicity-analysis"></a></h2>
 
-      <div class="section-desc"><p>Functions for preparing circadian transcriptomic datasets, detecting rhythmic genes, and running reproducible public examples.</p></div>
+      <div class="section-desc"><p>Functions for preparing circadian transcriptomic datasets, detecting rhythmic genes, testing differential rhythmicity, and running reproducible public examples.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -119,7 +156,7 @@
       </dl></div><div class="section level2">
       <h2 id="quality-control">Quality control<a class="anchor" aria-label="anchor" href="#quality-control"></a></h2>
 
-      <div class="section-desc"><p>Functions for count-data exploration, sample-level quality control, filtering, and marker assessment.</p></div>
+      <div class="section-desc"><p>Functions for count-data exploration, sample-level quality control, filtering, sample removal, and marker assessment.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -163,7 +200,7 @@
       </dl></div><div class="section level2">
       <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a></h2>
 
-      <div class="section-desc"><p>Functions for generating publication-ready differential expression and functional enrichment visualizations.</p></div>
+      <div class="section-desc"><p>Functions for generating publication-ready differential expression, gene-expression, and functional enrichment visualizations.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -221,7 +258,7 @@
       </dl></div><div class="section level2">
       <h2 id="expression-analysis">Expression analysis<a class="anchor" aria-label="anchor" href="#expression-analysis"></a></h2>
 
-      <div class="section-desc"><p>Functions for extracting and inspecting gene-expression values.</p></div>
+      <div class="section-desc"><p>Functions for extracting and inspecting normalized or transformed gene-expression values.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -237,7 +274,7 @@
       </dl></div><div class="section level2">
       <h2 id="gene-and-go-extraction">Gene and GO extraction<a class="anchor" aria-label="anchor" href="#gene-and-go-extraction"></a></h2>
 
-      <div class="section-desc"><p>Functions for extracting differentially expressed genes, enriched Gene Ontology terms, and associated gene sets.</p></div>
+      <div class="section-desc"><p>Functions for extracting differentially expressed genes, enriched Gene Ontology terms, rhythmic genes, and associated gene sets.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -274,7 +311,7 @@
       </dl></div><div class="section level2">
       <h2 id="palettes-and-visualization-helpers">Palettes and visualization helpers<a class="anchor" aria-label="anchor" href="#palettes-and-visualization-helpers"></a></h2>
 
-      <div class="section-desc"><p>Colour palettes and visual styling utilities used by DEGgo.</p></div>
+      <div class="section-desc"><p>Colour palettes and visual styling utilities used throughout DEGgo.</p></div>
 
       <dl></dl></div><div class="section level2">
 
