@@ -2,94 +2,125 @@
 % Please edit documentation in R/visualization.R
 \name{plot_gene_expression}
 \alias{plot_gene_expression}
-\title{Plot normalized gene expression}
+\title{Plot gene expression}
 \usage{
 plot_gene_expression(
-  expr_df,
-  gene,
-  x = "treatment",
-  color = x,
+  object,
+  genes,
+  x,
+  metadata = NULL,
   facet = NULL,
-  geom = c("violin", "boxplot", "barplot"),
-  comparisons = list(c("PBS", "PAMH")),
-  stats = TRUE,
-  stat_method = "wilcox.test",
-  stat_label = c("p.signif", "p.format"),
-  output_dir = NULL,
-  filename = NULL,
-  width = 6,
-  height = 5,
-  dpi = 300,
-  style = "classic",
-  txtsize = 12,
-  x_ang = 45,
-  ncol = NULL
+  sample_col = NULL,
+  gene_col = NULL,
+  assay = c("auto", "normalized", "counts"),
+  normalization = c("deseq2", "cpm", "none"),
+  organism = c("mouse", "human"),
+  gene_type = c("auto", "symbol", "ensembl"),
+  geom = c("boxplot", "barplot", "mean", "violin"),
+  transform = c("log2", "none"),
+  pseudocount = 1,
+  colors = NULL,
+  point = TRUE,
+  pt_size = 1.7,
+  jitter = 0.055,
+  error = c("sem", "sd", "ci95", "none"),
+  stats = FALSE,
+  stat_method = c("auto", "deseq2", "wilcox", "ttest"),
+  stat_scope = c("genes", "all"),
+  stat_data = NULL,
+  ref = NULL,
+  test = NULL,
+  stat_label = c("padj", "pvalue", "both", "stars", "none"),
+  bracket = TRUE,
+  stat_size = 3,
+  scales = "free_y",
+  style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray", "matplotlib"),
+  txtsize = 10,
+  legend = FALSE,
+  title = NULL,
+  x_title = NULL,
+  y_title = NULL,
+  seed = 42
 )
 }
 \arguments{
-\item{expr_df}{Long-format expression table.}
+\item{object}{DEGgo result, DESeqDataSet, matrix, or data.frame.}
 
-\item{gene}{Gene symbol to plot.}
+\item{genes}{Genes to plot.}
 
-\item{x}{Metadata variable displayed on the x-axis.}
+\item{x}{Metadata grouping column.}
 
-\item{color}{Metadata variable used for fill colors.}
+\item{metadata}{Metadata for matrix/data.frame input.}
 
-\item{facet}{Optional metadata variable used for faceting.}
+\item{facet}{Optional facet columns.}
 
-\item{geom}{Plot type: \code{"violin"}, \code{"boxplot"},
-or \code{"barplot"}.}
+\item{sample_col}{Sample identifier column.}
 
-\item{comparisons}{List of comparisons passed to
-\code{ggpubr::stat_compare_means()}.}
+\item{gene_col}{Gene identifier column for data.frame input.}
 
-\item{stats}{Logical. Add statistical comparisons.}
+\item{assay}{\code{"auto"}, \code{"normalized"}, or \code{"counts"}.}
 
-\item{stat_method}{Statistical test method.}
+\item{normalization}{\code{"deseq2"}, \code{"cpm"}, or \code{"none"}.}
 
-\item{stat_label}{Label style:
-\code{"p.signif"} or \code{"p.format"}.}
+\item{organism}{\code{"mouse"} or \code{"human"}.}
 
-\item{output_dir}{Output directory.}
+\item{gene_type}{\code{"auto"}, \code{"symbol"}, or \code{"ensembl"}.}
 
-\item{filename}{Output filename.}
+\item{geom}{\code{"boxplot"}, \code{"barplot"}, \code{"mean"}, or \code{"violin"}.}
 
-\item{width}{Plot width.}
+\item{transform}{\code{"log2"} or \code{"none"}.}
 
-\item{height}{Plot height.}
+\item{pseudocount}{Pseudocount for log2 transformation.}
 
-\item{dpi}{Plot resolution.}
+\item{colors}{Named group colors.}
 
-\item{style}{Theme style passed to \code{.deggo_theme()}.}
+\item{point}{Show sample points.}
 
-\item{txtsize}{Base font size.}
+\item{pt_size}{Point size.}
 
-\item{x_ang}{Numeric. Angle of x-axis labels.}
+\item{jitter}{Point jitter.}
 
-\item{ncol}{Number of plot columns.}
+\item{error}{\code{"sem"}, \code{"sd"}, \code{"ci95"}, or \code{"none"}.}
+
+\item{stats}{Show statistical annotations.}
+
+\item{stat_method}{\code{"auto"}, \code{"deseq2"}, \code{"wilcox"}, or \code{"ttest"}.}
+
+\item{stat_scope}{\code{"genes"} or \code{"all"} for non-DESeq2 tests.}
+
+\item{stat_data}{Optional precomputed statistics.}
+
+\item{ref}{Reference group.}
+
+\item{test}{Test group.}
+
+\item{stat_label}{\code{"padj"}, \code{"pvalue"}, \code{"both"}, \code{"stars"}, or \code{"none"}.}
+
+\item{bracket}{Draw significance bracket.}
+
+\item{stat_size}{Statistical label size.}
+
+\item{scales}{Facet scales.}
+
+\item{style}{Plot style.}
+
+\item{txtsize}{Text size.}
+
+\item{legend}{Show legend.}
+
+\item{title}{Plot title.}
+
+\item{x_title}{X-axis title.}
+
+\item{y_title}{Y-axis title.}
+
+\item{seed}{Jitter seed.}
 }
 \value{
 A ggplot object.
 }
 \description{
-Generates publication-ready violin, boxplot, or barplot visualizations
-from normalized expression values produced by
-\code{extract_normalized_expression()}.
-}
-\details{
-Statistical comparisons can be added using
-\code{ggpubr::stat_compare_means()}.
-}
-\examples{
-\dontrun{
-plot_gene_expression(
-  expr_df,
-  gene = "Adipoq",
-  x = "treatment",
-  color = "treatment",
-  facet = "tissue",
-  geom = "violin"
-)
-}
-
+Plots gene expression from DEGgo results, DESeqDataSet objects, raw counts,
+or normalized expression matrices. DEGgo statistics are reused when
+available; otherwise statistics can optionally be computed per facet panel.
 }

@@ -33,325 +33,430 @@
 #' @keywords internal
 #' @noRd
 .deggo_theme <- function(
-    style = c("classic", "minimal", "bw", "test", "void", "dirty", "gray"),
-    txtsize = 12,
-    xy.val = TRUE,
-    x.ang = 0,
-    hjust = NULL,
-    vjust = NULL,
-    xlab = TRUE,
-    ylab = TRUE,
-    xy.lab = TRUE,
-    facet.face = "bold",
-    ttl.face = "bold",
-    txt.face = c("plain", "italic", "bold"),
-    ttl.pos = c("center", "left", "right"),
-    x.ttl = TRUE,
-    y.ttl = TRUE,
-    ticks = NULL,
-    line = NULL,
-    border = NULL,
-    grid.major = NULL,
-    grid.minor = NULL,
-    panel.fill = "white",
-    facet.bg = TRUE,
-    mode = c("light", "dark"),
-    leg.pos = "right",
-    leg.dir = "vertical",
-    leg.size = 10,
-    leg.ttl = 10,
-    leg.ttl.size = 10,
-    leg.just = "center",
-    leg.ttl.text = NULL,
+    style=c("classic","minimal","bw","test","void","dirty","gray","matplotlib"),
+    txtsize=12,
+    family="Helvetica",
+    txt.face=c("plain","italic","bold"),
+    fg=NULL,
+    bg=NULL,
+    panel.fill="white",
+    mode=c("light","dark"),
+    xy.val=TRUE,
+    xy.lab=TRUE,
+    xlab=TRUE,
+    ylab=TRUE,
+    x.ttl=TRUE,
+    y.ttl=TRUE,
+    x.ang=0,
+    hjust=NULL,
+    vjust=NULL,
+    axis.size=NULL,
+    axis.ttl.size=NULL,
+    axis.face="plain",
+    axis.ttl.face="plain",
+    ticks=NULL,
+    tick.length=2.5,
+    line=NULL,
+    border=NULL,
+    linewidth=0.3,
+    grid.major=NULL,
+    grid.minor=NULL,
+    grid.col=NULL,
+    ttl.face="bold",
+    ttl.size=NULL,
+    ttl.pos=c("center","left","right"),
+    ttl.scope=c("panel","plot"),
+    subtitle.size=NULL,
+    subtitle.face="plain",
+    caption.size=NULL,
+    caption.face="plain",
+    caption.pos=c("right","left","center"),
+    facet.face="bold",
+    facet.size=NULL,
+    facet.bg=TRUE,
+    facet.fill=NULL,
+    facet.text.col=NULL,
+    leg=TRUE,
+    leg.pos="right",
+    leg.dir="vertical",
+    leg.ncol=NULL,
+    leg.just="center",
+    leg.size=10,
+    leg.ttl=NULL,
+    leg.ttl.size=10,
+    leg.ttl.face="bold",
+    leg.ttl.text=NULL,
+    leg.key.size=0.4,
+    leg.spacing=0.05,
+    leg.box=c("vertical","horizontal"),
+    leg.bg=NULL,
+    leg.border=FALSE,
+    plot.margin=c(5.5,5.5,5.5,5.5),
+    panel.spacing=0.1,
+    aspect.ratio=NULL,
     ...
 ) {
-
+  # --------------------------------------------------------------------------- #
+  # Arguments
+  # --------------------------------------------------------------------------- #
   style <- match.arg(style)
-  ttl.pos <- match.arg(ttl.pos)
-  txt.face <- match.arg(txt.face)
   mode <- match.arg(mode)
-
-  lw <- 0.3
-
-  if (is.null(line)) {
-    line <- style == "classic"
+  txt.face <- match.arg(txt.face)
+  ttl.pos <- match.arg(ttl.pos)
+  ttl.scope <- match.arg(ttl.scope)
+  caption.pos <- match.arg(caption.pos)
+  leg.box <- match.arg(leg.box)
+  if (!is.null(leg.ttl)) {
+    warning("`leg.ttl` is deprecated; use `leg.ttl.size`.",call.=FALSE)
+    leg.ttl.size <- leg.ttl
   }
-
-  if (mode == "light") {
-    col.txt <- "#1A1A1A"
-    col.grid <- "#D9D9D9"
-    col.panel <- panel.fill
-    col.strip <- "#EFEFEF"
-  } else {
-    col.txt <- "#DDDDDD"
-    col.grid <- "#444444"
-    col.panel <- "#1E1E1E"
-    col.strip <- "#383838"
-  }
-
+  axis.size <- if (is.null(axis.size)) txtsize else axis.size
+  axis.ttl.size <- if (is.null(axis.ttl.size)) txtsize else axis.ttl.size
+  ttl.size <- if (is.null(ttl.size)) txtsize+2 else ttl.size
+  subtitle.size <- if (is.null(subtitle.size)) max(7,txtsize-1) else subtitle.size
+  caption.size <- if (is.null(caption.size)) max(6,txtsize-2) else caption.size
+  facet.size <- if (is.null(facet.size)) txtsize else facet.size
+  if (is.null(line)) line <- style%in%c("classic","matplotlib")
+  if (is.null(fg)) fg <- if (mode=="dark") "white" else "#1A1A1A"
+  if (is.null(bg)) bg <- if (mode=="dark") "#111111" else panel.fill
+  if (is.null(grid.col)) grid.col <- if (mode=="dark") "#444444" else "#D9D9D9"
+  if (is.null(facet.fill)) facet.fill <- if (mode=="dark") "#383838" else "#EFEFEF"
+  if (is.null(facet.text.col)) facet.text.col <- fg
+  if (is.null(leg.bg)) leg.bg <- bg
+  if (length(plot.margin)!=4L || anyNA(plot.margin))
+    stop("`plot.margin` must contain four values: top, right, bottom, left.",call.=FALSE)
+  if (!is.null(aspect.ratio) && (!is.numeric(aspect.ratio) || length(aspect.ratio)!=1L || !is.finite(aspect.ratio) || aspect.ratio<=0))
+    stop("`aspect.ratio` must be a positive finite number or NULL.",call.=FALSE)
   if (is.null(hjust) || is.null(vjust)) {
-    if (x.ang == 0) {
-      hjust <- 0.5
-      vjust <- 0.5
-    } else if (x.ang == 45) {
-      hjust <- 1
-      vjust <- 1
-    } else if (x.ang == 90) {
-      hjust <- 1
-      vjust <- 0.5
-    } else if (x.ang == 270) {
-      hjust <- 0
-      vjust <- 0.5
-    } else {
-      hjust <- 1
-      vjust <- 1
-    }
+    pos <- switch(
+      as.character(x.ang),
+      `0`=c(.5,.5),
+      `45`=c(1,1),
+      `90`=c(1,.5),
+      `270`=c(0,.5),
+      c(1,1)
+    )
+    if (is.null(hjust)) hjust <- pos[1]
+    if (is.null(vjust)) vjust <- pos[2]
   }
-
-  ttl.pos <- switch(
-    ttl.pos,
-    left = 0,
-    center = 0.5,
-    right = 1
-  )
-
-  base <- ggplot2::theme(
-    text = ggplot2::element_text(
-      color = col.txt,
-      size = txtsize,
-      family = "Helvetica"
-    ),
-    axis.text.x = ggplot2::element_text(
-      color = col.txt,
-      size = txtsize
-    ),
-    axis.text.y = ggplot2::element_text(
-      color = col.txt,
-      size = txtsize
-    ),
-    axis.title = ggplot2::element_text(
-      size = txtsize
-    ),
-    plot.title = ggplot2::element_text(
-      hjust = ttl.pos,
-      face = ttl.face,
-      size = txtsize + 2,
-      color = col.txt
-    ),
-    strip.text = ggplot2::element_text(
-      face = facet.face,
-      color = col.txt
-    ),
-    legend.title = ggplot2::element_text(
-      size = leg.ttl.size + 2,
-      face = "bold"
-    ),
-    legend.text = ggplot2::element_text(
-      size = leg.size
-    ),
-    legend.position = leg.pos,
-    legend.direction = leg.dir,
-    legend.justification = leg.just,
-    legend.key.height = grid::unit(0.4, "cm"),
-    legend.key.width = grid::unit(0.4, "cm"),
-    legend.background = ggplot2::element_blank(),
-    legend.box.background = ggplot2::element_blank(),
-    legend.key = ggplot2::element_blank(),
-    legend.box = "vertical",
-    legend.spacing.y = grid::unit(0.05, "cm"),
-    legend.margin = ggplot2::margin(1, 1, 1, 1),
-    ...
-  )
-
+  ttl.hjust <- switch(ttl.pos,left=0,center=.5,right=1)
+  caption.hjust <- switch(caption.pos,left=0,center=.5,right=1)
+  # --------------------------------------------------------------------------- #
+  # Preset
+  # --------------------------------------------------------------------------- #
   preset <- switch(
     style,
-    minimal = ggplot2::theme_minimal(base_size = txtsize),
-    classic = ggplot2::theme_classic(base_size = txtsize),
-    bw = ggplot2::theme_bw(base_size = txtsize),
-    test = ggplot2::theme_test(base_size = txtsize),
-    void = ggplot2::theme_void(base_size = txtsize),
-    dirty = ggplot2::theme_minimal(base_size = txtsize) +
-      ggplot2::theme(
-        panel.grid = ggplot2::element_blank(),
-        panel.border = ggplot2::element_blank(),
-        axis.ticks = ggplot2::element_blank()
-      ),
-    gray = ggplot2::theme_gray(base_size = txtsize) +
-      ggplot2::theme(
-        panel.background = ggplot2::element_rect(
-          fill = "#EDEDED",
-          color = NA
-        ),
-        panel.grid.major = ggplot2::element_line(
-          color = "#CCCCCC",
-          linewidth = lw
-        ),
-        panel.grid.minor = ggplot2::element_line(
-          color = "#DDDDDD",
-          linewidth = lw / 2
-        )
-      )
+    classic=ggplot2::theme_classic(base_size=txtsize,base_family=family),
+    minimal=ggplot2::theme_minimal(base_size=txtsize,base_family=family),
+    bw=ggplot2::theme_bw(base_size=txtsize,base_family=family),
+    test=ggplot2::theme_test(base_size=txtsize,base_family=family),
+    void=ggplot2::theme_void(base_size=txtsize,base_family=family),
+    dirty=ggplot2::theme_minimal(base_size=txtsize,base_family=family),
+    gray=ggplot2::theme_gray(base_size=txtsize,base_family=family),
+    matplotlib=ggplot2::theme_classic(base_size=txtsize,base_family=family)
   )
-
-  th <- preset + base
-
-  if (style %in% c("bw", "test", "gray")) {
-    th <- th + ggplot2::theme(
-      panel.border = ggplot2::element_rect(
-        linewidth = lw,
-        color = col.txt,
-        fill = NA
+  # --------------------------------------------------------------------------- #
+  # Base
+  # --------------------------------------------------------------------------- #
+  th <- preset + ggplot2::theme(
+    text=ggplot2::element_text(colour=fg,size=txtsize,face=txt.face,family=family),
+    axis.text.x=ggplot2::element_text(
+      colour=fg,size=axis.size,face=axis.face,
+      angle=x.ang,hjust=hjust,vjust=vjust
+    ),
+    axis.text.y=ggplot2::element_text(
+      colour=fg,size=axis.size,face=axis.face
+    ),
+    axis.title.x=ggplot2::element_text(
+      colour=fg,size=axis.ttl.size,face=axis.ttl.face
+    ),
+    axis.title.y=ggplot2::element_text(
+      colour=fg,size=axis.ttl.size,face=axis.ttl.face
+    ),
+    axis.ticks.length=grid::unit(tick.length,"pt"),
+    plot.title=ggplot2::element_text(
+      colour=fg,size=ttl.size,face=ttl.face,hjust=ttl.hjust
+    ),
+    plot.subtitle=ggplot2::element_text(
+      colour=fg,size=subtitle.size,face=subtitle.face
+    ),
+    plot.caption=ggplot2::element_text(
+      colour=fg,size=caption.size,face=caption.face,hjust=caption.hjust
+    ),
+    strip.text=ggplot2::element_text(
+      colour=facet.text.col,size=facet.size,face=facet.face
+    ),
+    strip.background=ggplot2::element_rect(
+      fill=facet.fill,colour=NA
+    ),
+    panel.background=ggplot2::element_rect(
+      fill=bg,colour=NA
+    ),
+    plot.background=ggplot2::element_rect(
+      fill=bg,colour=NA
+    ),
+    legend.title=ggplot2::element_text(
+      colour=fg,size=leg.ttl.size,face=leg.ttl.face
+    ),
+    legend.text=ggplot2::element_text(
+      colour=fg,size=leg.size
+    ),
+    legend.position=if (isTRUE(leg)) leg.pos else "none",
+    legend.direction=leg.dir,
+    legend.justification=leg.just,
+    legend.key.height=grid::unit(leg.key.size,"cm"),
+    legend.key.width=grid::unit(leg.key.size,"cm"),
+    legend.key=ggplot2::element_rect(
+      fill=leg.bg,colour=NA
+    ),
+    legend.background=ggplot2::element_rect(
+      fill=leg.bg,colour=NA
+    ),
+    legend.box.background=if (isTRUE(leg.border)) {
+      ggplot2::element_rect(
+        fill=leg.bg,
+        colour=fg,
+        linewidth=linewidth
+      )
+    } else {
+      ggplot2::element_rect(
+        fill=leg.bg,
+        colour=NA
+      )
+    },
+    legend.box=leg.box,
+    legend.spacing.x=grid::unit(leg.spacing,"cm"),
+    legend.spacing.y=grid::unit(leg.spacing,"cm"),
+    legend.box.spacing=grid::unit(2,"pt"),
+    legend.margin=ggplot2::margin(0,0,0,0,"pt"),
+    panel.spacing=grid::unit(panel.spacing,"cm"),
+    plot.margin=ggplot2::margin(
+      plot.margin[1],
+      plot.margin[2],
+      plot.margin[3],
+      plot.margin[4],
+      unit="pt"
+    ),
+    aspect.ratio=aspect.ratio,
+    plot.title.position=ttl.scope,
+    plot.caption.position="plot",
+    ...
+  )
+  # --------------------------------------------------------------------------- #
+  # Style-specific defaults
+  # --------------------------------------------------------------------------- #
+  if (isTRUE(line) && style%in%c("classic","matplotlib")) {
+    th <- th+ggplot2::theme(
+      axis.line.x=ggplot2::element_line(
+        colour=fg,
+        linewidth=linewidth
       ),
-      axis.line = ggplot2::element_blank()
-    )
-  }
-
-  if (line && style == "classic") {
-    th <- th + ggplot2::theme(
-      axis.line.x = ggplot2::element_line(
-        color = col.txt,
-        linewidth = lw
-      ),
-      axis.line.y = ggplot2::element_line(
-        color = col.txt,
-        linewidth = lw
+      axis.line.y=ggplot2::element_line(
+        colour=fg,
+        linewidth=linewidth
       )
     )
   } else {
-    th <- th + ggplot2::theme(
-      axis.line = ggplot2::element_blank()
+    th <- th+ggplot2::theme(
+      axis.line=ggplot2::element_blank()
     )
   }
-
-  if (xy.val && xlab) {
+  if (style=="gray") {
+    gray.bg <- if (mode=="dark") bg else "#EDEDED"
     th <- th + ggplot2::theme(
-      axis.text.x = ggplot2::element_text(
-        angle = x.ang,
-        hjust = hjust,
-        vjust = vjust
+      panel.background=ggplot2::element_rect(
+        fill=gray.bg,
+        colour=NA
+      ),
+      panel.grid.major=ggplot2::element_line(
+        colour=grid.col,
+        linewidth=linewidth
+      ),
+      panel.grid.minor=ggplot2::element_line(
+        colour=grid.col,
+        linewidth=linewidth/2
       )
     )
   }
-
-  if (!xy.lab) {
-    th <- th + ggplot2::theme(
-      axis.text = ggplot2::element_blank(),
-      axis.ticks = ggplot2::element_blank()
+  if (style=="matplotlib") {
+    th <- th+ggplot2::theme(
+      panel.background=ggplot2::element_rect(fill="white",colour=NA),
+      plot.background=ggplot2::element_rect(fill="white",colour=NA),
+      panel.border=ggplot2::element_blank(),
+      panel.grid=ggplot2::element_blank(),
+      axis.line.x=ggplot2::element_line(colour=fg,linewidth=linewidth),
+      axis.line.y=ggplot2::element_line(colour=fg,linewidth=linewidth),
+      axis.ticks=ggplot2::element_line(colour=fg,linewidth=linewidth),
+      strip.background=ggplot2::element_blank(),
+      strip.text=ggplot2::element_text(
+        colour=fg,
+        size=facet.size,
+        face=facet.face
+      )
     )
   }
-
-  if (!xlab) {
+  # --------------------------------------------------------------------------- #
+  # Axis visibility
+  # --------------------------------------------------------------------------- #
+  if (!isTRUE(xy.val) || !isTRUE(xy.lab)) {
     th <- th + ggplot2::theme(
-      axis.text.x = ggplot2::element_blank(),
-      axis.ticks.x = ggplot2::element_blank()
+      axis.text=ggplot2::element_blank(),
+      axis.ticks=ggplot2::element_blank()
     )
   }
-
-  if (!ylab) {
+  if (!isTRUE(xlab)) {
     th <- th + ggplot2::theme(
-      axis.text.y = ggplot2::element_blank(),
-      axis.ticks.y = ggplot2::element_blank()
+      axis.text.x=ggplot2::element_blank(),
+      axis.ticks.x=ggplot2::element_blank()
     )
   }
-
-  if (!x.ttl) {
+  if (!isTRUE(ylab)) {
     th <- th + ggplot2::theme(
-      axis.title.x = ggplot2::element_blank()
+      axis.text.y=ggplot2::element_blank(),
+      axis.ticks.y=ggplot2::element_blank()
     )
   }
-
-  if (!y.ttl) {
+  if (!isTRUE(x.ttl)) {
     th <- th + ggplot2::theme(
-      axis.title.y = ggplot2::element_blank()
+      axis.title.x=ggplot2::element_blank()
     )
   }
-
+  if (!isTRUE(y.ttl)) {
+    th <- th + ggplot2::theme(
+      axis.title.y=ggplot2::element_blank()
+    )
+  }
   if (!is.null(ticks)) {
-    th <- th + if (isTRUE(ticks)) {
-      ggplot2::theme(
-        axis.ticks = ggplot2::element_line(
-          color = col.txt,
-          linewidth = lw
+    th <- th + ggplot2::theme(
+      axis.ticks=if (isTRUE(ticks)) {
+        ggplot2::element_line(
+          colour=fg,
+          linewidth=linewidth
         )
-      )
-    } else {
-      ggplot2::theme(axis.ticks = ggplot2::element_blank())
-    }
+      } else {
+        ggplot2::element_blank()
+      }
+    )
   }
-
+  # --------------------------------------------------------------------------- #
+  # Panel controls
+  # --------------------------------------------------------------------------- #
   if (!is.null(border)) {
-    th <- th + if (isTRUE(border)) {
-      ggplot2::theme(
-        panel.border = ggplot2::element_rect(
-          color = col.grid,
-          fill = NA,
-          linewidth = lw
+    th <- th + ggplot2::theme(
+      panel.border=if (isTRUE(border)) {
+        ggplot2::element_rect(
+          colour=fg,
+          fill=NA,
+          linewidth=linewidth
         )
-      )
-    } else {
-      ggplot2::theme(panel.border = ggplot2::element_blank())
-    }
+      } else {
+        ggplot2::element_blank()
+      }
+    )
   }
-
   if (!is.null(grid.major)) {
-    th <- th + if (isTRUE(grid.major)) {
-      ggplot2::theme(
-        panel.grid.major = ggplot2::element_line(
-          color = col.grid,
-          linewidth = lw
+    th <- th + ggplot2::theme(
+      panel.grid.major=if (isTRUE(grid.major)) {
+        ggplot2::element_line(
+          colour=grid.col,
+          linewidth=linewidth
         )
-      )
-    } else {
-      ggplot2::theme(panel.grid.major = ggplot2::element_blank())
-    }
+      } else {
+        ggplot2::element_blank()
+      }
+    )
   }
-
   if (!is.null(grid.minor)) {
-    th <- th + if (isTRUE(grid.minor)) {
-      ggplot2::theme(
-        panel.grid.minor = ggplot2::element_line(
-          color = col.grid,
-          linewidth = lw / 2
+    th <- th + ggplot2::theme(
+      panel.grid.minor=if (isTRUE(grid.minor)) {
+        ggplot2::element_line(
+          colour=grid.col,
+          linewidth=linewidth/2
         )
-      )
-    } else {
-      ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
-    }
-  }
-
-  if (!facet.bg) {
-    th <- th + ggplot2::theme(
-      strip.background = ggplot2::element_blank()
+      } else {
+        ggplot2::element_blank()
+      }
     )
   }
-
+  if (!isTRUE(facet.bg)) {
+    th <- th + ggplot2::theme(
+      strip.background=ggplot2::element_blank()
+    )
+  }
+  # --------------------------------------------------------------------------- #
+  # Void style
+  # --------------------------------------------------------------------------- #
+  if (style=="void") {
+    th <- th + ggplot2::theme(
+      axis.text=ggplot2::element_blank(),
+      axis.text.x=ggplot2::element_blank(),
+      axis.text.y=ggplot2::element_blank(),
+      axis.title=ggplot2::element_blank(),
+      axis.title.x=ggplot2::element_blank(),
+      axis.title.y=ggplot2::element_blank(),
+      axis.ticks=ggplot2::element_blank(),
+      axis.ticks.x=ggplot2::element_blank(),
+      axis.ticks.y=ggplot2::element_blank(),
+      axis.ticks.length=grid::unit(0,"pt"),
+      axis.line=ggplot2::element_blank(),
+      axis.line.x=ggplot2::element_blank(),
+      axis.line.y=ggplot2::element_blank(),
+      panel.grid=ggplot2::element_blank(),
+      panel.grid.major=ggplot2::element_blank(),
+      panel.grid.minor=ggplot2::element_blank(),
+      panel.border=ggplot2::element_blank(),
+      strip.background=ggplot2::element_blank()
+    )
+  }
+  # --------------------------------------------------------------------------- #
+  # Dirty style
+  # --------------------------------------------------------------------------- #
+  if (style=="dirty") {
+    th <- th + ggplot2::theme(
+      axis.text=ggplot2::element_blank(),
+      axis.text.x=ggplot2::element_blank(),
+      axis.text.y=ggplot2::element_blank(),
+      axis.title=ggplot2::element_blank(),
+      axis.title.x=ggplot2::element_blank(),
+      axis.title.y=ggplot2::element_blank(),
+      axis.ticks=ggplot2::element_blank(),
+      axis.ticks.x=ggplot2::element_blank(),
+      axis.ticks.y=ggplot2::element_blank(),
+      axis.ticks.length=grid::unit(0,"pt"),
+      axis.line=ggplot2::element_blank(),
+      axis.line.x=ggplot2::element_blank(),
+      axis.line.y=ggplot2::element_blank(),
+      panel.border=ggplot2::element_blank(),
+      panel.grid=ggplot2::element_blank(),
+      panel.grid.major=ggplot2::element_blank(),
+      panel.grid.minor=ggplot2::element_blank(),
+      strip.background=ggplot2::element_blank()
+    )
+  }
+  # --------------------------------------------------------------------------- #
+  # Legend title
+  # --------------------------------------------------------------------------- #
   if (!is.null(leg.ttl.text)) {
-    th <- th + ggplot2::labs(color = leg.ttl.text)
-  }
-
-  if (style == "void") {
-    th <- th + ggplot2::theme(
-      axis.text.x = ggplot2::element_blank(),
-      axis.text.y = ggplot2::element_blank(),
-      axis.ticks = ggplot2::element_blank(),
-      axis.title.x = ggplot2::element_blank(),
-      axis.title.y = ggplot2::element_blank(),
-      axis.line = ggplot2::element_blank(),
-      panel.grid = ggplot2::element_blank(),
-      panel.border = ggplot2::element_blank(),
-      strip.text = ggplot2::element_blank(),
-      strip.background = ggplot2::element_blank()
+    warning(
+      "`leg.ttl.text` cannot be applied through a theme and should be set with labs().",
+      call.=FALSE
     )
   }
 
-  if (style == "dirty") {
-    th <- th + ggplot2::theme(
-      axis.ticks = ggplot2::element_blank(),
-      panel.border = ggplot2::element_blank(),
-      panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank(),
-      strip.background = ggplot2::element_blank()
-    )
+  # --------------------------------------------------------------------------- #
+  # Legend columns
+  # --------------------------------------------------------------------------- #
+  if (!is.null(leg.ncol)) {
+    if (!is.numeric(leg.ncol) || length(leg.ncol)!=1L || !is.finite(leg.ncol) || leg.ncol<1)
+      stop("`leg.ncol` must be a positive integer or NULL.",call.=FALSE)
+
+    return(list(
+      th,
+      ggplot2::guides(
+        colour=ggplot2::guide_legend(ncol=as.integer(leg.ncol)),
+        fill=ggplot2::guide_legend(ncol=as.integer(leg.ncol))
+      )
+    ))
   }
 
   th
@@ -1179,178 +1284,607 @@ deggo_palette <- function(
 # ========================================================= #
 # PLOT GENE EXPRESSION
 # ========================================================= #
-#' Plot normalized gene expression
+
+#' Plot gene expression
 #'
-#' Generates publication-ready violin, boxplot, or barplot visualizations
-#' from normalized expression values produced by
-#' \code{extract_normalized_expression()}.
+#' Plots gene expression from DEGgo results, DESeqDataSet objects, raw counts,
+#' or normalized expression matrices. DEGgo statistics are reused when
+#' available; otherwise statistics can optionally be computed per facet panel.
 #'
-#' Statistical comparisons can be added using
-#' \code{ggpubr::stat_compare_means()}.
-#'
-#' @param expr_df Long-format expression table.
-#' @param gene Gene symbol to plot.
-#' @param x Metadata variable displayed on the x-axis.
-#' @param color Metadata variable used for fill colors.
-#' @param facet Optional metadata variable used for faceting.
-#' @param geom Plot type: \code{"violin"}, \code{"boxplot"},
-#'   or \code{"barplot"}.
-#' @param comparisons List of comparisons passed to
-#'   \code{ggpubr::stat_compare_means()}.
-#' @param stats Logical. Add statistical comparisons.
-#' @param stat_method Statistical test method.
-#' @param stat_label Label style:
-#'   \code{"p.signif"} or \code{"p.format"}.
-#' @param output_dir Output directory.
-#' @param filename Output filename.
-#' @param width Plot width.
-#' @param height Plot height.
-#' @param dpi Plot resolution.
-#' @param style Theme style passed to \code{.deggo_theme()}.
-#' @param txtsize Base font size.
-#' @param ncol Number of plot columns.
-#' @param x_ang Numeric. Angle of x-axis labels.
+#' @param object DEGgo result, DESeqDataSet, matrix, or data.frame.
+#' @param genes Genes to plot.
+#' @param x Metadata grouping column.
+#' @param metadata Metadata for matrix/data.frame input.
+#' @param facet Optional facet columns.
+#' @param sample_col Sample identifier column.
+#' @param gene_col Gene identifier column for data.frame input.
+#' @param assay `"auto"`, `"normalized"`, or `"counts"`.
+#' @param normalization `"deseq2"`, `"cpm"`, or `"none"`.
+#' @param organism `"mouse"` or `"human"`.
+#' @param gene_type `"auto"`, `"symbol"`, or `"ensembl"`.
+#' @param geom `"boxplot"`, `"barplot"`, `"mean"`, or `"violin"`.
+#' @param transform `"log2"` or `"none"`.
+#' @param pseudocount Pseudocount for log2 transformation.
+#' @param colors Named group colors.
+#' @param point Show sample points.
+#' @param pt_size Point size.
+#' @param jitter Point jitter.
+#' @param error `"sem"`, `"sd"`, `"ci95"`, or `"none"`.
+#' @param stats Show statistical annotations.
+#' @param stat_method `"auto"`, `"deseq2"`, `"wilcox"`, or `"ttest"`.
+#' @param stat_scope `"genes"` or `"all"` for non-DESeq2 tests.
+#' @param stat_data Optional precomputed statistics.
+#' @param ref Reference group.
+#' @param test Test group.
+#' @param stat_label `"padj"`, `"pvalue"`, `"both"`, `"stars"`, or `"none"`.
+#' @param bracket Draw significance bracket.
+#' @param stat_size Statistical label size.
+#' @param scales Facet scales.
+#' @param style Plot style.
+#' @param txtsize Text size.
+#' @param legend Show legend.
+#' @param title Plot title.
+#' @param x_title X-axis title.
+#' @param y_title Y-axis title.
+#' @param seed Jitter seed.
 #'
 #' @return A ggplot object.
-#'
-#' @examples
-#' \dontrun{
-#' plot_gene_expression(
-#'   expr_df,
-#'   gene = "Adipoq",
-#'   x = "treatment",
-#'   color = "treatment",
-#'   facet = "tissue",
-#'   geom = "violin"
-#' )
-#' }
-#'
 #' @export
-#'
+
 plot_gene_expression <- function(
-    expr_df,
-    gene,
-    x = "treatment",
-    color = x,
-    facet = NULL,
-    geom = c("violin", "boxplot", "barplot"),
-    comparisons = list(c("PBS", "PAMH")),
-    stats = TRUE,
-    stat_method = "wilcox.test",
-    stat_label = c("p.signif", "p.format"),
-    output_dir = NULL,
-    filename = NULL,
-    width = 6,
-    height = 5,
-    dpi = 300,
-    style = "classic",
-    txtsize = 12,
-    x_ang = 45,
-    ncol = NULL
+    object,
+    genes,
+    x,
+    metadata=NULL,
+    facet=NULL,
+    sample_col=NULL,
+    gene_col=NULL,
+    assay=c("auto","normalized","counts"),
+    normalization=c("deseq2","cpm","none"),
+    organism=c("mouse","human"),
+    gene_type=c("auto","symbol","ensembl"),
+    geom=c("boxplot","barplot","mean","violin"),
+    transform=c("log2","none"),
+    pseudocount=1,
+    colors=NULL,
+    point=TRUE,
+    pt_size=1.7,
+    jitter=.055,
+    error=c("sem","sd","ci95","none"),
+    stats=FALSE,
+    stat_method=c("auto","deseq2","wilcox","ttest"),
+    stat_scope=c("genes","all"),
+    stat_data=NULL,
+    ref=NULL,
+    test=NULL,
+    stat_label=c("padj","pvalue","both","stars","none"),
+    bracket=TRUE,
+    stat_size=3,
+    scales="free_y",
+    style=c("classic","minimal","bw","test","void","dirty","gray","matplotlib"),
+    txtsize=10,
+    legend=FALSE,
+    title=NULL,
+    x_title=NULL,
+    y_title=NULL,
+    seed=42
 ) {
+  # ----------------------------------------------------------------------- #
+  # Setup
+  # ----------------------------------------------------------------------- #
+  assay <- match.arg(assay); normalization <- match.arg(normalization)
+  organism <- match.arg(organism); gene_type <- match.arg(gene_type)
+  geom <- match.arg(geom); transform <- match.arg(transform)
+  error <- match.arg(error); stat_method <- match.arg(stat_method)
+  stat_scope <- match.arg(stat_scope); stat_label <- match.arg(stat_label)
+  genes <- unique(genes[!is.na(genes)&nzchar(genes)])
+  if (!length(genes)) stop("`genes` is empty.",call.=FALSE)
+  norm <- function(z) tolower(gsub("[^a-z0-9]+","_",as.character(z)))
+  is.dds <- inherits(object,"DESeqDataSet")
+  is.deggo <- is.list(object)&&!is.dds&&!is.null(object$dds)
+  deggo <- if (is.deggo) object else NULL
+  if (is.deggo) object <- object$dds
+  style <- match.arg(style)
+  raw <- NULL
 
-  geom <- match.arg(geom)
-  stat_label <- match.arg(stat_label)
+  # ----------------------------------------------------------------------- #
+  # Expression
+  # ----------------------------------------------------------------------- #
+  if (inherits(object,"DESeqDataSet")) {
+    meta <- as.data.frame(SummarizedExperiment::colData(object))
+    raw <- DESeq2::counts(object,normalized=FALSE)
+    if (assay=="counts"&&normalization=="none") {
+      expr <- raw; norm.used <- "none"
+    } else if (assay=="counts"&&normalization=="cpm") {
+      expr <- sweep(raw,2,colSums(raw),"/")*1e6; norm.used <- "CPM"
+    } else {
+      expr <- DESeq2::counts(object,normalized=TRUE); norm.used <- "DESeq2"
+    }
+    if (is.null(sample_col)) {
+      sample_col <- ".sample"
+      meta$.sample <- colnames(expr)
+    }
+  } else {
+    if (!is.matrix(object)&&!is.data.frame(object))
+      stop("Unsupported `object`.",call.=FALSE)
+    if (is.null(metadata)) stop("`metadata` is required.",call.=FALSE)
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required.", call. = FALSE)
-  }
-
-  if (isTRUE(stats) && !requireNamespace("ggpubr", quietly = TRUE)) {
-    stop("Package 'ggpubr' is required for stats.", call. = FALSE)
-  }
-
-  df <- as.data.frame(expr_df)
-
-  required <- c("gene", "expression", x)
-  if (!is.null(color)) required <- c(required, color)
-  if (!is.null(facet)) required <- c(required, facet)
-
-  missing <- setdiff(required, colnames(df))
-  if (length(missing) > 0) {
-    stop("Missing column(s): ", paste(missing, collapse = ", "), call. = FALSE)
-  }
-
-  df <- df[df$gene == gene, , drop = FALSE]
-
-  if (nrow(df) == 0) {
-    stop("Gene not found in expr_df: ", gene, call. = FALSE)
-  }
-
-  df[[x]] <- factor(df[[x]])
-
-  p <- ggplot2::ggplot(
-    df,
-    ggplot2::aes(x = .data[[x]], y = .data[["expression"]], fill = .data[[color]])
-  )
-
-  if (geom == "violin") {
-    p <- p +
-      ggplot2::geom_violin(trim = FALSE, alpha = 0.8, linewidth = 0.1) +
-      ggplot2::geom_boxplot(width = 0.15, outlier.shape = NA, alpha = 0.85) +
-      ggplot2::geom_jitter(width = 0.08, size = 0.5, alpha = 0.8)
-  }
-
-  if (geom == "boxplot") {
-    p <- p +
-      ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.8, linewidth = 0.1) +
-      ggplot2::geom_jitter(width = 0.12, size = 0.5, alpha = 0.8)
-  }
-
-  if (geom == "barplot") {
-    p <- p +
-      ggplot2::stat_summary(fun = mean, geom = "bar", alpha = 0.8, width = 0.7) +
-      ggplot2::stat_summary(fun.data = ggplot2::mean_se, geom = "errorbar", width = 0.2, linewidth = 0.1) +
-      ggplot2::geom_jitter(width = 0.12, size = 0.5, alpha = 0.8)
-  }
-
-  if (!is.null(facet)) {
-    p <- p +
-      ggplot2::facet_wrap(stats::as.formula(paste("~", facet)), scales = "free_y", ncol = ncol)
-  }
-
-  if (isTRUE(stats)) {
-    p <- p +
-      ggpubr::stat_compare_means(
-        comparisons = comparisons,
-        method = stat_method,
-        label = stat_label
-      )
-  }
-
-  y_label <- switch(
-    unique(df$assay)[1],
-    raw = "Raw counts",
-    normalized = "Normalized counts",
-    log2_normalized = "log2(Normalized counts + 1)",
-    vst = "VST expression",
-    fpkm = "FPKM",
-    tpm = "TPM",
-    "Expression"
-  )
-
-  p <- p +
-    ggplot2::labs(title = gene, x = x, y = y_label) +
-    .deggo_theme(style = style, txtsize = txtsize, x.ang = x_ang)
-
-  if (!is.null(output_dir)) {
-    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-
-    if (is.null(filename)) {
-      filename <- paste0(gene, "_", geom)
+    z <- object
+    if (is.data.frame(z)) {
+      ids <- c("gene_id","gene","Gene","ENSEMBL","ensembl","feature_id")
+      gc <- if (!is.null(gene_col)) gene_col else intersect(ids,names(z))[1]
+      if (length(gc)&&!is.na(gc)) {
+        rownames(z) <- as.character(z[[gc]])
+        z[[gc]] <- NULL
+      }
+      z <- z[,vapply(z,is.numeric,logical(1)),drop=FALSE]
     }
 
-    ggplot2::ggsave(
-      file.path(output_dir, paste0(filename, ".png")),
-      p, width = width, height = height, dpi = dpi, bg = "white"
+    expr <- as.matrix(z); storage.mode(expr) <- "numeric"
+    meta <- as.data.frame(metadata)
+    if (is.null(sample_col))
+      sample_col <- if ("sample"%in%names(meta)) "sample" else ".sample"
+    if (sample_col==".sample") meta$.sample <- rownames(meta)
+    if (!sample_col%in%names(meta)) stop("`sample_col` not found.",call.=FALSE)
+
+    sm <- as.character(meta[[sample_col]])
+    if (sum(rownames(expr)%in%sm)>sum(colnames(expr)%in%sm)) expr <- t(expr)
+    common <- intersect(colnames(expr),sm)
+    if (!length(common)) stop("No expression samples match metadata.",call.=FALSE)
+
+    expr <- expr[,common,drop=FALSE]
+    meta <- meta[match(common,sm),,drop=FALSE]
+
+    # ----------------------------------------------------------------------- #
+    # Detect + normalize expression
+    # ----------------------------------------------------------------------- #
+    nonnegative <- all(expr>=0,na.rm=TRUE)
+    integer.like <- nonnegative &&
+      all(abs(expr-round(expr))<=.01,na.rm=TRUE)
+
+    input <- if (assay=="auto") {
+      if (integer.like) "counts" else "normalized"
+    } else assay
+
+    if (input=="counts") {
+      if (!nonnegative)
+        stop("Raw counts must be non-negative.",call.=FALSE)
+
+      delta <- max(abs(expr-round(expr)),na.rm=TRUE)
+
+      if (delta>.01)
+        stop(
+          "`assay='counts'` requires raw integer counts. Max deviation = ",
+          signif(delta,4),".",
+          call.=FALSE
+        )
+
+      raw <- round(expr)
+      storage.mode(raw) <- "integer"
+
+      if (normalization=="deseq2") {
+        d <- DESeq2::DESeqDataSetFromMatrix(
+          countData=raw,
+          colData=data.frame(row.names=colnames(raw)),
+          design=~1
+        )
+        d <- DESeq2::estimateSizeFactors(d)
+        expr <- DESeq2::counts(d,normalized=TRUE)
+        norm.used <- "DESeq2"
+      } else if (normalization=="cpm") {
+        lib <- colSums(raw)
+        if (any(lib<=0))
+          stop("Invalid library size.",call.=FALSE)
+        expr <- sweep(raw,2,lib,"/")*1e6
+        norm.used <- "CPM"
+      } else {
+        expr <- raw
+        norm.used <- "none"
+      }
+    } else {
+      raw <- NULL
+      norm.used <- "provided"
+    }
+  }
+
+  # ----------------------------------------------------------------------- #
+  # Metadata
+  # ----------------------------------------------------------------------- #
+  need <- unique(c(x,facet,sample_col))
+  miss <- setdiff(need,names(meta))
+  if (length(miss)) stop("Missing metadata: ",paste(miss,collapse=", "),call.=FALSE)
+
+  groups <- unique(as.character(meta[[x]]))
+  groups <- groups[!is.na(groups)]
+
+  if (stats&&(is.null(ref)||is.null(test))) {
+    if (length(groups)!=2) stop("Specify `ref` and `test`.",call.=FALSE)
+    ref <- groups[1]; test <- groups[2]
+  }
+
+  lev <- if (!is.null(ref)&&!is.null(test))
+    c(ref,test,setdiff(groups,c(ref,test))) else groups
+  meta[[x]] <- factor(meta[[x]],levels=lev)
+
+  # ----------------------------------------------------------------------- #
+  # Genes
+  # ----------------------------------------------------------------------- #
+  if (gene_type=="auto")
+    gene_type <- if (all(grepl("^ENS[A-Z]*G[0-9]+(?:\\.[0-9]+)?$",genes)))
+      "ensembl" else "symbol"
+
+  features <- rownames(expr)
+
+  if (gene_type=="symbol") {
+    db <- switch(
+      organism,
+      mouse={
+        if (!requireNamespace("org.Mm.eg.db",quietly=TRUE))
+          stop("Install `org.Mm.eg.db`.")
+        org.Mm.eg.db::org.Mm.eg.db
+      },
+      human={
+        if (!requireNamespace("org.Hs.eg.db",quietly=TRUE))
+          stop("Install `org.Hs.eg.db`.")
+        org.Hs.eg.db::org.Hs.eg.db
+      }
     )
 
-    ggplot2::ggsave(
-      file.path(output_dir, paste0(filename, ".pdf")),
-      p, width = width, height = height, bg = "white"
+    gm <- suppressMessages(
+      AnnotationDbi::select(db,genes,"ENSEMBL","SYMBOL")
+    )
+    gm <- unique(gm[!is.na(gm$ENSEMBL),])
+    gm$feature_id <- features[match(gm$ENSEMBL,sub("\\..*$","",features))]
+    m <- is.na(gm$feature_id)
+    gm$feature_id[m] <- features[match(gm$SYMBOL[m],features)]
+    gm$gene <- gm$SYMBOL
+  } else {
+    gm <- data.frame(gene=genes,ENSEMBL=sub("\\..*$","",genes))
+    gm$feature_id <- features[
+      match(gm$ENSEMBL,sub("\\..*$","",features))
+    ]
+  }
+
+  gm <- gm[!is.na(gm$feature_id)&!duplicated(gm$feature_id),]
+  gm <- gm[match(genes,gm$gene,nomatch=0),]
+  if (!nrow(gm)) stop("Requested genes are absent.",call.=FALSE)
+
+  # ----------------------------------------------------------------------- #
+  # Long expression
+  # ----------------------------------------------------------------------- #
+  ids <- gm$feature_id
+  dat <- as.data.frame(t(expr[ids,,drop=FALSE]))
+  names(dat) <- ids
+  for (z in need) dat[[z]] <- meta[[z]]
+
+  dat <- tidyr::pivot_longer(
+    dat,dplyr::all_of(ids),
+    names_to="feature_id",values_to="expression"
+  ) |>
+    dplyr::left_join(gm[,c("feature_id","gene")],by="feature_id")
+
+  dat$gene <- factor(dat$gene,levels=gm$gene)
+  dat[[x]] <- factor(dat[[x]],levels=lev)
+  dat$.value <- if (transform=="log2")
+    log2(dat$expression+pseudocount) else dat$expression
+
+  # ----------------------------------------------------------------------- #
+  # Statistics
+  # ----------------------------------------------------------------------- #
+  st <- stat_data
+  stat.source <- if (!is.null(st)) "stat_data" else NULL
+  method.used <- NULL
+
+  panels <- if (length(facet))
+    dplyr::distinct(meta,dplyr::across(dplyr::all_of(facet)))
+  else data.frame(.panel="All")
+
+  # DEGgo precomputed
+  if (stats&&is.null(st)&&!is.null(deggo)&&is.list(deggo$results)) {
+    cn <- names(deggo$results); cnn <- norm(cn)
+
+    sl <- lapply(seq_len(nrow(panels)),function(i) {
+      pa <- panels[i,,drop=FALSE]
+      hit <- grepl(norm(test),cnn,fixed=TRUE)&grepl(norm(ref),cnn,fixed=TRUE)
+
+      if ("tissue"%in%names(pa))
+        hit <- hit&grepl(norm(pa$tissue),cnn,fixed=TRUE)
+
+      idx <- which(hit)
+      if ("sex"%in%names(pa)&&length(idx)) {
+        sx <- grepl(norm(pa$sex),cnn[idx],fixed=TRUE)
+        if (any(sx)) idx <- idx[sx]
+      }
+      if (!length(idx)) return(NULL)
+
+      z <- deggo$results[[idx[1]]]
+      if (is.list(z)&&!is.data.frame(z)) {
+        zz <- Filter(is.data.frame,z)
+        if (!length(zz)) return(NULL)
+        score <- vapply(zz,function(q) {
+          n <- norm(names(q))
+          2*any(n%in%c("gene","symbol","gene_symbol","gene_id","feature_id","ensembl"))+
+            2*any(n%in%c("pvalue","p_value","p_val","padj","p_adj","p_val_adj","fdr"))
+        },numeric(1))
+        z <- zz[[which.max(score)]]
+      }
+      if (!is.data.frame(z)) return(NULL)
+
+      for (fc in facet) z[[fc]] <- pa[[fc]][1]
+      z$.comparison <- cn[idx[1]]
+      z
+    })
+
+    sl <- Filter(Negate(is.null),sl)
+    if (length(sl)) st <- dplyr::bind_rows(sl)
+    stat.source <- "results$results"
+    method.used <- "precomputed"
+  }
+
+  # Compute statistics
+  if (stats&&is.null(st)&&is.null(deggo)) {
+    method.used <- if (stat_method=="auto")
+      if (!is.null(raw)) "deseq2" else "wilcox" else stat_method
+
+    if (method.used=="deseq2"&&is.null(raw))
+      stop("DESeq2 requires raw counts.",call.=FALSE)
+
+    stat.ids <- if (stat_scope=="genes") gm$feature_id else rownames(expr)
+
+    sl <- lapply(seq_len(nrow(panels)),function(i) {
+      idx <- rep(TRUE,nrow(meta))
+      if (length(facet))
+        for (z in facet)
+          idx <- idx&as.character(meta[[z]])==as.character(panels[[z]][i])
+
+      g <- as.character(meta[[x]][idx])
+      keep <- !is.na(g)&g%in%c(ref,test)
+      idx <- which(idx)[keep]; g <- g[keep]
+      if (sum(g==ref)<2||sum(g==test)<2) return(NULL)
+
+      if (method.used=="deseq2") {
+        m <- raw[,idx,drop=FALSE]
+        m <- m[rowSums(m)>0,,drop=FALSE]
+        cd <- data.frame(.group=factor(g,levels=c(ref,test)),row.names=colnames(m))
+        d <- DESeq2::DESeqDataSetFromMatrix(m,cd,~.group)
+        d <- suppressMessages(DESeq2::DESeq(d,quiet=TRUE))
+        r <- as.data.frame(DESeq2::results(d,contrast=c(".group",test,ref)))
+        r$feature_id <- rownames(r)
+        out <- r[,c("feature_id","baseMean","log2FoldChange","lfcSE","stat","pvalue","padj")]
+      } else {
+        m <- expr[stat.ids,idx,drop=FALSE]
+        if (transform=="log2") m <- log2(m+pseudocount)
+        ir <- g==ref; it <- g==test
+
+        pv <- apply(m,1,function(v) tryCatch(
+          if (method.used=="wilcox")
+            stats::wilcox.test(v[it],v[ir],exact=FALSE)$p.value
+          else stats::t.test(v[it],v[ir])$p.value,
+          error=function(e) NA_real_
+        ))
+
+        out <- data.frame(
+          feature_id=rownames(m),
+          pvalue=pv,
+          padj=stats::p.adjust(pv,"BH")
+        )
+      }
+
+      if (length(facet))
+        for (z in facet) out[[z]] <- panels[[z]][i]
+      out
+    })
+
+    sl <- Filter(Negate(is.null),sl)
+    if (length(sl)) st <- dplyr::bind_rows(sl)
+    stat.source <- method.used
+  }
+
+  # Standardize statistics
+  if (stats&&!is.null(st)&&nrow(st)) {
+    nn <- norm(names(st))
+    pick <- function(z) {
+      i <- which(nn%in%z)
+      if (length(i)) names(st)[i[1]] else NULL
+    }
+
+    gc <- pick(c("gene","symbol","gene_symbol","gene_id","feature","feature_id","ensembl"))
+    pc <- pick(c("pvalue","p_value","p_val","p"))
+    ac <- pick(c("padj","p_adj","p_val_adj","fdr","qvalue","q_value"))
+
+    if (!is.null(gc)) {
+      sg <- as.character(st[[gc]])
+      ii <- match(sg,gm$gene)
+      m <- is.na(ii)
+      ii[m] <- match(sub("\\..*$","",sg[m]),sub("\\..*$","",gm$feature_id))
+      st$gene <- gm$gene[ii]
+      st <- st[!is.na(st$gene),,drop=FALSE]
+      st$pvalue <- if (!is.null(pc)) as.numeric(st[[pc]]) else NA_real_
+      st$padj <- if (!is.null(ac)) as.numeric(st[[ac]]) else st$pvalue
+      st$gene <- factor(st$gene,levels=gm$gene)
+    } else st <- NULL
+  }
+
+  if (stats&&(is.null(st)||!nrow(st)))
+    warning("No statistics matched or were produced; plotting expression only.",call.=FALSE)
+
+  # ----------------------------------------------------------------------- #
+  # Colors + errors
+  # ----------------------------------------------------------------------- #
+  if (is.null(colors))
+    colors <- if (exists("cellpalette",mode="function"))
+      cellpalette(length(lev)) else scales::hue_pal()(length(lev))
+  if (is.null(names(colors))) names(colors) <- lev
+
+  ef <- switch(
+    error,
+    sem=function(z) {
+      z <- z[is.finite(z)]; m <- mean(z)
+      e <- if (length(z)>1) sd(z)/sqrt(length(z)) else NA
+      data.frame(y=m,ymin=m-e,ymax=m+e)
+    },
+    sd=function(z) {
+      z <- z[is.finite(z)]; m <- mean(z)
+      e <- if (length(z)>1) sd(z) else NA
+      data.frame(y=m,ymin=m-e,ymax=m+e)
+    },
+    ci95=function(z) {
+      z <- z[is.finite(z)]; m <- mean(z)
+      e <- if (length(z)>1) qt(.975,length(z)-1)*sd(z)/sqrt(length(z)) else NA
+      data.frame(y=m,ymin=m-e,ymax=m+e)
+    },
+    none=NULL
+  )
+
+  # ----------------------------------------------------------------------- #
+  # Plot
+  # ----------------------------------------------------------------------- #
+  p <- ggplot2::ggplot(
+    dat,
+    ggplot2::aes(
+      x=.data[[x]],y=.value,
+      fill=.data[[x]],colour=.data[[x]]
+    )
+  )
+
+  if (geom=="boxplot")
+    p <- p+ggplot2::geom_boxplot(width=.52,alpha=.55,outlier.shape=NA)
+  if (geom=="violin")
+    p <- p+ggplot2::geom_violin(width=.8,alpha=.35,trim=FALSE)
+  if (geom=="barplot")
+    p <- p+ggplot2::stat_summary(fun=mean,geom="col",width=.55,alpha=.65,colour="black")
+  if (geom=="mean")
+    p <- p+ggplot2::stat_summary(fun=mean,geom="crossbar",width=.55)
+  if (geom%in%c("barplot","mean")&&!is.null(ef))
+    p <- p+ggplot2::stat_summary(fun.data=ef,geom="errorbar",width=.12,colour="black")
+  if (point)
+    p <- p+ggplot2::geom_point(
+      position=ggplot2::position_jitter(width=jitter,height=0,seed=seed),
+      size=pt_size,alpha=.9
+    )
+
+  # ----------------------------------------------------------------------- #
+  # Statistical annotation
+  # ----------------------------------------------------------------------- #
+  sp <- NULL
+
+  if (stats&&stat_label!="none"&&!is.null(st)&&nrow(st)) {
+    sp <- st
+    sp$.label <- switch(
+      stat_label,
+      stars=dplyr::case_when(
+        !is.na(sp$padj)&sp$padj<1e-4~"****",
+        !is.na(sp$padj)&sp$padj<1e-3~"***",
+        !is.na(sp$padj)&sp$padj<1e-2~"**",
+        !is.na(sp$padj)&sp$padj<.05~"*",
+        TRUE~"ns"
+      ),
+      padj=ifelse(is.na(sp$padj),"padj=NA",
+                  paste0("padj=",format.pval(sp$padj,digits=2,eps=1e-3))),
+      pvalue=ifelse(is.na(sp$pvalue),"p=NA",
+                    paste0("p=",format.pval(sp$pvalue,digits=2,eps=1e-3))),
+      both=paste0(
+        "p=",format.pval(sp$pvalue,digits=2,eps=1e-3),
+        "\npadj=",format.pval(sp$padj,digits=2,eps=1e-3)
+      )
+    )
+
+    pv <- c("gene",facet)
+    pos <- dat |>
+      dplyr::group_by(dplyr::across(dplyr::all_of(pv))) |>
+      dplyr::summarise(
+        .max=max(.value,na.rm=TRUE),
+        .min=min(.value,na.rm=TRUE),
+        .groups="drop"
+      ) |>
+      dplyr::mutate(
+        .range=pmax(.max-.min,abs(.max)*.1,.5),
+        .y=.max+.range*.10,
+        .tip=.y-.range*.025,
+        .label_y=.y+.range*.04
+      )
+
+    sp <- dplyr::left_join(sp,pos,by=intersect(pv,names(sp)))
+    sp$.xmin <- match(ref,lev)
+    sp$.xmax <- match(test,lev)
+    sp$.xmid <- (sp$.xmin+sp$.xmax)/2
+
+    if (bracket)
+      p <- p+
+      ggplot2::geom_segment(
+        data=sp,ggplot2::aes(x=.xmin,xend=.xmax,y=.y,yend=.y),
+        inherit.aes=FALSE
+      )+
+      ggplot2::geom_segment(
+        data=sp,ggplot2::aes(x=.xmin,xend=.xmin,y=.tip,yend=.y),
+        inherit.aes=FALSE
+      )+
+      ggplot2::geom_segment(
+        data=sp,ggplot2::aes(x=.xmax,xend=.xmax,y=.tip,yend=.y),
+        inherit.aes=FALSE
+      )
+
+    p <- p+ggplot2::geom_text(
+      data=sp,
+      ggplot2::aes(x=.xmid,y=.label_y,label=.label),
+      inherit.aes=FALSE,size=stat_size,vjust=0
     )
   }
 
+  # ----------------------------------------------------------------------- #
+  # Facets + theme
+  # ----------------------------------------------------------------------- #
+  fv <- c("gene",facet)
+
+  if (length(fv)==1) {
+    p <- p+ggplot2::facet_wrap(
+      stats::as.formula(paste("~",fv)),
+      scales=scales
+    )
+  } else {
+    p <- p+ggplot2::facet_grid(
+      stats::as.formula(
+        paste(fv[1],"~",paste(fv[-1],collapse="+"))
+      ),
+      scales=scales,
+      switch="y"
+    )
+  }
+
+  if (is.null(y_title)) {
+    u <- if (norm.used=="CPM") "CPM" else
+      if (norm.used%in%c("DESeq2","provided")) "normalized count" else "count"
+
+    y_title <- if (transform=="log2")
+      paste0("log2(",u," + ",pseudocount,")") else u
+  }
+
+  p <- p+
+    ggplot2::scale_fill_manual(values=colors,drop=FALSE)+
+    ggplot2::scale_colour_manual(values=colors,drop=FALSE)+
+    ggplot2::labs(
+      x=x_title,
+      y=y_title,
+      title=title
+    )+
+    .deggo_theme(
+      style=style,
+      txtsize=txtsize,
+      leg=legend,
+      facet.face="bold",
+      facet.size=txtsize,
+      panel.spacing=.25
+    )
+
+  # ----------------------------------------------------------------------- #
+  # Output
+  # ----------------------------------------------------------------------- #
+  attr(p,"data") <- dat
+  attr(p,"statistics") <- st
+  attr(p,"stat_plot") <- sp
+  attr(p,"stat_source") <- stat.source
+  attr(p,"stat_method") <- method.used
+  attr(p,"normalization") <- norm.used
   p
 }
 
